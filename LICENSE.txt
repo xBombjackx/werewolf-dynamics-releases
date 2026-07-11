@@ -1,0 +1,50 @@
+Werewolf Dynamics — End User License Agreement (Freeware Beta)
+
+Copyright (c) 2026 Werewolf Dynamics. All rights reserved.
+
+This agreement covers the Werewolf Dynamics plugin binaries distributed
+through this repository's Releases page ("the Software").
+
+WHAT YOU MAY DO
+
+1. Download and install the Software on machines you own or control.
+2. Use the Software in your own audio work, personal or commercial,
+   including in music, film, games, and broadcast, with no fee and no
+   attribution required.
+
+WHAT YOU MAY NOT DO
+
+3. Redistribute the Software. Do not re-host, bundle, mirror, or include
+   the files in any other package or installer — link people to this
+   repository's Releases page instead.
+4. Sell, rent, sublicense, or otherwise charge for the Software.
+5. Reverse engineer, decompile, disassemble, or modify the Software,
+   except where applicable law expressly permits it despite this term.
+6. Use the "Werewolf Dynamics" name, the "WD" plugin marks, or the
+   faceplate artwork to promote another product.
+
+OWNERSHIP
+
+7. The Software is licensed, not sold. Werewolf Dynamics retains all
+   right, title, and interest in the Software and its trade names.
+   This is a beta: features may change or disappear between releases,
+   and any release may stop being available.
+
+NO WARRANTY
+
+8. The Software is provided "AS IS", without warranty of any kind,
+   express or implied, including fitness for a particular purpose.
+   To the maximum extent permitted by law, Werewolf Dynamics is not
+   liable for any damages arising from use of the Software — including
+   lost work, lost audio, or damaged sessions. Save often; it's a beta.
+
+TERMINATION
+
+9. This license ends automatically if you break its terms. On
+   termination, delete all copies of the Software.
+
+THIRD-PARTY NOTICES
+
+10. The Software is built with the JUCE framework (c) Raw Material
+    Software Limited, and the VST 3 SDK. VST is a registered trademark
+    of Steinberg Media Technologies GmbH.
