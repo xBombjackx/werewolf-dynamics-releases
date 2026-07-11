@@ -24,6 +24,8 @@ is the real thing: two time constants, program-dependent memory, that slow
 settling tail. Two voicings (tube WD-2A, solid-state WD-3A) plus drive and
 iron controls the original never gave you.
 
+<img src="img/wd-opto.png" width="340" alt="WD Opto faceplate">&nbsp;&nbsp;<img src="img/wd-mu.png" width="340" alt="WD Mu faceplate">
+
 **WD Mu** — variable-mu compressor built around a simulated 6386 push-pull
 stage and the classic six-position time-constant bank. No threshold knob,
 because the circuit doesn't have one; you drive it and it leans back. Bias
@@ -33,21 +35,29 @@ knob on the front, mismatched tube pairs on the back.
 module. The boost you can't get wrong, with a twist: the filter inductors
 have live magnetic cores, and a Core knob sets how hard you push them.
 
+<img src="img/wd-tec.png" width="700" alt="WDTec faceplate">
+
 **WD Tape** — a full tape machine. Record head, bias oscillator, reproduce
 head, all of it, aligned by the same procedure a tech would use on the
 hardware. Two stock formulations. Every unit number ships with its own
 transport quirks.
+
+<img src="img/wd-tape.png" width="700" alt="WD Tape faceplate">
 
 **WD XQ** — one parametric EQ, five circuits. Precision digital, two console
 flavors, a stepped American classic, and an inductor design from 1973. The
 knobs stay put while the circuit underneath changes what they're allowed to
 do. Dynamic bands on all five.
 
+<img src="img/wd-xq.png" width="820" alt="WD XQ faceplate">
+
 **WD Rack** — the chassis. Put it on your master bus, give your modules the
 same frame number, and suddenly they're screwed into the same box: shared
 power supply that sags when a neighbor works hard, adjacent-slot bleed, a
 slot map you can reorder. Crank the crosstalk and the rack becomes an effect
 of its own. Skip it entirely and every module runs clean standalone.
+
+<img src="img/wd-rack.png" width="340" alt="WD Rack with all five modules seated in the chassis">
 
 ## Requirements
 
