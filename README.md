@@ -17,7 +17,7 @@ factory and it behaves like a well-kept unit. Or don't.
 All free. Grab the zip from the
 [Releases page](../../releases).
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/bombjack)
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/mighty_bombjack)
 
 ## The lineup
 
