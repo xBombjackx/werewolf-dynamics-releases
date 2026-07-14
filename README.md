@@ -14,7 +14,7 @@ module has a rear panel with the service trims the hardware kept locked
 inside: supply draw, bias, transformer headroom, tube swaps. Set them to
 factory and it behaves like a well-kept unit. Or don't.
 
-All free while in beta. Grab the zip from the
+All free. Grab the zip from the
 [Releases page](../../releases).
 
 ## The lineup
