@@ -1,4 +1,6 @@
 # Werewolf Dynamics
+![Downloads](https://img.shields.io/github/downloads/xBombjackx/werewolf-dynamics-releases/total)
+
 
 Analog gear, simulated from the circuit up.
 
