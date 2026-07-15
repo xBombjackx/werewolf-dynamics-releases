@@ -28,12 +28,14 @@ is the real thing: two time constants, program-dependent memory, that slow
 settling tail. Two voicings (tube WD-2A, solid-state WD-3A) plus drive and
 iron controls the original never gave you.
 
-<img src="img/wd-opto.png" width="340" alt="WD Opto faceplate">&nbsp;&nbsp;<img src="img/wd-mu.png" width="340" alt="WD Mu faceplate">
+<img src="img/wd-opto.png" width="340" alt="WD Opto faceplate">
 
 **WD Mu** — variable-mu compressor built around a simulated 6386 push-pull
 stage and the classic six-position time-constant bank. No threshold knob,
 because the circuit doesn't have one; you drive it and it leans back. Bias
 knob on the front, mismatched tube pairs on the back.
+
+<img src="img/wd-mu.png" width="340" alt="WD Mu faceplate">
 
 **WDTec** — passive tube EQ, program and midrange sections in one wide
 module. The boost you can't get wrong, with a twist: the filter inductors
