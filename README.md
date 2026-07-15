@@ -71,6 +71,15 @@ capacitor, same as the hardware.
 
 <img src="img/wd-vca.png" width="700" alt="WD VCA faceplate">
 
+**WD Duress** — a curve-family compressor in the Distressor spirit. Every
+ratio position is its own engineered curve: 1:1 is warm-up distortion with
+no compression at all, 10:1 borrows an opto release with a twenty-second
+tail, and Nuke is a log-release brickwall. Three distortion modes, two
+stereo link laws taken from the block diagram, and a British Mode switch
+that overrides the envelope the way all-buttons abuse does.
+
+<img src="img/wd-duress.png" width="700" alt="WD Duress faceplate">
+
 **WD Pre** — five preamps behind one gain knob. Precision digital wire, a
 Class A British console with its iron, an American op-amp console, a German
 broadcast valve, and a cassette 4-track desk channel. Gain redistributes the
@@ -101,6 +110,14 @@ slot map you can reorder. Crank the crosstalk and the rack becomes an effect
 of its own. Skip it entirely and every module runs clean standalone.
 
 <img src="img/wd-rack.png" width="340" alt="WD Rack with modules seated in the chassis">
+
+**WD Strip** — a console channel in one window: preamp into EQ into
+compressor, a model selector on each stage. Any of the five Pre laws, either
+EQ, any of the four compressors. All three stages hang off one power rail
+inside the same process, so the compressor's knee moves when the preamp
+leans on the supply. No rack required.
+
+<img src="img/wd-strip.png" width="820" alt="WD Strip channel strip">
 
 ## Requirements
 
