@@ -132,13 +132,16 @@ leans on the supply. No rack required.
 
 ## Requirements
 
-Windows 10 or 11, 64-bit, and any VST3 host.
+Windows 10 or 11, 64-bit, and any VST3 or CLAP host.
 
 ## Install
 
-Unzip the release and copy the `.vst3` folders into
-`C:\Program Files\Common Files\VST3`, then rescan in your DAW. Everything
-shows up under Werewolf Dynamics.
+Unzip the release. Copy the `.vst3` folders into
+`C:\Program Files\Common Files\VST3`, or the `.clap` files into
+`C:\Program Files\Common Files\CLAP` (create it if it doesn't exist —
+per-user alternative: `%LOCALAPPDATA%\Programs\Common\CLAP`). Pick one
+format per plugin, then rescan in your DAW. Everything shows up under
+Werewolf Dynamics.
 
 Beta builds are not code-signed yet, so Windows may grumble on first
 download. Expected for now.
