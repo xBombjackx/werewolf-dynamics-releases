@@ -106,7 +106,7 @@
 const DEMOS = [
   {
     title: 'WD Strip — the shared rail',
-    blurb: 'A whole console channel (73 preamp into the VCA bus comp) sharing one power supply, sample-accurately. Rail solid, then sagging under draw — the compression goes spongy as the supply dips with the music. Diff ×10 is only what the rail is doing.',
+    blurb: 'A console channel: 73 preamp into the VCA bus compressor, sharing one power supply. First the rail is solid. Then it sags under the draw and the compression goes spongy. Diff ×10 plays just what the rail changes, boosted 20 dB.',
     variants: [
       { label: 'Rail solid', file: 'audio/strip_sag0.wav' },
       { label: 'Rail sags',  file: 'audio/strip_sag8.wav' },
@@ -115,7 +115,7 @@ const DEMOS = [
   },
   {
     title: 'WD Duress — ratio travel',
-    blurb: 'Drums through the curve compressor, loudness-matched. 1:1 is the wire through the circuit; 6:1 is the manual’s universal starting point; Nuke is the party trick.',
+    blurb: 'Drums, loudness matched. 1:1 is the circuit doing nothing. 6:1 is where the manual says to start. Nuke is the last detent.',
     variants: [
       { label: '1:1',  file: 'audio/duress_11.wav' },
       { label: '6:1',  file: 'audio/duress_61.wav' },
@@ -124,7 +124,7 @@ const DEMOS = [
   },
   {
     title: 'WD Mu — dying tubes',
-    blurb: 'The same drum squeeze with the bias centered, then at the cold stop: a starving remote-cutoff pair gets cleaner and politer as the compression audibly runs out. Less is the mechanism.',
+    blurb: 'The same drum squeeze twice. Bias centered, the tubes grip hard. Bias at the cold stop, the pair is starving and the compression runs out. A dying vari-mu gets cleaner, not dirtier.',
     variants: [
       { label: 'Bias center', file: 'audio/mu_center.wav' },
       { label: 'Dying tubes', file: 'audio/mu_dying.wav' },
@@ -132,7 +132,7 @@ const DEMOS = [
   },
   {
     title: 'WD FET — output stage',
-    blurb: 'One guitar, one compressor, three output circuits at the same drive: Class A, Push-Pull, and the Triode furnace. The three laws finally separate on program.',
+    blurb: 'One guitar, one compressor, three output circuits at the same drive. Class A, push-pull, triode. Three different circuits, three different kinds of hair.',
     variants: [
       { label: 'Class A',   file: 'audio/fet_classa.wav' },
       { label: 'Push-Pull', file: 'audio/fet_pushpull.wav' },
@@ -141,7 +141,7 @@ const DEMOS = [
   },
   {
     title: 'WD Opto — tube slam',
-    blurb: 'A vocal riding the optical compressor: the calibrated line amp, then THD at the stop — an unmistakably overdriven tube stage riding the same gain reduction.',
+    blurb: 'A vocal on the optical compressor. First the line amp at its calibrated drive, then THD at the stop. Same gain reduction both times. Only the tube stage changes.',
     variants: [
       { label: 'Calibrated', file: 'audio/opto_honest.wav' },
       { label: 'Tube slam',  file: 'audio/opto_slam.wav' },
@@ -149,7 +149,7 @@ const DEMOS = [
   },
   {
     title: 'WD Pre — three circuits',
-    blurb: 'A screamed vocal through three preamp laws at the same gain, loudness-matched: clean digital, the Class A 73, and the all-tube 76.',
+    blurb: 'One scream through three preamp circuits at the same gain, loudness matched. Precision is clean math. The 73 is discrete class A. The 76 is all tube.',
     variants: [
       { label: 'Precision', file: 'audio/pre_precision.wav' },
       { label: '73',        file: 'audio/pre_73.wav' },
@@ -158,7 +158,7 @@ const DEMOS = [
   },
   {
     title: 'WDTec — open the loop',
-    blurb: 'The passive EQ with the same curve dialed in, three ways: feedback loop closed (the calibrated line), loop opened (the tubes come through), then DRIVE shoveling coal into the open loop.',
+    blurb: 'The passive EQ with one curve, three ways. Loop closed is the calibrated line. Open the loop and the tubes come through. Then DRIVE runs the open loop hot.',
     variants: [
       { label: 'Loop closed', file: 'audio/tec_closed.wav' },
       { label: 'Loop open',   file: 'audio/tec_open.wav' },
@@ -167,7 +167,7 @@ const DEMOS = [
   },
   {
     title: 'WD XQ — the line stage grinds',
-    blurb: 'The Inductor 73 model’s input stage on a metal mix: honest at 25, musical at 50, and the deliberately-too-far stop at 100 — the console stops being polite (and the saturation eats real level; that drop is the physics).',
+    blurb: 'The Inductor 73 input stage on a metal mix. 25 is the calibrated console. 50 pushes it. 100 is deliberately too far, and the saturation eats real level. The drop is the circuit, not a mistake.',
     variants: [
       { label: 'Drive 25',  file: 'audio/xq_25.wav' },
       { label: 'Drive 50',  file: 'audio/xq_50.wav' },
@@ -176,7 +176,7 @@ const DEMOS = [
   },
   {
     title: 'WD Tape — warble stop',
-    blurb: 'Sustained keys on the calibrated studio machine, then the portable at 7.5 ips with FLUTTER at the stop — pitch warble well past any real machine’s spec.',
+    blurb: 'Sustained keys. The studio machine in calibration, then the portable at 7.5 ips with flutter at the stop. No real machine wobbles this much. That is what the stop is for.',
     variants: [
       { label: 'Calibrated', file: 'audio/tape_cal.wav' },
       { label: 'Warble',     file: 'audio/tape_warble.wav' },
@@ -184,7 +184,7 @@ const DEMOS = [
   },
   {
     title: 'WD VCA — thump box',
-    blurb: 'Deep, fast bus compression so the gain never sits still — then control-voltage feedthrough at ×2. Every gain move thumps; steady GR is silent. The classic cheap-VCA giveaway.',
+    blurb: 'Deep fast bus compression, so the gain never sits still. Then control-voltage feedthrough at ×2. Every gain move thumps. Steady gain reduction is silent. This is how cheap VCAs give themselves away.',
     variants: [
       { label: 'Calibrated', file: 'audio/vca_deep.wav' },
       { label: 'Thump ×2',   file: 'audio/vca_thump.wav' },
@@ -192,7 +192,7 @@ const DEMOS = [
   },
   {
     title: 'WD AX — air and girth',
-    blurb: 'A vocal with the exciter parked, then the default air injection, then BIG BOTTOM girth — sustain and weight without raising the peaks (the added band sums in quadrature).',
+    blurb: 'A vocal with the exciter parked, then the air injection, then the Big Bottom girth. The girth adds sustain and weight without raising the peaks.',
     variants: [
       { label: 'Parked', file: 'audio/ax_parked.wav' },
       { label: 'Air',    file: 'audio/ax_air.wav' },
