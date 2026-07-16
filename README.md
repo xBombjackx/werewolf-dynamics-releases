@@ -19,6 +19,15 @@ factory and it behaves like a well-kept unit. Or don't.
 All free. Grab the zip from the
 [Releases page](../../releases).
 
+## 🎧 Hear it first
+
+**[Audio demos — listen in your browser](https://xbombjackx.github.io/werewolf-dynamics-releases/)**
+
+Eleven A/B demos, one mechanism each. Every variant of a demo is the same
+performance, sample-locked — switching circuits mid-playback is a 12 ms
+crossfade, so what changes is only the circuit. Loudness-matched, no
+mastering, no cheating.
+
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/mighty_bombjack)
 
 ## The lineup

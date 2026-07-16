@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Werewolf Dynamics — Audio Demos</title>
+<style>
+  /* M14 flat language: flat fields, hairlines, ink ramp, accent-for-state. */
+  :root {
+    --room: #0B0C0E; --panel: #17181B; --chassis: #121316; --well: #101114;
+    --ink: #E8E6E1; --ink-dim: #8B8D93; --ink-faint: #55575D;
+    --line: #2A2C31; --line-soft: #222428;
+    --accent: #F2A93C; --accent-hi: #F7BC62; --on-accent: #131313;
+    --sans: "Segoe UI", system-ui, sans-serif;
+    --mono: "Cascadia Mono", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; padding: 40px 16px;
+    background: var(--room); color: var(--ink);
+    font-family: var(--sans);
+    display: flex; flex-direction: column; align-items: center; gap: 18px;
+  }
+  header { text-align: center; margin-bottom: 6px; }
+  header .mark { font-size: 22px; font-weight: 800; letter-spacing: 0.16em; }
+  header .mark span { color: var(--accent); }
+  header .sub { font-size: 9px; letter-spacing: 0.3em; color: var(--ink-faint); text-transform: uppercase; margin-top: 4px; }
+
+  .demo {
+    width: min(720px, 96vw);
+    background: var(--panel);
+    border: 1px solid rgba(0,0,0,0.75); border-radius: 6px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+    padding: 14px 16px 16px;
+  }
+  .demo h2 {
+    margin: 0; font-size: 12px; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+  }
+  .demo .blurb { margin: 6px 0 12px; font-size: 11.5px; line-height: 1.5; color: var(--ink-dim); }
+
+  .transport { display: flex; align-items: center; gap: 10px; }
+  button {
+    font-family: inherit; cursor: pointer;
+    background: var(--well); color: var(--ink-dim);
+    border: 1px solid var(--line); border-radius: 4px;
+  }
+  button:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+  .play {
+    width: 44px; height: 34px;
+    font-size: 13px; color: var(--ink);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .play.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .loop {
+    height: 34px; padding: 0 10px;
+    font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+  }
+  .loop.on { color: var(--accent); border-color: var(--accent); }
+
+  .bar {
+    flex: 1; height: 34px; position: relative; cursor: pointer;
+    background: var(--well); border: 1px solid var(--line); border-radius: 4px;
+    overflow: hidden;
+  }
+  .bar .fill { position: absolute; inset: 0 auto 0 0; width: 0%; background: color-mix(in srgb, var(--accent) 22%, transparent); }
+  .bar .head { position: absolute; top: 0; bottom: 0; left: 0%; width: 2px; background: var(--accent); }
+  .bar .time {
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    font: 500 9px var(--mono); color: var(--ink-faint); pointer-events: none;
+  }
+
+  .variants { display: flex; gap: 0; margin-top: 12px; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; background: var(--well); }
+  .variants button {
+    flex: 1; border: 0; border-radius: 0; padding: 10px 6px;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--ink-faint); background: none;
+  }
+  .variants button + button { border-left: 1px solid var(--line-soft); }
+  .variants button.on { background: var(--accent); color: var(--on-accent); }
+  .variants button:disabled { opacity: 0.4; cursor: default; }
+
+  .status { margin-top: 8px; font: 500 9px var(--mono); color: var(--ink-faint); min-height: 12px; letter-spacing: 0.06em; }
+  .keys { font-size: 9px; color: var(--ink-faint); letter-spacing: 0.08em; }
+  footer { font-size: 9px; color: var(--ink-faint); letter-spacing: 0.14em; text-transform: uppercase; margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="mark">WEREWOLF <span>DYNAMICS</span></div>
+  <div class="sub">audio demos &middot; switch circuits while it plays</div>
+</header>
+<div class="keys">Space = play/pause the last demo you touched &middot; keys 1&ndash;4 switch its variants</div>
+
+<div id="demos"></div>
+
+<footer>all variants play in sample lock &middot; switching is a 12 ms crossfade &middot; nothing else changes</footer>
+
+<script>
+// ===========================================================================
+// Demo definitions. Each demo = one source performance rendered N ways.
+// Every variant should be the SAME length and loudness-staged deliberately;
+// the player starts them all sample-locked and only moves gain.
+// ===========================================================================
+const DEMOS = [
+  {
+    title: 'WD Strip — the shared rail',
+    blurb: 'A whole console channel (73 preamp into the VCA bus comp) sharing one power supply, sample-accurately. Rail solid, then sagging under draw — the compression goes spongy as the supply dips with the music. Diff ×10 is only what the rail is doing.',
+    variants: [
+      { label: 'Rail solid', file: 'audio/strip_sag0.wav' },
+      { label: 'Rail sags',  file: 'audio/strip_sag8.wav' },
+      { label: 'Diff ×10',   file: 'audio/strip_diff.wav' },
+    ],
+  },
+  {
+    title: 'WD Duress — ratio travel',
+    blurb: 'Drums through the curve compressor, loudness-matched. 1:1 is the wire through the circuit; 6:1 is the manual’s universal starting point; Nuke is the party trick.',
+    variants: [
+      { label: '1:1',  file: 'audio/duress_11.wav' },
+      { label: '6:1',  file: 'audio/duress_61.wav' },
+      { label: 'Nuke', file: 'audio/duress_nuke.wav' },
+    ],
+  },
+  {
+    title: 'WD Mu — dying tubes',
+    blurb: 'The same drum squeeze with the bias centered, then at the cold stop: a starving remote-cutoff pair gets cleaner and politer as the compression audibly runs out. Less is the mechanism.',
+    variants: [
+      { label: 'Bias center', file: 'audio/mu_center.wav' },
+      { label: 'Dying tubes', file: 'audio/mu_dying.wav' },
+    ],
+  },
+  {
+    title: 'WD FET — output stage',
+    blurb: 'One guitar, one compressor, three output circuits at the same drive: Class A, Push-Pull, and the Triode furnace. The three laws finally separate on program.',
+    variants: [
+      { label: 'Class A',   file: 'audio/fet_classa.wav' },
+      { label: 'Push-Pull', file: 'audio/fet_pushpull.wav' },
+      { label: 'Triode',    file: 'audio/fet_triode.wav' },
+    ],
+  },
+  {
+    title: 'WD Opto — tube slam',
+    blurb: 'A vocal riding the optical compressor: the calibrated line amp, then THD at the stop — an unmistakably overdriven tube stage riding the same gain reduction.',
+    variants: [
+      { label: 'Calibrated', file: 'audio/opto_honest.wav' },
+      { label: 'Tube slam',  file: 'audio/opto_slam.wav' },
+    ],
+  },
+  {
+    title: 'WD Pre — three circuits',
+    blurb: 'A screamed vocal through three preamp laws at the same gain, loudness-matched: clean digital, the Class A 73, and the all-tube 76.',
+    variants: [
+      { label: 'Precision', file: 'audio/pre_precision.wav' },
+      { label: '73',        file: 'audio/pre_73.wav' },
+      { label: '76',        file: 'audio/pre_76.wav' },
+    ],
+  },
+  {
+    title: 'WDTec — open the loop',
+    blurb: 'The passive EQ with the same curve dialed in, three ways: feedback loop closed (the calibrated line), loop opened (the tubes come through), then DRIVE shoveling coal into the open loop.',
+    variants: [
+      { label: 'Loop closed', file: 'audio/tec_closed.wav' },
+      { label: 'Loop open',   file: 'audio/tec_open.wav' },
+      { label: 'Furnace',     file: 'audio/tec_furnace.wav' },
+    ],
+  },
+  {
+    title: 'WD XQ — the line stage grinds',
+    blurb: 'The Inductor 73 model’s input stage on a metal mix: honest at 25, musical at 50, and the deliberately-too-far stop at 100 — the console stops being polite (and the saturation eats real level; that drop is the physics).',
+    variants: [
+      { label: 'Drive 25',  file: 'audio/xq_25.wav' },
+      { label: 'Drive 50',  file: 'audio/xq_50.wav' },
+      { label: 'Drive 100', file: 'audio/xq_100.wav' },
+    ],
+  },
+  {
+    title: 'WD Tape — warble stop',
+    blurb: 'Sustained keys on the calibrated studio machine, then the portable at 7.5 ips with FLUTTER at the stop — pitch warble well past any real machine’s spec.',
+    variants: [
+      { label: 'Calibrated', file: 'audio/tape_cal.wav' },
+      { label: 'Warble',     file: 'audio/tape_warble.wav' },
+    ],
+  },
+  {
+    title: 'WD VCA — thump box',
+    blurb: 'Deep, fast bus compression so the gain never sits still — then control-voltage feedthrough at ×2. Every gain move thumps; steady GR is silent. The classic cheap-VCA giveaway.',
+    variants: [
+      { label: 'Calibrated', file: 'audio/vca_deep.wav' },
+      { label: 'Thump ×2',   file: 'audio/vca_thump.wav' },
+    ],
+  },
+  {
+    title: 'WD AX — air and girth',
+    blurb: 'A vocal with the exciter parked, then the default air injection, then BIG BOTTOM girth — sustain and weight without raising the peaks (the added band sums in quadrature).',
+    variants: [
+      { label: 'Parked', file: 'audio/ax_parked.wav' },
+      { label: 'Air',    file: 'audio/ax_air.wav' },
+      { label: 'Girth',  file: 'audio/ax_girth.wav' },
+    ],
+  },
+];
+
+// ===========================================================================
+// Player: one AudioContext; per demo, all variants decoded up front, all
+// sources started at the same context time, one gain open at a time.
+// ===========================================================================
+const FADE = 0.012; // seconds; short enough to feel instant, long enough not to click
+let ctx = null;
+let lastTouched = null;
+
+function fmt (s) {
+  s = Math.max(0, s);
+  return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+}
+
+class Demo {
+  constructor (def, root) {
+    this.def = def;
+    this.buffers = null;   // decoded AudioBuffers
+    this.sources = null;   // live AudioBufferSourceNodes (playing only)
+    this.gains = null;
+    this.active = 0;
+    this.playing = false;
+    this.loop = true;
+    this.startCtxTime = 0; // ctx.currentTime at (re)start
+    this.startOffset = 0;  // seconds into the material at (re)start
+    this.duration = 0;
+    this.build(root);
+  }
+
+  build (root) {
+    const el = document.createElement('section');
+    el.className = 'demo';
+    el.innerHTML = `
+      <h2></h2><p class="blurb"></p>
+      <div class="transport">
+        <button class="play" title="Play / pause">&#9654;</button>
+        <button class="loop on" title="Loop">LOOP</button>
+        <div class="bar"><div class="fill"></div><div class="head"></div><div class="time">0:00</div></div>
+      </div>
+      <div class="variants"></div>
+      <div class="status"></div>`;
+    el.querySelector('h2').textContent = this.def.title;
+    el.querySelector('.blurb').textContent = this.def.blurb ?? '';
+    this.el = el;
+    this.playBtn = el.querySelector('.play');
+    this.loopBtn = el.querySelector('.loop');
+    this.barEl = el.querySelector('.bar');
+    this.fillEl = el.querySelector('.fill');
+    this.headEl = el.querySelector('.head');
+    this.timeEl = el.querySelector('.time');
+    this.statusEl = el.querySelector('.status');
+
+    const vwrap = el.querySelector('.variants');
+    this.vbtns = this.def.variants.map((v, i) => {
+      const b = document.createElement('button');
+      b.textContent = v.label;
+      b.addEventListener('click', () => { lastTouched = this; this.switchTo(i); });
+      vwrap.appendChild(b);
+      return b;
+    });
+    this.vbtns[0].classList.add('on');
+
+    this.playBtn.addEventListener('click', () => { lastTouched = this; this.toggle(); });
+    this.loopBtn.addEventListener('click', () => {
+      lastTouched = this;
+      this.loop = !this.loop;
+      this.loopBtn.classList.toggle('on', this.loop);
+      if (this.sources) this.sources.forEach(s => { s.loop = this.loop; });
+    });
+    this.barEl.addEventListener('pointerdown', e => {
+      lastTouched = this;
+      if (!this.duration) return;
+      const r = this.barEl.getBoundingClientRect();
+      this.seek((e.clientX - r.left) / r.width * this.duration);
+    });
+    root.appendChild(el);
+  }
+
+  status (t) { this.statusEl.textContent = t; }
+
+  async load () {
+    if (this.buffers) return true;
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    this.status('loading…');
+    try {
+      const raw = await Promise.all(this.def.variants.map(v =>
+        fetch(v.file).then(r => {
+          if (!r.ok) throw new Error(`${v.file}: HTTP ${r.status}`);
+          return r.arrayBuffer();
+        })));
+      this.buffers = await Promise.all(raw.map(a => ctx.decodeAudioData(a)));
+      this.duration = Math.max(...this.buffers.map(b => b.duration));
+      const secs = this.buffers.map(b => b.duration.toFixed(2));
+      if (new Set(secs).size > 1)
+        this.status(`note: variant lengths differ (${secs.join(' / ')} s)`);
+      else this.status('');
+      return true;
+    } catch (err) {
+      this.status(`could not load audio — ${err.message}`);
+      this.buffers = null;
+      return false;
+    }
+  }
+
+  spinUp (offset) {
+    // (Re)create one source per variant, all started at the same time.
+    this.tearDown();
+    const t0 = ctx.currentTime + 0.03;
+    this.gains = this.buffers.map((_, i) => {
+      const g = ctx.createGain();
+      g.gain.value = i === this.active ? 1 : 0;
+      g.connect(ctx.destination);
+      return g;
+    });
+    this.sources = this.buffers.map((buf, i) => {
+      const s = ctx.createBufferSource();
+      s.buffer = buf;
+      s.loop = this.loop;
+      s.connect(this.gains[i]);
+      s.start(t0, offset % buf.duration);
+      return s;
+    });
+    this.sources[0].onended = () => { if (!this.loop) this.stopUi(); };
+    this.startCtxTime = t0;
+    this.startOffset = offset;
+  }
+
+  tearDown () {
+    if (this.sources) this.sources.forEach(s => { s.onended = null; try { s.stop(); } catch (_) {} });
+    if (this.gains) this.gains.forEach(g => g.disconnect());
+    this.sources = this.gains = null;
+  }
+
+  position () {
+    if (!this.playing) return this.startOffset;
+    const p = this.startOffset + Math.max(0, ctx.currentTime - this.startCtxTime);
+    return this.loop ? p % this.duration : Math.min(p, this.duration);
+  }
+
+  async toggle () {
+    if (this.playing) { this.pause(); return; }
+    if (!(await this.load())) return;
+    if (ctx.state === 'suspended') await ctx.resume();
+    this.spinUp(this.startOffset >= this.duration ? 0 : this.startOffset);
+    this.playing = true;
+    this.playBtn.classList.add('on');
+    this.playBtn.innerHTML = '&#10073;&#10073;';
+    this.tick();
+  }
+
+  pause () {
+    this.startOffset = this.position();
+    this.tearDown();
+    this.stopUi();
+  }
+
+  stopUi () {
+    this.playing = false;
+    this.playBtn.classList.remove('on');
+    this.playBtn.innerHTML = '&#9654;';
+  }
+
+  seek (to) {
+    to = Math.max(0, Math.min(this.duration || 0, to));
+    this.startOffset = to;
+    if (this.playing) this.spinUp(to);
+    this.draw();
+  }
+
+  switchTo (i) {
+    if (i === this.active || i >= this.def.variants.length) return;
+    const prev = this.active;
+    this.active = i;
+    this.vbtns.forEach((b, k) => b.classList.toggle('on', k === i));
+    if (this.gains) {
+      // Equal-time linear crossfade: the material is identical and in phase,
+      // so a short linear fade is artifact-free.
+      const t = ctx.currentTime;
+      const a = this.gains[prev].gain, b = this.gains[i].gain;
+      a.cancelScheduledValues(t); b.cancelScheduledValues(t);
+      a.setValueAtTime(a.value, t); b.setValueAtTime(b.value, t);
+      a.linearRampToValueAtTime(0, t + FADE);
+      b.linearRampToValueAtTime(1, t + FADE);
+    }
+  }
+
+  draw () {
+    const p = this.position(), d = this.duration || 1;
+    const pct = Math.min(100, p / d * 100);
+    this.fillEl.style.width = pct + '%';
+    this.headEl.style.left = pct + '%';
+    this.timeEl.textContent = `${fmt(p)} / ${fmt(this.duration)}`;
+  }
+
+  tick () {
+    if (!this.playing) { this.draw(); return; }
+    this.draw();
+    requestAnimationFrame(() => this.tick());
+  }
+}
+
+const rootEl = document.getElementById('demos');
+const demos = DEMOS.map(d => new Demo(d, rootEl));
+if (demos.length) lastTouched = demos[0];
+
+addEventListener('keydown', e => {
+  if (!lastTouched || e.repeat) return;
+  if (e.code === 'Space') { e.preventDefault(); lastTouched.toggle(); return; }
+  const m = /^Digit([1-4])$/.exec(e.code);
+  if (m) lastTouched.switchTo(Number(m[1]) - 1);
+});
+</script>
+</body>
+</html>
