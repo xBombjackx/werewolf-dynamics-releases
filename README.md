@@ -126,9 +126,20 @@ of its own. Skip it entirely and every module runs clean standalone.
 compressor, a model selector on each stage. Any of the five Pre laws, either
 EQ, any of the four compressors. All three stages hang off one power rail
 inside the same process, so the compressor's knee moves when the preamp
-leans on the supply. No rack required.
+leans on the supply. The response curve and compressor transfer on the face
+are measured live from the running engines, not drawn. No rack required.
 
 <img src="img/wd-strip.png" width="820" alt="WD Strip channel strip">
+
+**WD Delta** — a send/return pair that lets you hear what your whole chain
+is doing: any plugins, anyone's. SEND taps the untouched signal at the top,
+RETURN sits at the end, measures the chain's real latency by correlation,
+and monitors the difference — raw, or level-matched so louder never reads
+as different. A DRY mode gives you instant whole-chain bypass with no PDC
+hiccup, and WET MATCHED plays the chain loudness-matched to its input: the
+honest way to A/B your own processing.
+
+<img src="img/wd-delta-send.png" width="220" alt="WD Delta Send faceplate"> <img src="img/wd-delta-return.png" width="220" alt="WD Delta Return faceplate">
 
 ## Requirements
 
