@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Werewolf Dynamics — WD Duress, Live</title>
+<style>
+  /* M14 flat language, same tokens as demo/player and index.html. */
+  :root {
+    --room: #0B0C0E; --panel: #17181B; --chassis: #121316; --well: #101114;
+    --ink: #E8E6E1; --ink-dim: #8B8D93; --ink-faint: #55575D;
+    --line: #2A2C31; --line-soft: #222428;
+    --accent: #F2A93C; --accent-hi: #F7BC62; --on-accent: #131313;
+    --sans: "Segoe UI", system-ui, sans-serif;
+    --mono: "Cascadia Mono", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; padding: 40px 16px;
+    background: var(--room); color: var(--ink);
+    font-family: var(--sans);
+    display: flex; flex-direction: column; align-items: center; gap: 18px;
+  }
+  header { text-align: center; margin-bottom: 6px; }
+  header .mark { font-size: 22px; font-weight: 800; letter-spacing: 0.16em; }
+  header .mark span { color: var(--accent); }
+  header .sub { font-size: 9px; letter-spacing: 0.3em; color: var(--ink-faint); text-transform: uppercase; margin-top: 4px; }
+
+  .demo {
+    width: min(720px, 96vw);
+    background: var(--panel);
+    border: 1px solid rgba(0,0,0,0.75); border-radius: 6px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+    padding: 14px 16px 16px;
+  }
+  .demo h2 { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; }
+  .demo .blurb { margin: 6px 0 12px; font-size: 11.5px; line-height: 1.5; color: var(--ink-dim); }
+
+  .transport { display: flex; align-items: center; gap: 10px; }
+  button {
+    font-family: inherit; cursor: pointer;
+    background: var(--well); color: var(--ink-dim);
+    border: 1px solid var(--line); border-radius: 4px;
+  }
+  button:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+  .play { width: 44px; height: 34px; font-size: 13px; color: var(--ink); display: flex; align-items: center; justify-content: center; }
+  .play.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .loop { height: 34px; padding: 0 10px; font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; }
+  .loop.on { color: var(--accent); border-color: var(--accent); }
+
+  .bar { flex: 1; height: 34px; position: relative; cursor: pointer; background: var(--well); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+  .bar .fill { position: absolute; inset: 0 auto 0 0; width: 0%; background: color-mix(in srgb, var(--accent) 22%, transparent); }
+  .bar .head { position: absolute; top: 0; bottom: 0; left: 0%; width: 2px; background: var(--accent); }
+  .bar .time { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font: 500 9px var(--mono); color: var(--ink-faint); pointer-events: none; }
+
+  .vol { display: flex; align-items: center; gap: 6px; }
+  .vol label { font-size: 8.5px; font-weight: 700; letter-spacing: 0.12em; color: var(--ink-faint); text-transform: uppercase; }
+  .vol input { width: 74px; accent-color: var(--accent); }
+
+  .stems { display: flex; gap: 0; margin-top: 12px; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; background: var(--well); }
+  .stems button { flex: 1; border: 0; border-radius: 0; padding: 10px 6px; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faint); background: none; }
+  .stems button + button { border-left: 1px solid var(--line-soft); }
+  .stems button.on { background: var(--accent); color: var(--on-accent); }
+
+  .ratios { display: flex; gap: 0; margin-top: 12px; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; background: var(--well); }
+  .ratios button { flex: 1; border: 0; border-radius: 0; padding: 9px 2px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-faint); background: none; }
+  .ratios button + button { border-left: 1px solid var(--line-soft); }
+  .ratios button.on { background: var(--accent); color: var(--on-accent); }
+
+  .rack {
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 8px;
+    margin-top: 14px; padding: 12px 10px 10px;
+    background: var(--chassis); border: 1px solid var(--line); border-radius: 5px;
+    flex-wrap: wrap;
+  }
+  .knob { display: flex; flex-direction: column; align-items: center; gap: 4px; user-select: none; }
+  .knob canvas { cursor: ns-resize; touch-action: none; }
+  .knob .kname { font-size: 8.5px; font-weight: 700; letter-spacing: 0.14em; color: var(--ink-dim); text-transform: uppercase; }
+  .knob .kval { font: 500 9px var(--mono); color: var(--ink-faint); min-height: 11px; }
+
+  .switches { display: flex; flex-direction: column; gap: 6px; }
+  .switches button { padding: 7px 10px; font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; min-width: 92px; }
+  .switches button.on { color: var(--accent); border-color: var(--accent); }
+  .switches button.power.on { background: var(--accent); color: var(--on-accent); }
+
+  .meterrow { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+  .meter { flex: 1; height: 26px; position: relative; background: var(--well); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+  .meter .grfill { position: absolute; inset: 0 auto 0 0; width: 0%; background: color-mix(in srgb, var(--accent) 30%, transparent); }
+  .meter .scale { position: absolute; inset: 0; display: flex; justify-content: space-between; padding: 0 6px; align-items: center; font: 500 8px var(--mono); color: var(--ink-faint); pointer-events: none; }
+  .readout { font: 500 10px var(--mono); color: var(--ink-dim); min-width: 190px; text-align: right; }
+
+  .presets { display: flex; gap: 6px; margin-top: 12px; }
+  .presets button { padding: 7px 12px; font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+  .presets button.on { color: var(--accent); border-color: var(--accent); }
+
+  .status { margin-top: 8px; font: 500 9px var(--mono); color: var(--ink-faint); min-height: 12px; letter-spacing: 0.06em; }
+  .keys { font-size: 9px; color: var(--ink-faint); letter-spacing: 0.08em; }
+  footer { font-size: 9px; color: var(--ink-faint); letter-spacing: 0.14em; text-transform: uppercase; margin-top: 8px; }
+  a { color: var(--ink-dim); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="mark">WEREWOLF <span>DYNAMICS</span></div>
+  <div class="sub">wd duress &middot; running live in your browser</div>
+</header>
+<div class="keys">Space = play/pause &middot; drag &amp; drop your own clip anywhere &middot; this is the real engine compiled to WebAssembly, not a recording</div>
+
+<section class="demo">
+  <h2>WD Duress — live</h2>
+  <p class="blurb">
+    The curve-family compressor — eight engineered curves, British Mode, the
+    summing link, residual color generators, oversampled like the plugin —
+    compiled to WebAssembly and processing the stem while you listen.
+    Autogain matches loudness to bypass, so POWER is an honest A/B. INPUT is
+    the compression control: it drives program into each curve's fixed
+    threshold. Start at 6:1 like the manual says, then hit Nuke — or drop in
+    your own vocal; it stays on your machine, nothing is uploaded.
+  </p>
+
+  <div class="transport">
+    <button class="play" id="play" title="Play / pause">&#9654;</button>
+    <button class="loop on" id="loop" title="Loop">LOOP</button>
+    <div class="bar" id="bar"><div class="fill"></div><div class="head"></div><div class="time">0:00</div></div>
+    <div class="vol"><label for="vol">Vol</label><input id="vol" type="range" min="0" max="100" value="60"></div>
+  </div>
+
+  <div class="stems" id="stems"></div>
+
+  <div class="ratios" id="ratios"></div>
+
+  <div class="rack" id="rack">
+    <!-- knobs injected here -->
+    <div class="switches">
+      <button id="brit">BRIT</button>
+      <button id="audiomode">CLEAN</button>
+      <button id="detmode">DET FLAT</button>
+      <button id="power" class="power on">POWER</button>
+    </div>
+  </div>
+
+  <div class="meterrow">
+    <div class="meter"><div class="grfill" id="grfill"></div>
+      <div class="scale"><span>GR 0</span><span>-5</span><span>-10</span><span>-15</span><span>-20 dB</span></div>
+    </div>
+    <div class="readout" id="readout">GR 0.0 dB &middot; AG +0.0 dB</div>
+  </div>
+
+  <div class="presets">
+    <button id="p11" title="The published duress_11 staging: the circuit doing nothing">1:1</button>
+    <button id="p61" class="on" title="The published duress_61 staging: where the manual says to start">6:1</button>
+    <button id="pnuke" title="The published duress_nuke staging: the last detent">NUKE</button>
+  </div>
+
+  <div class="status" id="status">loading engine&hellip;</div>
+</section>
+
+<footer>same dsp core as the plugin &middot; parity-gated against the native build every release</footer>
+
+<script>
+// ===========================================================================
+// Parameter ids — must match demo/live/wasm/DuressWasm.cpp's Param enum.
+// Values are natural units.
+// ===========================================================================
+const P = { input: 0, output: 1, ratio: 2, brit: 3, attack: 4, release: 5,
+            audiomode: 6, audiohp: 7, detmode: 8, link: 9, imagelink: 10,
+            sclisten: 11, mix: 12, coloron: 13, dist: 14, cal: 15,
+            autogain: 16, power: 17, unit: 18, pair: 19, denorm: 20 };
+
+// Recipe staging (demo/tools/renderdemos.ps1, duress_61): ratio 6:1,
+// input +8, Match Bypass, output -6 (high-crest OH kit headroom).
+const DEFAULTS = { [P.input]: 8, [P.output]: -6, [P.ratio]: 4,
+                   [P.attack]: 5, [P.release]: 5,
+                   [P.autogain]: 2, [P.power]: 1 };
+
+const STEMS = [
+  { label: 'Drums', file: '../audio/duress_11.wav' },
+];
+
+const RATIOS = ['1:1', '2:1', '3:1', '4:1', '6:1', '10:1', '20:1', 'NUKE'];
+
+const KNOBS = [
+  { id: P.input,   name: 'Input',   min: -24, max: 24, def: 8,  fmt: v => (v >= 0 ? '+' : '') + v.toFixed(1) + ' dB' },
+  { id: P.attack,  name: 'Attack',  min: 0,   max: 10, def: 5,  fmt: v => v.toFixed(1) },
+  { id: P.release, name: 'Release', min: 0,   max: 10, def: 5,  fmt: v => v.toFixed(1) },
+  { id: P.output,  name: 'Output',  min: -24, max: 24, def: -6, fmt: v => (v >= 0 ? '+' : '') + v.toFixed(1) + ' dB' },
+];
+
+const statusEl = document.getElementById('status');
+// ?smoke — headless release check (demo/live/README.md), same contract as
+// the opto page.
+const SMOKE = new URLSearchParams(location.search).has('smoke');
+const smokeStamp = () => {
+  if (SMOKE)
+    document.title = `SMOKE ${playing ? 'PLAYING' : 'STOPPED'}`
+      + ` | ctx ${ctx ? ctx.state : 'none'}`
+      + ` | ${document.getElementById('readout').textContent}`
+      + ` | ${statusEl.textContent || 'no errors'}`;
+};
+const status = t => { statusEl.textContent = t; smokeStamp(); };
+
+// ===========================================================================
+// Canvas knob — identical to index.html's.
+// ===========================================================================
+class Knob {
+  constructor (spec, parent, onChange) {
+    this.spec = spec;
+    this.value = spec.def;
+    this.onChange = onChange;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'knob';
+    this.cv = document.createElement('canvas');
+    const dpr = devicePixelRatio || 1;
+    this.px = 56;
+    this.cv.width = this.cv.height = this.px * dpr;
+    this.cv.style.width = this.cv.style.height = this.px + 'px';
+    this.cv.getContext('2d').scale(dpr, dpr);
+    const name = document.createElement('div');
+    name.className = 'kname';
+    name.textContent = spec.name;
+    this.val = document.createElement('div');
+    this.val.className = 'kval';
+    wrap.append(this.cv, name, this.val);
+    parent.appendChild(wrap);
+
+    this.cv.addEventListener('pointerdown', e => {
+      this.cv.setPointerCapture(e.pointerId);
+      this.dragY = e.clientY;
+      this.dragV = this.value;
+    });
+    this.cv.addEventListener('pointermove', e => {
+      if (this.dragY === undefined) return;
+      const range = this.spec.max - this.spec.min;
+      const scale = (e.shiftKey ? 600 : 150); // px for full travel
+      this.set(this.dragV + (this.dragY - e.clientY) / scale * range);
+    });
+    this.cv.addEventListener('pointerup', () => { this.dragY = undefined; });
+    this.cv.addEventListener('dblclick', () => this.set(this.spec.def));
+    this.draw();
+  }
+
+  set (v, silent) {
+    this.value = Math.min(this.spec.max, Math.max(this.spec.min, v));
+    this.draw();
+    if (!silent) this.onChange(this.spec.id, this.value);
+  }
+
+  draw () {
+    const g = this.cv.getContext('2d');
+    const c = this.px / 2, r = c - 5;
+    const a0 = Math.PI * 0.75, a1 = Math.PI * 2.25;
+    const t = (this.value - this.spec.min) / (this.spec.max - this.spec.min);
+    const av = a0 + t * (a1 - a0);
+    g.clearRect(0, 0, this.px, this.px);
+    g.beginPath(); g.arc(c, c, r, 0, Math.PI * 2);
+    g.fillStyle = '#101114'; g.fill();
+    g.strokeStyle = '#2A2C31'; g.lineWidth = 1; g.stroke();
+    g.lineWidth = 3; g.lineCap = 'butt';
+    g.beginPath(); g.arc(c, c, r - 3.5, a0, a1);
+    g.strokeStyle = '#222428'; g.stroke();
+    g.beginPath(); g.arc(c, c, r - 3.5, a0, av);
+    g.strokeStyle = '#F2A93C'; g.stroke();
+    g.beginPath();
+    g.moveTo(c + Math.cos(av) * (r - 14), c + Math.sin(av) * (r - 14));
+    g.lineTo(c + Math.cos(av) * (r - 6), c + Math.sin(av) * (r - 6));
+    g.strokeStyle = '#E8E6E1'; g.lineWidth = 2; g.lineCap = 'round'; g.stroke();
+    this.val.textContent = this.spec.fmt(this.value);
+  }
+}
+
+// ===========================================================================
+// Engine: stem source -> wd-live worklet -> master volume -> destination.
+// The master gain starts at zero and ramps up on every start (and follows
+// the VOL slider with a perceptual square-law), so nothing ever slams out.
+// ===========================================================================
+let ctx = null, node = null, master = null, wasmModule = null, wasmBytes = null;
+let source = null, playing = false, loop = true;
+let startCtxTime = 0, startOffset = 0, duration = 0;
+let buffers = {};
+let activeStem = 0;
+const params = { ...DEFAULTS };
+
+const volEl = document.getElementById('vol');
+const volGain = () => Math.pow(volEl.valueAsNumber / 100, 2);
+volEl.addEventListener('input', () => {
+  if (master) master.gain.setTargetAtTime(volGain(), ctx.currentTime, 0.02);
+});
+
+async function ensureEngine () {
+  if (node) return true;
+  try {
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    status('fetching engine…');
+    const resp = await fetch('wd-duress.wasm');
+    if (!resp.ok) throw new Error(`wd-duress.wasm: HTTP ${resp.status} — run demo/tools/buildwasm.ps1`);
+    wasmBytes = await resp.arrayBuffer();
+    status('compiling…');
+    wasmModule = await WebAssembly.compile(wasmBytes);
+    status('starting worklet…');
+    await ctx.audioWorklet.addModule('wd-worklet.js');
+    node = await makeNode();
+    master = ctx.createGain();
+    master.gain.value = 0;
+    node.connect(master);
+    master.connect(ctx.destination);
+    status('');
+    return true;
+  } catch (err) {
+    status(`engine failed — ${err.message}`);
+    node = null;
+    return false;
+  }
+}
+
+function makeNode () {
+  return new Promise((resolve, reject) => {
+    let n;
+    try {
+      n = new AudioWorkletNode(ctx, 'wd-live', {
+        numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2],
+        processorOptions: { module: wasmModule },
+      });
+    } catch (_) {
+      n = new AudioWorkletNode(ctx, 'wd-live', {
+        numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2],
+        processorOptions: { bytes: wasmBytes },
+      });
+    }
+    const timer = setTimeout(() => reject(new Error('engine start timed out')), 4000);
+    n.port.onmessage = (e) => {
+      const m = e.data;
+      if (m.t === 'ready') {
+        clearTimeout(timer);
+        for (const [id, v] of Object.entries(params)) n.port.postMessage({ t: 'p', id: +id, v });
+        onMeters(m);
+        resolve(n);
+      } else if (m.t === 'error') {
+        clearTimeout(timer);
+        reject(new Error(m.message));
+      } else if (m.t === 'meters') onMeters(m);
+    };
+  });
+}
+
+function setParam (id, v) {
+  params[id] = v;
+  if (node) node.port.postMessage({ t: 'p', id, v });
+  syncPresetLights();
+}
+
+// ---- meters -------------------------------------------------------------
+// wd-worklet is module-agnostic: its message names carry wd_meter(0..4);
+// for Duress that is 0=GR, 1=AG, 2=cell, 3=dist (THD), 4=det.
+const grfill = document.getElementById('grfill');
+const readout = document.getElementById('readout');
+function onMeters (m) {
+  const gr = Math.max(0, m.gr ?? 0);
+  grfill.style.width = Math.min(100, gr / 20 * 100) + '%';
+  const ag = m.ag ?? 0;
+  readout.innerHTML = `GR ${gr.toFixed(1)} dB &middot; AG ${ag >= 0 ? '+' : ''}${ag.toFixed(1)} dB`;
+  smokeStamp();
+}
+
+// ---- transport (adapted from index.html) ---------------------------------
+const playBtn = document.getElementById('play');
+const loopBtn = document.getElementById('loop');
+const barEl = document.getElementById('bar');
+const fillEl = barEl.querySelector('.fill');
+const headEl = barEl.querySelector('.head');
+const timeEl = barEl.querySelector('.time');
+
+const fmt = s => { s = Math.max(0, s); return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`; };
+
+async function loadStem (i) {
+  const stem = STEMS[i];
+  if (buffers[i]) return buffers[i];
+  if (stem.buffer) return (buffers[i] = stem.buffer);
+  status('loading stem…');
+  const r = await fetch(stem.file);
+  if (!r.ok) throw new Error(`${stem.file}: HTTP ${r.status} — the demo stems are local-only (demo/src is not in git)`);
+  buffers[i] = await ctx.decodeAudioData(await r.arrayBuffer());
+  status('');
+  return buffers[i];
+}
+
+function spinUp (offset) {
+  tearDown();
+  const buf = buffers[activeStem];
+  duration = buf.duration;
+  source = ctx.createBufferSource();
+  source.buffer = buf;
+  source.loop = loop;
+  source.connect(node);
+  const t0 = ctx.currentTime + 0.03;
+  source.start(t0, offset % buf.duration);
+  source.onended = () => { if (!loop) stopUi(); };
+  startCtxTime = t0;
+  startOffset = offset;
+  // Soft start: 300 ms ramp to the slider's level.
+  master.gain.cancelScheduledValues(t0);
+  master.gain.setValueAtTime(0, t0);
+  master.gain.linearRampToValueAtTime(volGain(), t0 + 0.3);
+}
+
+function tearDown () {
+  if (source) { source.onended = null; try { source.stop(); } catch (_) {} source.disconnect(); }
+  source = null;
+}
+
+function position () {
+  if (!playing) return startOffset;
+  const p = startOffset + Math.max(0, ctx.currentTime - startCtxTime);
+  return loop ? p % (duration || 1) : Math.min(p, duration);
+}
+
+async function toggle () {
+  if (playing) { pause(); return; }
+  if (!(await ensureEngine())) return;
+  try { await loadStem(activeStem); } catch (err) { status(err.message); return; }
+  if (ctx.state === 'suspended') await ctx.resume();
+  spinUp(startOffset >= (duration || Infinity) ? 0 : startOffset);
+  playing = true;
+  playBtn.classList.add('on');
+  playBtn.innerHTML = '&#10073;&#10073;';
+  tick();
+}
+
+function pause () {
+  startOffset = position();
+  tearDown();
+  stopUi();
+}
+
+function stopUi () {
+  playing = false;
+  playBtn.classList.remove('on');
+  playBtn.innerHTML = '&#9654;';
+}
+
+function draw () {
+  const p = position(), d = duration || 1;
+  const pct = Math.min(100, p / d * 100);
+  fillEl.style.width = pct + '%';
+  headEl.style.left = pct + '%';
+  timeEl.textContent = `${fmt(p)} / ${fmt(duration)}`;
+}
+
+function tick () { if (!playing) { draw(); return; } draw(); requestAnimationFrame(tick); }
+
+playBtn.addEventListener('click', toggle);
+loopBtn.addEventListener('click', () => {
+  loop = !loop;
+  loopBtn.classList.toggle('on', loop);
+  if (source) source.loop = loop;
+});
+barEl.addEventListener('pointerdown', e => {
+  if (!duration) return;
+  const r = barEl.getBoundingClientRect();
+  const to = Math.max(0, Math.min(duration, (e.clientX - r.left) / r.width * duration));
+  startOffset = to;
+  if (playing) spinUp(to);
+  draw();
+});
+addEventListener('keydown', e => {
+  if (e.repeat) return;
+  if (e.code === 'Space' && e.target.tagName !== 'BUTTON') { e.preventDefault(); toggle(); }
+});
+
+// ---- stems (built-in cuts + the visitor's own clips) ---------------------
+// User clips are decoded and played entirely in the browser: the file is
+// never uploaded anywhere.
+const stemsEl = document.getElementById('stems');
+const stemBtns = [];
+
+function syncStemLights () {
+  stemBtns.forEach((x, k) => x.classList.toggle('on', k === activeStem));
+}
+
+async function selectStem (i) {
+  if (i === activeStem) return;
+  activeStem = i;
+  syncStemLights();
+  if (playing) {
+    try { await loadStem(i); } catch (err) { status(err.message); return; }
+    startOffset = 0;
+    spinUp(0);
+  }
+}
+
+function addStemButton (stem, i) {
+  const b = document.createElement('button');
+  b.textContent = stem.label;
+  b.addEventListener('click', () => selectStem(i));
+  stemsEl.insertBefore(b, fileBtn);
+  stemBtns[i] = b;
+  return b;
+}
+
+const fileInput = document.createElement('input');
+fileInput.type = 'file';
+fileInput.accept = 'audio/*';
+fileInput.style.display = 'none';
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) loadUserClip(fileInput.files[0]);
+  fileInput.value = '';
+});
+const fileBtn = document.createElement('button');
+fileBtn.innerHTML = 'YOUR CLIP&hellip;';
+fileBtn.title = 'Load your own audio — decoded and processed locally, never uploaded';
+fileBtn.addEventListener('click', () => fileInput.click());
+stemsEl.append(fileBtn, fileInput);
+
+STEMS.forEach(addStemButton);
+
+async function loadUserClip (file) {
+  if (!(await ensureEngine())) return;
+  status(`decoding ${file.name}…`);
+  let decoded;
+  try {
+    decoded = await ctx.decodeAudioData(await file.arrayBuffer());
+  } catch (_) {
+    status(`could not decode "${file.name}"`);
+    return;
+  }
+  const label = (file.name.replace(/\.[^.]+$/, '') || 'your clip').slice(0, 18);
+  const i = STEMS.push({ label, buffer: decoded }) - 1;
+  addStemButton(STEMS[i], i);
+  status(`${file.name} · ${decoded.duration.toFixed(1)}s · local only`);
+  activeStem = i;
+  syncStemLights();
+  startOffset = 0;
+  if (playing) spinUp(0);
+}
+
+addEventListener('dragover', e => e.preventDefault());
+addEventListener('drop', e => {
+  e.preventDefault();
+  const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f) loadUserClip(f);
+});
+
+activeStem = 0;
+syncStemLights();
+
+// ---- ratio row -----------------------------------------------------------
+const ratiosEl = document.getElementById('ratios');
+const ratioBtns = RATIOS.map((label, i) => {
+  const b = document.createElement('button');
+  b.textContent = label;
+  b.addEventListener('click', () => setRatio(i));
+  ratiosEl.appendChild(b);
+  return b;
+});
+function setRatio (i) {
+  setParam(P.ratio, i);
+  ratioBtns.forEach((x, k) => x.classList.toggle('on', k === i));
+}
+ratioBtns[DEFAULTS[P.ratio]].classList.add('on');
+
+// ---- knobs + switches ------------------------------------------------------
+const rack = document.getElementById('rack');
+const switches = rack.querySelector('.switches');
+const knobs = KNOBS.map(spec => {
+  const k = new Knob(spec, rack, setParam);
+  rack.insertBefore(rack.lastElementChild, switches); // keep switches last
+  return k;
+});
+
+const britBtn = document.getElementById('brit');
+britBtn.addEventListener('click', () => {
+  const on = params[P.brit] < 0.5;
+  setParam(P.brit, on ? 1 : 0);
+  britBtn.classList.toggle('on', on);
+});
+
+const AUDIO_MODES = ['CLEAN', 'DIST 2', 'DIST 3'];
+const audioModeBtn = document.getElementById('audiomode');
+audioModeBtn.addEventListener('click', () => {
+  const next = ((params[P.audiomode] ?? 0) + 1) % 3;
+  setParam(P.audiomode, next);
+  audioModeBtn.textContent = AUDIO_MODES[next];
+  audioModeBtn.classList.toggle('on', next > 0);
+});
+
+const DET_MODES = ['DET FLAT', 'DET HP', 'DET BAND', 'DET HP+BD'];
+const detModeBtn = document.getElementById('detmode');
+detModeBtn.addEventListener('click', () => {
+  const next = ((params[P.detmode] ?? 0) + 1) % 4;
+  setParam(P.detmode, next);
+  detModeBtn.textContent = DET_MODES[next];
+  detModeBtn.classList.toggle('on', next > 0);
+});
+
+const powerBtn = document.getElementById('power');
+powerBtn.addEventListener('click', () => {
+  const on = params[P.power] < 0.5;
+  setParam(P.power, on ? 1 : 0);
+  powerBtn.classList.toggle('on', on);
+});
+
+// ---- presets (the published demo stagings) --------------------------------
+const p11Btn = document.getElementById('p11');
+const p61Btn = document.getElementById('p61');
+const pnukeBtn = document.getElementById('pnuke');
+function applyPreset (ratio, input) {
+  setRatio(ratio);
+  knobs[0].set(input); // input (fires setParam)
+  knobs[3].set(-6);    // output
+  syncPresetLights();
+}
+p11Btn.addEventListener('click', () => applyPreset(0, 0));
+p61Btn.addEventListener('click', () => applyPreset(4, 8));
+pnukeBtn.addEventListener('click', () => applyPreset(7, 15));
+function syncPresetLights () {
+  const at = (r, inp) => Math.round(params[P.ratio]) === r
+    && Math.round(params[P.input] ?? 0) === inp;
+  p11Btn.classList.toggle('on', at(0, 0));
+  p61Btn.classList.toggle('on', at(4, 8));
+  pnukeBtn.classList.toggle('on', at(7, 15));
+}
+
+status('press play — the engine compiles on first start');
+
+if (SMOKE) toggle();
+</script>
+</body>
+</html>

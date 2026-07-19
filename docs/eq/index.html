@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Werewolf Digital EQ</title>
+<style>
+  :root {
+    --bg0: #0b0d12;
+    --bg1: #10131a;
+    --panel: #141821;
+    --line: #232a36;
+    --text: #d5dce8;
+    --dim: #6d7789;
+    --faint: #454e5e;
+    --accent: #6fd3ff;
+    --accent-soft: rgba(111, 211, 255, 0.14);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    background: linear-gradient(180deg, var(--bg1), var(--bg0));
+    color: var(--text);
+    font: 12px/1.45 "Segoe UI", system-ui, sans-serif;
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* ---------- header ---------- */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 14px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+    flex: 0 0 auto;
+  }
+  .brand { display: flex; align-items: center; gap: 9px; margin-right: 6px; }
+  .brand svg { display: block; }
+  .brand .name { font-weight: 600; letter-spacing: 0.18em; font-size: 13px; }
+  .brand .name em { font-style: normal; color: var(--accent); }
+  .headsep { width: 1px; height: 20px; background: var(--line); }
+  .hgroup { display: flex; align-items: center; gap: 6px; }
+  .hgroup label { color: var(--dim); font-size: 10px; letter-spacing: 0.1em; }
+  select {
+    background: var(--bg0);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 3px 6px;
+    font: inherit;
+    font-size: 11px;
+    outline: none;
+  }
+  button.tgl {
+    background: none;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    color: var(--dim);
+    padding: 4px 11px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+  }
+  button.tgl:hover { border-color: var(--faint); color: var(--text); }
+  button.tgl.on { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+  button.tgl.warn.on { color: #ffb36b; border-color: #ffb36b; background: rgba(255,179,107,0.12); }
+  .spacer { flex: 1; }
+  .meters { display: flex; align-items: center; gap: 8px; }
+  .meterbar {
+    width: 54px; height: 6px; border-radius: 3px;
+    background: var(--bg0); border: 1px solid var(--line);
+    overflow: hidden; position: relative;
+  }
+  .meterbar i {
+    position: absolute; inset: 0; transform-origin: left;
+    background: linear-gradient(90deg, #3fa9d9, var(--accent));
+    transform: scaleX(0);
+  }
+  .meters .db { color: var(--dim); font-size: 10px; min-width: 46px; text-align: right;
+                font-variant-numeric: tabular-nums; }
+  #buildTag { color: var(--faint); font-size: 9px; letter-spacing: 0.06em; }
+
+  /* ---------- canvas ---------- */
+  main { position: relative; flex: 1 1 auto; min-height: 120px; }
+  #graph { position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+           cursor: crosshair; outline: none; }
+  #readout {
+    position: absolute; pointer-events: none; display: none;
+    background: rgba(13, 16, 22, 0.92);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 5px 8px;
+    font-size: 10.5px;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+  }
+  #readout .n { color: var(--dim); }
+  #rangeSwitch, #specSwitch {
+    position: absolute; top: 8px; display: flex; gap: 2px; align-items: center;
+    background: rgba(13,16,22,0.7); border: 1px solid var(--line);
+    border-radius: 5px; padding: 2px;
+  }
+  #rangeSwitch { right: 10px; }
+  #specSwitch { left: 10px; }
+  #rangeSwitch button, #specSwitch button {
+    background: none; border: 0; color: var(--dim); font: inherit; font-size: 9.5px;
+    padding: 2px 7px; cursor: pointer; border-radius: 3px; letter-spacing: 0.05em;
+  }
+  #rangeSwitch button.on, #specSwitch button.on { background: var(--accent-soft); color: var(--accent); }
+  #specSwitch .lbl { color: var(--faint); font-size: 8.5px; letter-spacing: 0.12em; padding: 0 3px 0 5px; }
+  #toast {
+    position: absolute; left: 50%; top: 14px; transform: translateX(-50%);
+    background: rgba(13,16,22,0.9); border: 1px solid var(--line); border-radius: 5px;
+    color: var(--text); font-size: 11px; padding: 6px 12px; opacity: 0;
+    transition: opacity 0.25s; pointer-events: none;
+  }
+
+  /* ---------- band rail ---------- */
+  footer {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+    padding: 9px 14px;
+    background: var(--panel);
+    border-top: 1px solid var(--line);
+    min-height: 64px;
+  }
+  #bandRail { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; flex: 1; }
+  #bandRail .hint { color: var(--faint); font-size: 11px; letter-spacing: 0.04em; }
+  .chip {
+    display: flex; align-items: center; gap: 7px;
+    border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px;
+  }
+  .chip .swatch { width: 10px; height: 10px; border-radius: 50%; }
+  .chip .bnum { font-size: 11px; color: var(--dim); letter-spacing: 0.08em; }
+  .dragnum { display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+             padding: 2px 6px; border-radius: 4px; cursor: ns-resize; min-width: 62px; }
+  .dragnum:hover { background: rgba(255,255,255,0.04); }
+  .dragnum label { color: var(--dim); font-size: 9px; letter-spacing: 0.12em; pointer-events: none; }
+  .dragnum .v { font-size: 12.5px; font-variant-numeric: tabular-nums; pointer-events: none; }
+  .globals { display: flex; align-items: center; gap: 4px; border-left: 1px solid var(--line);
+             padding-left: 12px; }
+</style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <svg width="18" height="16" viewBox="0 0 18 16">
+        <defs>
+          <linearGradient id="pg" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#ff6b6b"/><stop offset="0.25" stop-color="#ffd36b"/>
+            <stop offset="0.5" stop-color="#6bff9e"/><stop offset="0.75" stop-color="#6fd3ff"/>
+            <stop offset="1" stop-color="#c06bff"/>
+          </linearGradient>
+        </defs>
+        <path d="M9 1 L17 15 L1 15 Z" fill="none" stroke="url(#pg)" stroke-width="1.6"/>
+      </svg>
+      <div class="name">WEREWOLF <em>DIGITAL</em> EQ</div>
+    </div>
+    <div class="headsep"></div>
+    <div class="hgroup"><label>MODE</label><select id="chanMode"></select></div>
+    <div class="hgroup"><label>MONITOR</label><select id="monitor"></select></div>
+    <button class="tgl warn" id="deltaBtn" title="Hear only what the EQ changes">DELTA</button>
+    <button class="tgl" id="autoBtn" title="Loudness-compensated output (arrives in M5)">AUTO</button>
+    <button class="tgl" id="powerBtn" title="True bypass">POWER</button>
+    <div class="spacer"></div>
+    <div class="meters">
+      <span class="db" id="inDb">-inf</span>
+      <div class="meterbar"><i id="inBar"></i></div>
+      <div class="meterbar"><i id="outBar"></i></div>
+      <span class="db" id="outDb">-inf</span>
+    </div>
+    <div class="headsep"></div>
+    <div id="buildTag">—</div>
+  </header>
+
+  <main>
+    <canvas id="graph" tabindex="0"></canvas>
+    <div id="rangeSwitch">
+      <button data-r="6">±6</button><button data-r="12">±12</button><button data-r="30" class="on">±30</button>
+    </div>
+    <div id="specSwitch">
+      <span class="lbl">ANALYZER</span>
+      <button data-m="both">PRE+POST</button><button data-m="pre">PRE</button>
+      <button data-m="post">POST</button><button data-m="off">OFF</button>
+      <button id="freezeBtn" title="Hold the analyzer still">❄</button>
+    </div>
+    <div id="readout"></div>
+    <div id="toast"></div>
+  </main>
+
+  <footer>
+    <div id="bandRail"><span class="hint">Double-click (or drag) the graph to add a band · wheel = width · right-click = remove</span></div>
+    <div class="globals" id="globals"></div>
+  </footer>
+
+<script>
+  // Any script failure paints a visible banner instead of a dead panel.
+  window.addEventListener('error', e => {
+    let el = document.getElementById('errBanner');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'errBanner';
+      el.style.cssText = 'position:fixed;left:0;right:0;bottom:0;background:#5c1a1a;'
+        + 'color:#ffd9d9;font:11px monospace;padding:4px 10px;z-index:99;';
+      document.body.appendChild(el);
+    }
+    el.textContent = 'UI error: ' + e.message + ' @' + (e.lineno || '?');
+  });
+</script>
+<script type="module">
+(async () => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+  // ------------------------------------------------------------------ host
+  let host = null;
+  if (window.__JUCE__ && window.__JUCE__.backend) {
+    try {
+      const lib = await import('./juce/index.js');
+      const be = window.__JUCE__.backend;
+      host = {
+        slider: id => lib.getSliderState(id),
+        combo:  id => lib.getComboBoxState(id),
+        toggle: id => lib.getToggleState(id),
+        call:   (name, ...args) => lib.getNativeFunction(name)(...args),
+        on:     (event, cb) => be.addEventListener(event, cb),
+      };
+    } catch (e) { console.warn('JUCE frontend unavailable:', e); }
+  }
+
+  // -------------------------------------------------- parameter access
+  // Frozen APVTS ranges mirrored here (JUCE skew math) so the canvas can
+  // convert pixels <-> real units without a round-trip.
+  const RANGES = {
+    freq:  { min: 10, max: 30000, centre: 1000 },
+    gain:  { min: -30, max: 30 },
+    q:     { min: 0.025, max: 40, centre: 1 },
+    slope: { min: 6, max: 96, centre: 24 },
+    input: { min: -18, max: 18 },
+    output:{ min: -24, max: 12 },
+    mix:   { min: 0, max: 100 },
+    listen:{ min: 0, max: 24 },
+  };
+  const skewOf = r => r.centre ? Math.log(0.5) / Math.log((r.centre - r.min) / (r.max - r.min)) : 1;
+  const fromNorm = (r, p) => {
+    p = clamp(p, 0, 1);
+    const s = skewOf(r);
+    if (s !== 1 && p > 0) p = Math.exp(Math.log(p) / s);
+    return r.min + (r.max - r.min) * p;
+  };
+  const toNorm = (r, v) => {
+    let p = clamp((v - r.min) / (r.max - r.min), 0, 1);
+    const s = skewOf(r);
+    if (s !== 1 && p > 0) p = Math.pow(p, s);
+    return p;
+  };
+
+  const sliders = {}, combos = {}, toggles = {};
+  const sl = id => {
+    if (!host) return null;
+    if (!sliders[id]) {
+      sliders[id] = host.slider(id);
+      sliders[id].valueChangedEvent.addListener(() => { railDirty = true; });
+    }
+    return sliders[id];
+  };
+  const cb = id => {
+    if (!host) return null;
+    if (!combos[id]) {
+      combos[id] = host.combo(id);
+      combos[id].valueChangedEvent.addListener(() => { railDirty = true; });
+    }
+    return combos[id];
+  };
+  const tg = id => {
+    if (!host) return null;
+    if (!toggles[id]) {
+      toggles[id] = host.toggle(id);
+      toggles[id].valueChangedEvent.addListener(() => { railDirty = true; });
+    }
+    return toggles[id];
+  };
+  const bandId = (i, suffix) => 'b' + (i + 1) + suffix;
+  const getReal = (id, range) => { const s = sl(id); return s ? fromNorm(range, s.getNormalisedValue()) : range.min; };
+  const setReal = (id, range, v) => { const s = sl(id); if (s) s.setNormalisedValue(toNorm(range, v)); };
+  const gesture = (id, start) => {
+    const s = sl(id);
+    if (!s) return;
+    if (start && s.sliderDragStarted) s.sliderDragStarted();
+    if (!start && s.sliderDragEnded) s.sliderDragEnded();
+  };
+  const comboIndex = (id, n) => { const s = cb(id); return s ? Math.round((s.value || 0) * (n - 1)) : 0; };
+  const setComboIndex = (id, i) => { const s = cb(id); if (s && s.setChoiceIndex) s.setChoiceIndex(i); };
+
+  const SHAPES = ['Bell', 'Low Shelf', 'High Shelf', 'Notch', 'Low Cut', 'High Cut', 'Band Pass', 'Tilt', 'All Pass'];
+  const CHANS = ['Stereo', 'Left', 'Right', 'Mid', 'Side'];
+  const SHAPE = { bell: 0, lowShelf: 1, highShelf: 2, notch: 3, lowCut: 4, highCut: 5, bandPass: 6, tilt: 7, allPass: 8 };
+  const usesGainY = s => s === SHAPE.bell || s === SHAPE.lowShelf || s === SHAPE.highShelf || s === SHAPE.tilt;
+  const usesSlopeY = s => s === SHAPE.lowCut || s === SHAPE.highCut;
+  const bandHue = i => (i * 137.508) % 360;
+  const bandColor = (i, a = 1, l = 62) => `hsla(${bandHue(i)}, 72%, ${l}%, ${a})`;
+
+  // ---------------------------------------------------------- model state
+  let resp = null;              // last "response" payload
+  let sampleRate = 48000;
+  let selected = -1;
+
+  // ---- analyzer state (bins mirror the C++ layout: 240 log 10..30k)
+  const SPEC_BINS = 240, SPEC_FMIN = 10, SPEC_FMAX = 30000;
+  const SPEC_TILT = 4.5;        // dB/oct display tilt around 1 kHz
+  const SPEC_RANGE = 90;        // display floor, dB
+  const specFreq = Array.from({ length: SPEC_BINS }, (_, b) =>
+    SPEC_FMIN * Math.pow(SPEC_FMAX / SPEC_FMIN, (b + 0.5) / SPEC_BINS));
+  const specTilt = specFreq.map(f => SPEC_TILT * Math.log2(f / 1000));
+  let specTarget = null;        // {pre:[], post:[]} latest frame
+  const specDisp = { pre: new Array(SPEC_BINS).fill(-120),
+                     post: new Array(SPEC_BINS).fill(-120) };
+  let specMode = localStorage.getItem('wdeqSpecMode') || 'both';
+  let specFrozen = false;
+  let hover = { node: -1, x: -1, y: -1, inPlot: false };
+  let drag = null;              // {band, mode, startX, startY, startVals}
+  let dbRange = parseFloat(localStorage.getItem('wdeqDbRange') || '30');
+  let uiDirty = true, railDirty = true;
+
+  // ------------------------------------------------------------- canvas
+  const canvas = $('graph');
+  const ctx = canvas.getContext('2d');
+  const PAD = { l: 14, r: 44, t: 12, b: 24 };
+  let W = 0, H = 0, dpr = 1;
+
+  const FMIN = 10, FMAX = 30000;
+  const xOf = f => PAD.l + (Math.log10(f / FMIN) / Math.log10(FMAX / FMIN)) * (W - PAD.l - PAD.r);
+  const fOf = x => FMIN * Math.pow(FMAX / FMIN, (x - PAD.l) / (W - PAD.l - PAD.r));
+  const yOf = db => {
+    const mid = PAD.t + (H - PAD.t - PAD.b) / 2;
+    return mid - (db / dbRange) * (H - PAD.t - PAD.b) / 2;
+  };
+  const dbOfY = y => {
+    const mid = PAD.t + (H - PAD.t - PAD.b) / 2;
+    return -(y - mid) / ((H - PAD.t - PAD.b) / 2) * dbRange;
+  };
+
+  function fitCanvas() {
+    dpr = window.devicePixelRatio || 1;
+    const r = canvas.getBoundingClientRect();
+    W = r.width; H = r.height;
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    uiDirty = true;
+  }
+  new ResizeObserver(fitCanvas).observe(canvas);
+  fitCanvas();
+
+  const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+  function noteName(f) {
+    if (f < 16) return '';
+    const n = Math.round(12 * Math.log2(f / 440) + 69);
+    const cents = Math.round(1200 * Math.log2(f / (440 * Math.pow(2, (n - 69) / 12))));
+    return NOTE_NAMES[((n % 12) + 12) % 12] + (Math.floor(n / 12) - 1)
+         + (cents ? (cents > 0 ? '+' : '') + cents + '¢' : '');
+  }
+  const fmtHz = f => f >= 1000 ? (f / 1000).toFixed(f >= 10000 ? 1 : 2) + ' kHz' : Math.round(f) + ' Hz';
+  const fmtDb = v => (v > 0 ? '+' : '') + v.toFixed(1) + ' dB';
+
+  // node display position for a band (freq x; y depends on shape)
+  const nodeY = b => usesGainY(b.shape) ? yOf(clamp(b.gain, -dbRange, dbRange)) : yOf(0);
+
+  function totalAt(f) {
+    if (!resp || !resp.freqs.length) return 0;
+    const a = resp.freqs, t = resp.total;
+    if (f <= a[0]) return t[0];
+    if (f >= a[a.length - 1]) return t[t.length - 1];
+    let lo = 0, hi = a.length - 1;
+    while (hi - lo > 1) {
+      const m = (lo + hi) >> 1;
+      if (a[m] <= f) lo = m; else hi = m;
+    }
+    const p = (f - a[lo]) / (a[hi] - a[lo]);
+    return t[lo] + p * (t[hi] - t[lo]);
+  }
+
+  function drawCurve(freqs, dbs, close) {
+    ctx.beginPath();
+    let started = false;
+    for (let i = 0; i < freqs.length; ++i) {
+      const x = xOf(freqs[i]);
+      const y = yOf(clamp(dbs[i], -dbRange * 1.5, dbRange * 1.5));
+      if (!started) { ctx.moveTo(x, y); started = true; }
+      else ctx.lineTo(x, y);
+    }
+    if (close) {
+      ctx.lineTo(xOf(freqs[freqs.length - 1]), yOf(0));
+      ctx.lineTo(xOf(freqs[0]), yOf(0));
+      ctx.closePath();
+    }
+  }
+
+  function render() {
+    ctx.clearRect(0, 0, W, H);
+    const plotW = W - PAD.l - PAD.r, plotH = H - PAD.t - PAD.b;
+    if (plotW < 40 || plotH < 40) return;
+
+    // ---- grid
+    ctx.font = '9.5px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    const decades = [10, 100, 1000, 10000];
+    for (const d of decades)
+      for (let m = 1; m < 10; ++m) {
+        const f = d * m;
+        if (f < FMIN || f > FMAX) continue;
+        const major = m === 1 || m === 2 || m === 5;
+        ctx.strokeStyle = major ? 'rgba(255,255,255,0.075)' : 'rgba(255,255,255,0.03)';
+        ctx.lineWidth = 1;
+        const x = xOf(f);
+        ctx.beginPath(); ctx.moveTo(x, PAD.t); ctx.lineTo(x, H - PAD.b); ctx.stroke();
+        if (major && f >= 20 && f <= 20000) {
+          ctx.fillStyle = 'rgba(150,160,180,0.55)';
+          ctx.fillText(f >= 1000 ? (f / 1000) + 'k' : '' + f, x, H - PAD.b + 5);
+        }
+      }
+    const dbStep = dbRange >= 24 ? 6 : dbRange >= 12 ? 3 : 1.5;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    for (let db = -dbRange; db <= dbRange + 0.01; db += dbStep) {
+      const y = yOf(db);
+      const zero = Math.abs(db) < 0.01;
+      ctx.strokeStyle = zero ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.05)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(PAD.l, y); ctx.lineTo(W - PAD.r, y); ctx.stroke();
+      ctx.fillStyle = zero ? 'rgba(180,195,215,0.7)' : 'rgba(150,160,180,0.45)';
+      ctx.fillText((db > 0 ? '+' : '') + (dbStep < 3 ? db.toFixed(1) : Math.round(db)), W - PAD.r + 6, y);
+    }
+
+    // ---- Nyquist shade
+    const nyq = 0.475 * sampleRate;
+    if (nyq < FMAX) {
+      const x = xOf(nyq);
+      ctx.fillStyle = 'rgba(0,0,0,0.28)';
+      ctx.fillRect(x, PAD.t, W - PAD.r - x, plotH);
+    }
+
+    // ---- spectrum (own scale: 0 dB at top, -SPEC_RANGE at plot bottom)
+    if (specMode !== 'off' && specTarget) {
+      const ySpec = db => {
+        const p = clamp((db + SPEC_RANGE) / SPEC_RANGE, 0, 1);
+        return H - PAD.b - p * plotH;
+      };
+      const drawSpec = (arr, stroke, fill) => {
+        ctx.beginPath();
+        ctx.moveTo(xOf(specFreq[0]), H - PAD.b);
+        for (let b = 0; b < SPEC_BINS; ++b)
+          ctx.lineTo(xOf(specFreq[b]), ySpec(arr[b] + specTilt[b]));
+        ctx.lineTo(xOf(specFreq[SPEC_BINS - 1]), H - PAD.b);
+        ctx.closePath();
+        ctx.fillStyle = fill;
+        ctx.fill();
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      };
+      if (specMode === 'both' || specMode === 'pre')
+        drawSpec(specDisp.pre, 'rgba(140,155,185,0.35)', 'rgba(120,140,175,0.13)');
+      if (specMode === 'both' || specMode === 'post')
+        drawSpec(specDisp.post, 'rgba(111,211,255,0.5)', 'rgba(111,211,255,0.09)');
+    }
+
+    if (!resp) return;
+    const bands = resp.bands;
+
+    // ---- per-band curves (dim; emphasized when selected/hovered)
+    for (const b of bands) {
+      if (!b.on || !b.curve) continue;
+      const hot = b.i === selected || b.i === hover.node;
+      if (hot) {
+        drawCurve(resp.freqs, b.curve, true);
+        const g = ctx.createLinearGradient(0, PAD.t, 0, H - PAD.b);
+        g.addColorStop(0, bandColor(b.i, 0.16));
+        g.addColorStop(0.5, bandColor(b.i, 0.05));
+        g.addColorStop(1, bandColor(b.i, 0.16));
+        ctx.fillStyle = g;
+        ctx.fill();
+      }
+      drawCurve(resp.freqs, b.curve, false);
+      ctx.strokeStyle = bandColor(b.i, hot ? 0.9 : 0.42);
+      ctx.lineWidth = hot ? 1.8 : 1.1;
+      ctx.stroke();
+    }
+
+    // ---- total curve with glow
+    drawCurve(resp.freqs, resp.total, false);
+    ctx.save();
+    ctx.shadowColor = 'rgba(111,211,255,0.55)';
+    ctx.shadowBlur = 9;
+    ctx.strokeStyle = '#eef4ff';
+    ctx.lineWidth = 2.1;
+    ctx.stroke();
+    ctx.restore();
+
+    // ---- nodes
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '600 9.5px "Segoe UI", system-ui, sans-serif';
+    for (const b of bands) {
+      if (!b.on) continue;
+      const x = xOf(b.freq), y = nodeY(b);
+      const sel = b.i === selected, hot = b.i === hover.node;
+      ctx.beginPath();
+      ctx.arc(x, y, sel ? 9 : 8, 0, Math.PI * 2);
+      ctx.fillStyle = sel ? bandColor(b.i, 0.95) : 'rgba(13,16,22,0.9)';
+      ctx.fill();
+      ctx.lineWidth = sel || hot ? 2.2 : 1.6;
+      ctx.strokeStyle = bandColor(b.i, sel ? 1 : hot ? 0.95 : 0.75);
+      ctx.stroke();
+      ctx.fillStyle = sel ? '#0b0d12' : bandColor(b.i, 0.95, 70);
+      ctx.fillText('' + (b.i + 1), x, y + 0.5);
+      if (b.dyn) { // dynamic marker ring (engine arrives in M4)
+        ctx.beginPath();
+        ctx.arc(x, y, 12, 0, Math.PI * 2);
+        ctx.setLineDash([2, 3]);
+        ctx.strokeStyle = bandColor(b.i, 0.5);
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    // ---- hover crosshair
+    if (hover.inPlot && drag == null && hover.node < 0) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(hover.x, PAD.t); ctx.lineTo(hover.x, H - PAD.b); ctx.stroke();
+    }
+  }
+
+  function frame() {
+    // analyzer ballistics: fast up, easy down, freezable
+    if (specMode !== 'off' && specTarget && !specFrozen) {
+      let moving = false;
+      for (const key of ['pre', 'post']) {
+        const d = specDisp[key], t = specTarget[key];
+        for (let b = 0; b < SPEC_BINS; ++b) {
+          const a = t[b] > d[b] ? 0.5 : 0.08;
+          d[b] += (t[b] - d[b]) * a;
+          if (Math.abs(t[b] - d[b]) > 0.05) moving = true;
+        }
+      }
+      if (moving) uiDirty = true;
+    }
+    if (uiDirty) { uiDirty = false; render(); }
+    if (railDirty) { railDirty = false; syncRail(); }
+    meterFrame();
+    requestAnimationFrame(frame);
+  }
+
+  // ------------------------------------------------------------ readout
+  const readout = $('readout');
+  function updateReadout(clientX, clientY) {
+    if (!hover.inPlot || drag) { readout.style.display = 'none'; return; }
+    const f = clamp(fOf(hover.x), FMIN, FMAX);
+    const db = totalAt(f);
+    readout.innerHTML = `${fmtHz(f)} <span class="n">${noteName(f)}</span> · ${fmtDb(db)}`;
+    readout.style.display = 'block';
+    const r = canvas.getBoundingClientRect();
+    readout.style.left = clamp(clientX - r.left + 14, 0, W - 150) + 'px';
+    readout.style.top = clamp(clientY - r.top + 16, 0, H - 30) + 'px';
+  }
+
+  // --------------------------------------------------------- interaction
+  const hitNode = (x, y) => {
+    if (!resp) return -1;
+    let best = -1, bestD = 13;
+    for (const b of resp.bands) {
+      if (!b.on) continue;
+      const d = Math.hypot(x - xOf(b.freq), y - nodeY(b));
+      const dd = b.i === selected ? d - 2 : d;
+      if (dd < bestD) { bestD = dd; best = b.i; }
+    }
+    return best;
+  };
+
+  const bandOf = i => resp && resp.bands[i];
+  const toastEl = $('toast');
+  let toastTimer = 0;
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.style.opacity = 1;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.style.opacity = 0, 1600);
+  }
+
+  function createBandAt(x, y) {
+    if (!resp) return -1;
+    const free = resp.bands.find(b => !b.on);
+    if (!free) { toast('All 24 bands are in use'); return -1; }
+    const i = free.i;
+    const f = clamp(fOf(x), FMIN, FMAX);
+    const g = clamp(dbOfY(y), -30, 30);
+    const shape = f < 50 ? SHAPE.lowCut : f > 18000 ? SHAPE.highCut : SHAPE.bell;
+    setReal(bandId(i, 'freq'), RANGES.freq, f);
+    if (shape === SHAPE.bell) setReal(bandId(i, 'gain'), RANGES.gain, g);
+    setComboIndex(bandId(i, 'shape'), shape);
+    const on = tg(bandId(i, 'on'));
+    if (on) on.setValue(true);
+    // optimistic local echo so the node is draggable this same gesture
+    free.on = true; free.freq = f; free.shape = shape;
+    if (shape === SHAPE.bell) free.gain = g;
+    selected = i;
+    railDirty = uiDirty = true;
+    return i;
+  }
+
+  function beginDrag(i, ev) {
+    const b = bandOf(i);
+    if (!b) return;
+    drag = {
+      band: i,
+      startX: ev.clientX, startY: ev.clientY,
+      f0: b.freq, g0: b.gain, q0: b.q, s0: b.slope,
+    };
+    gesture(bandId(i, 'freq'), true);
+    gesture(bandId(i, 'gain'), true);
+    canvas.setPointerCapture(ev.pointerId);
+  }
+
+  canvas.addEventListener('pointerdown', ev => {
+    canvas.focus();
+    if (ev.button === 2) return; // context handled separately
+    const r = canvas.getBoundingClientRect();
+    const x = ev.clientX - r.left, y = ev.clientY - r.top;
+    const hit = hitNode(x, y);
+    if (hit >= 0) {
+      selected = hit;
+      railDirty = uiDirty = true;
+      beginDrag(hit, ev);
+    } else {
+      // click = deselect; drag-out or double-click = create
+      drag = { pending: true, startX: ev.clientX, startY: ev.clientY, px: x, py: y };
+      canvas.setPointerCapture(ev.pointerId);
+    }
+  });
+
+  canvas.addEventListener('dblclick', ev => {
+    const r = canvas.getBoundingClientRect();
+    createBandAt(ev.clientX - r.left, ev.clientY - r.top);
+  });
+
+  canvas.addEventListener('pointermove', ev => {
+    const r = canvas.getBoundingClientRect();
+    const x = ev.clientX - r.left, y = ev.clientY - r.top;
+    hover.x = x; hover.y = y;
+    hover.inPlot = x >= PAD.l && x <= W - PAD.r && y >= PAD.t && y <= H - PAD.b;
+
+    if (drag && drag.pending) {
+      if (Math.hypot(ev.clientX - drag.startX, ev.clientY - drag.startY) > 5) {
+        const i = createBandAt(drag.px, drag.py);
+        drag = null;
+        if (i >= 0) beginDrag(i, ev);
+      }
+    } else if (drag) {
+      const b = bandOf(drag.band);
+      if (b) {
+        const fine = ev.shiftKey ? 0.25 : 1;
+        const dxOct = (ev.clientX - drag.startX) / ((W - PAD.l - PAD.r) / Math.log2(FMAX / FMIN));
+        const f = clamp(drag.f0 * Math.pow(2, dxOct * fine), FMIN, FMAX);
+        setReal(bandId(b.i, 'freq'), RANGES.freq, f);
+        b.freq = f;
+
+        const dy = ev.clientY - drag.startY;
+        if (usesGainY(b.shape)) {
+          const g = clamp(drag.g0 - dy / ((H - PAD.t - PAD.b) / 2) * dbRange * fine, -30, 30);
+          setReal(bandId(b.i, 'gain'), RANGES.gain, g);
+          b.gain = g;
+        } else if (usesSlopeY(b.shape)) {
+          const s = clamp(drag.s0 - dy * 0.22 * fine, 6, 96);
+          setReal(bandId(b.i, 'slope'), RANGES.slope, s);
+          b.slope = s;
+        } else {
+          const q = clamp(drag.q0 * Math.exp(-dy * 0.008 * fine), 0.025, 40);
+          setReal(bandId(b.i, 'q'), RANGES.q, q);
+          b.q = q;
+        }
+        railDirty = true;
+      }
+    } else {
+      const prev = hover.node;
+      hover.node = hitNode(x, y);
+      canvas.style.cursor = hover.node >= 0 ? 'grab' : 'crosshair';
+      if (prev !== hover.node) uiDirty = true;
+    }
+    updateReadout(ev.clientX, ev.clientY);
+    uiDirty = true;
+  });
+
+  canvas.addEventListener('pointerup', ev => {
+    if (drag && !drag.pending) {
+      gesture(bandId(drag.band, 'freq'), false);
+      gesture(bandId(drag.band, 'gain'), false);
+    } else if (drag && drag.pending) {
+      selected = -1;
+      railDirty = uiDirty = true;
+    }
+    drag = null;
+    try { canvas.releasePointerCapture(ev.pointerId); } catch (e) {}
+  });
+
+  canvas.addEventListener('pointerleave', () => {
+    hover.inPlot = false;
+    hover.node = -1;
+    readout.style.display = 'none';
+    uiDirty = true;
+  });
+
+  canvas.addEventListener('contextmenu', ev => {
+    ev.preventDefault();
+    const r = canvas.getBoundingClientRect();
+    const hit = hitNode(ev.clientX - r.left, ev.clientY - r.top);
+    if (hit >= 0) {
+      const on = tg(bandId(hit, 'on'));
+      if (on) on.setValue(false);
+      const b = bandOf(hit);
+      if (b) b.on = false;
+      if (selected === hit) selected = -1;
+      railDirty = uiDirty = true;
+    }
+  });
+
+  canvas.addEventListener('wheel', ev => {
+    ev.preventDefault();
+    const target = hover.node >= 0 ? hover.node : selected;
+    const b = bandOf(target);
+    if (!b || !b.on) return;
+    const q = clamp(b.q * Math.exp(-ev.deltaY * 0.0016), 0.025, 40);
+    setReal(bandId(b.i, 'q'), RANGES.q, q);
+    b.q = q;
+    railDirty = uiDirty = true;
+  }, { passive: false });
+
+  canvas.addEventListener('keydown', ev => {
+    const b = bandOf(selected);
+    if (!b || !b.on) return;
+    const fine = ev.shiftKey;
+    let used = true;
+    if (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight') {
+      const step = (ev.key === 'ArrowLeft' ? -1 : 1) * (fine ? 1 / 96 : 1 / 24);
+      const f = clamp(b.freq * Math.pow(2, step), FMIN, FMAX);
+      setReal(bandId(b.i, 'freq'), RANGES.freq, f); b.freq = f;
+    } else if (ev.key === 'ArrowUp' || ev.key === 'ArrowDown') {
+      const dir = ev.key === 'ArrowUp' ? 1 : -1;
+      if (usesGainY(b.shape)) {
+        const g = clamp(b.gain + dir * (fine ? 0.1 : 0.5), -30, 30);
+        setReal(bandId(b.i, 'gain'), RANGES.gain, g); b.gain = g;
+      } else if (usesSlopeY(b.shape)) {
+        const s = clamp(b.slope + dir * (fine ? 1 : 6), 6, 96);
+        setReal(bandId(b.i, 'slope'), RANGES.slope, s); b.slope = s;
+      } else {
+        const q = clamp(b.q * Math.exp(dir * (fine ? 0.02 : 0.1)), 0.025, 40);
+        setReal(bandId(b.i, 'q'), RANGES.q, q); b.q = q;
+      }
+    } else if (ev.key === 'Delete' || ev.key === 'Backspace') {
+      const on = tg(bandId(b.i, 'on'));
+      if (on) on.setValue(false);
+      b.on = false; selected = -1;
+    } else if (ev.key === 'Escape') {
+      selected = -1;
+    } else if (ev.key === 'Tab') {
+      const enabled = resp.bands.filter(x => x.on).map(x => x.i);
+      if (enabled.length) {
+        const at = enabled.indexOf(selected);
+        selected = enabled[(at + (ev.shiftKey ? enabled.length - 1 : 1)) % enabled.length];
+      }
+    } else used = false;
+    if (used) { ev.preventDefault(); railDirty = uiDirty = true; }
+  });
+
+  // analyzer switches
+  {
+    const box = $('specSwitch');
+    const modeButtons = box.querySelectorAll('button[data-m]');
+    const apply = () => {
+      for (const b of modeButtons) b.classList.toggle('on', b.dataset.m === specMode);
+    };
+    for (const b of modeButtons)
+      b.addEventListener('click', () => {
+        specMode = b.dataset.m;
+        localStorage.setItem('wdeqSpecMode', specMode);
+        apply(); uiDirty = true;
+      });
+    apply();
+    $('freezeBtn').addEventListener('click', () => {
+      specFrozen = !specFrozen;
+      $('freezeBtn').classList.toggle('on', specFrozen);
+    });
+  }
+
+  // dB range switch
+  for (const btn of $('rangeSwitch').querySelectorAll('button')) {
+    if (parseFloat(btn.dataset.r) === dbRange) {
+      for (const o of $('rangeSwitch').querySelectorAll('button')) o.classList.remove('on');
+      btn.classList.add('on');
+    }
+    btn.addEventListener('click', () => {
+      dbRange = parseFloat(btn.dataset.r);
+      localStorage.setItem('wdeqDbRange', '' + dbRange);
+      for (const o of $('rangeSwitch').querySelectorAll('button')) o.classList.remove('on');
+      btn.classList.add('on');
+      uiDirty = true;
+    });
+  }
+
+  // ----------------------------------------------------------- band rail
+  const rail = $('bandRail');
+  function dragNumber(label, getV, setV, fmt, opts = {}) {
+    const el = document.createElement('div');
+    el.className = 'dragnum';
+    el.innerHTML = `<label>${label}</label><span class="v">—</span>`;
+    const span = el.querySelector('.v');
+    el.refresh = () => { span.textContent = fmt(getV()); };
+    let st = null;
+    el.addEventListener('pointerdown', ev => {
+      st = { y: ev.clientY, v: getV() };
+      el.setPointerCapture(ev.pointerId);
+      ev.preventDefault();
+    });
+    el.addEventListener('pointermove', ev => {
+      if (!st) return;
+      const fine = ev.shiftKey ? 0.15 : 1;
+      setV(st.v, (st.y - ev.clientY) * fine);
+      el.refresh();
+      uiDirty = true;
+    });
+    el.addEventListener('pointerup', ev => { st = null; try { el.releasePointerCapture(ev.pointerId); } catch (e) {} });
+    el.addEventListener('wheel', ev => {
+      ev.preventDefault();
+      const fine = ev.shiftKey ? 0.15 : 1;
+      setV(getV(), (ev.deltaY < 0 ? 12 : -12) * fine);
+      el.refresh();
+      uiDirty = true;
+    }, { passive: false });
+    if (opts.tip) el.title = opts.tip;
+    return el;
+  }
+
+  function selectEl(options, getI, setI) {
+    const el = document.createElement('select');
+    for (let i = 0; i < options.length; ++i) {
+      const o = document.createElement('option');
+      o.value = i; o.textContent = options[i];
+      el.appendChild(o);
+    }
+    el.addEventListener('change', () => { setI(parseInt(el.value, 10)); uiDirty = true; });
+    el.refresh = () => { el.value = '' + getI(); };
+    return el;
+  }
+
+  function toggleEl(label, getV, setV, cls = '') {
+    const el = document.createElement('button');
+    el.className = ('tgl ' + cls).trim();
+    el.textContent = label;
+    el.addEventListener('click', () => { setV(!getV()); el.refresh(); uiDirty = true; });
+    el.refresh = () => el.classList.toggle('on', !!getV());
+    return el;
+  }
+
+  let railWidgets = [];
+  let railBand = -2;
+  function buildRail() {
+    rail.innerHTML = '';
+    railWidgets = [];
+    railBand = selected;
+    const b = bandOf(selected);
+    if (!b || !b.on) {
+      rail.innerHTML = '<span class="hint">Double-click (or drag) the graph to add a band · wheel = width · right-click = remove</span>';
+      return;
+    }
+    const i = b.i;
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.style.borderColor = bandColor(i, 0.6);
+    chip.innerHTML = `<span class="swatch" style="background:${bandColor(i)}"></span><span class="bnum">BAND ${i + 1}</span>`;
+    rail.appendChild(chip);
+
+    const add = w => { rail.appendChild(w); railWidgets.push(w); };
+
+    add(selectEl(SHAPES,
+      () => comboIndex(bandId(i, 'shape'), SHAPES.length),
+      v => setComboIndex(bandId(i, 'shape'), v)));
+    add(selectEl(CHANS,
+      () => comboIndex(bandId(i, 'chan'), CHANS.length),
+      v => setComboIndex(bandId(i, 'chan'), v)));
+
+    add(dragNumber('FREQ',
+      () => getReal(bandId(i, 'freq'), RANGES.freq),
+      (v0, d) => setReal(bandId(i, 'freq'), RANGES.freq, clamp(v0 * Math.pow(2, d / 60), FMIN, FMAX)),
+      fmtHz));
+    add(dragNumber('GAIN',
+      () => getReal(bandId(i, 'gain'), RANGES.gain),
+      (v0, d) => setReal(bandId(i, 'gain'), RANGES.gain, clamp(v0 + d / 8, -30, 30)),
+      fmtDb));
+    add(dragNumber('Q',
+      () => getReal(bandId(i, 'q'), RANGES.q),
+      (v0, d) => setReal(bandId(i, 'q'), RANGES.q, clamp(v0 * Math.exp(d / 60), 0.025, 40)),
+      v => v.toFixed(v < 1 ? 3 : 2)));
+    add(dragNumber('SLOPE',
+      () => getReal(bandId(i, 'slope'), RANGES.slope),
+      (v0, d) => setReal(bandId(i, 'slope'), RANGES.slope, clamp(v0 + d / 4, 6, 96)),
+      v => v.toFixed(1) + ' dB/oct', { tip: 'Cut shapes: continuous 6–96 dB/oct' }));
+
+    add(toggleEl('DYN',
+      () => { const t = tg(bandId(i, 'dynon')); return t && t.getValue(); },
+      v => { const t = tg(bandId(i, 'dynon')); if (t) t.setValue(v); }));
+    railWidgets[railWidgets.length - 1].title = 'Dynamic band (engine arrives in M4)';
+
+    const listen = document.createElement('button');
+    listen.className = 'tgl';
+    listen.textContent = 'LISTEN';
+    listen.title = 'Hold: audition this band';
+    listen.addEventListener('pointerdown', () => setReal('listen', RANGES.listen, i + 1));
+    const stopListen = () => setReal('listen', RANGES.listen, 0);
+    listen.addEventListener('pointerup', stopListen);
+    listen.addEventListener('pointerleave', stopListen);
+    listen.refresh = () => listen.classList.toggle('on',
+      Math.round(getReal('listen', RANGES.listen)) === i + 1);
+    rail.appendChild(listen);
+    railWidgets.push(listen);
+
+    const del = document.createElement('button');
+    del.className = 'tgl';
+    del.textContent = '✕';
+    del.title = 'Remove band';
+    del.addEventListener('click', () => {
+      const on = tg(bandId(i, 'on'));
+      if (on) on.setValue(false);
+      b.on = false; selected = -1;
+      railDirty = uiDirty = true;
+    });
+    rail.appendChild(del);
+
+    for (const w of railWidgets) if (w.refresh) w.refresh();
+  }
+
+  function syncRail() {
+    if (railBand !== selected) { buildRail(); return; }
+    for (const w of railWidgets) if (w.refresh) w.refresh();
+  }
+
+  // globals cluster
+  {
+    const g = $('globals');
+    const add = w => g.appendChild(w);
+    add(dragNumber('IN',
+      () => getReal('input', RANGES.input),
+      (v0, d) => setReal('input', RANGES.input, clamp(v0 + d / 10, -18, 18)), fmtDb));
+    add(dragNumber('OUT',
+      () => getReal('output', RANGES.output),
+      (v0, d) => setReal('output', RANGES.output, clamp(v0 + d / 10, -24, 12)), fmtDb));
+    add(dragNumber('MIX',
+      () => getReal('mix', RANGES.mix),
+      (v0, d) => setReal('mix', RANGES.mix, clamp(v0 + d / 3, 0, 100)),
+      v => Math.round(v) + '%'));
+    for (const w of g.children) if (w.refresh) w.refresh();
+    setInterval(() => { for (const w of g.children) if (w.refresh) w.refresh(); }, 250);
+  }
+
+  // header controls
+  {
+    const cm = $('chanMode');
+    for (const [i, name] of ['Stereo', 'Left/Right', 'Mid/Side'].entries()) {
+      const o = document.createElement('option'); o.value = i; o.textContent = name; cm.appendChild(o);
+    }
+    cm.addEventListener('change', () => setComboIndex('channelmode', parseInt(cm.value, 10)));
+    const mon = $('monitor');
+    for (const [i, name] of ['Off', 'Left', 'Right', 'Mid', 'Side'].entries()) {
+      const o = document.createElement('option'); o.value = i; o.textContent = name; mon.appendChild(o);
+    }
+    mon.addEventListener('change', () => setComboIndex('listenchan', parseInt(mon.value, 10)));
+    setInterval(() => {
+      cm.value = '' + comboIndex('channelmode', 3);
+      mon.value = '' + comboIndex('listenchan', 5);
+    }, 400);
+
+    const bindHead = (elId, paramId) => {
+      const el = $(elId);
+      const t = tg(paramId);
+      if (!t) return;
+      const draw = () => el.classList.toggle('on', !!t.getValue());
+      el.addEventListener('click', () => t.setValue(!t.getValue()));
+      t.valueChangedEvent.addListener(draw);
+      draw();
+    };
+    bindHead('powerBtn', 'power');
+    bindHead('deltaBtn', 'delta');
+    bindHead('autoBtn', 'autogain');
+  }
+
+  // ------------------------------------------------------------- meters
+  let mIn = -70, mOut = -70, mInT = -70, mOutT = -70;
+  const showDb = v => v <= -69.5 ? '-inf' : v.toFixed(1);
+  function meterFrame() {
+    mIn += (mInT - mIn) * (mInT > mIn ? 0.6 : 0.12);
+    mOut += (mOutT - mOut) * (mOutT > mOut ? 0.6 : 0.12);
+    $('inBar').style.transform = `scaleX(${clamp((mIn + 60) / 60, 0, 1)})`;
+    $('outBar').style.transform = `scaleX(${clamp((mOut + 60) / 60, 0, 1)})`;
+    $('inDb').textContent = showDb(mInT);
+    $('outDb').textContent = showDb(mOutT);
+  }
+
+  // -------------------------------------------------------------- events
+  if (host) {
+    host.on('response', data => {
+      resp = data;
+      sampleRate = data.sampleRate || sampleRate;
+      // don't fight an in-progress drag with slightly stale echoes
+      if (drag && !drag.pending) {
+        const live = bandOf(drag.band);
+        const mine = resp.bands[drag.band];
+        if (live && mine) Object.assign(mine, {
+          freq: live.freq, gain: live.gain, q: live.q, slope: live.slope });
+      }
+      railDirty = uiDirty = true;
+    });
+    host.on('meters', m => { mInT = m.in; mOutT = m.out; });
+    host.on('spectrum', s => { if (!specFrozen) specTarget = s; });
+    try {
+      const state = await host.call('getUiState');
+      if (state) {
+        if (state.build) $('buildTag').textContent = state.build;
+        if (state.sampleRate) sampleRate = state.sampleRate;
+      }
+    } catch (e) { /* preview */ }
+    try { await host.call('requestResponse'); } catch (e) {}
+  } else {
+    // plain-browser preview: a static demo curve so the layout is visible
+    const freqs = [], total = [];
+    for (let i = 0; i < 200; ++i) {
+      const f = 10 * Math.pow(3000, i / 199);
+      freqs.push(f);
+      total.push(6 * Math.exp(-Math.pow(Math.log2(f / 200), 2))
+               - 9 * Math.exp(-Math.pow(Math.log2(f / 4000) * 1.6, 2)));
+    }
+    resp = { sampleRate: 48000, freqs, total,
+             bands: Array.from({ length: 24 }, (_, i) => ({
+               i, on: i < 2, shape: 0, freq: i ? 4000 : 200, gain: i ? -9 : 6,
+               q: 1, slope: 12, chan: 0, dyn: false,
+               curve: i < 2 ? total.map(v => v / 2) : undefined })) };
+  }
+
+  requestAnimationFrame(frame);
+})();
+</script>
+<script src="./boot.js"></script>
+</body>
+</html>
