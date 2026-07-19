@@ -140,6 +140,16 @@
   }
   .chip .swatch { width: 10px; height: 10px; border-radius: 50%; }
   .chip .bnum { font-size: 11px; color: var(--dim); letter-spacing: 0.08em; }
+  .dynmeter {
+    position: relative; width: 62px; height: 20px; overflow: hidden;
+    background: var(--bg0); border: 1px solid var(--line); border-radius: 4px;
+  }
+  .dynmeter div { position: absolute; top: 0; bottom: 0; }
+  .dynmeter span {
+    position: absolute; inset: 0; display: flex; align-items: center;
+    justify-content: center; font: 600 9px "Cascadia Mono", Consolas, monospace;
+    color: var(--text); pointer-events: none;
+  }
   .dragnum { display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
              padding: 2px 6px; border-radius: 4px; cursor: ns-resize; min-width: 62px; }
   .dragnum:hover { background: rgba(255,255,255,0.04); }
@@ -167,8 +177,9 @@
     <div class="headsep"></div>
     <div class="hgroup"><label>MODE</label><select id="chanMode"></select></div>
     <div class="hgroup"><label>MONITOR</label><select id="monitor"></select></div>
+    <div class="hgroup"><label>LOOKAHEAD</label><select id="lookaheadSel" title="Dynamic bands see the signal early; adds the shown latency"></select></div>
     <button class="tgl warn" id="deltaBtn" title="Hear only what the EQ changes">DELTA</button>
-    <button class="tgl" id="autoBtn" title="Loudness-compensated output (arrives in M5)">AUTO</button>
+    <button class="tgl" id="autoBtn" title="Loudness-compensated output (Match Bypass)">AUTO</button>
     <button class="tgl" id="powerBtn" title="True bypass">POWER</button>
     <div class="spacer"></div>
     <div class="meters">
@@ -249,6 +260,11 @@
     output:{ min: -24, max: 12 },
     mix:   { min: 0, max: 100 },
     listen:{ min: 0, max: 24 },
+    dynrange:  { min: -24, max: 24 },
+    dynthresh: { min: -60, max: 0 },
+    dynatk:    { min: 0.05, max: 250, centre: 20 },
+    dynrel:    { min: 1, max: 2500, centre: 150 },
+    dynlink:   { min: 0, max: 100 },
   };
   const skewOf = r => r.centre ? Math.log(0.5) / Math.log((r.centre - r.min) / (r.max - r.min)) : 1;
   const fromNorm = (r, p) => {
@@ -313,6 +329,13 @@
   let resp = null;              // last "response" payload
   let sampleRate = 48000;
   let selected = -1;
+
+  // ---- M5 dynamics display state (fed by the meters event at ~30 Hz)
+  const dynRides = new Array(24).fill(0);
+  const dynDets = new Array(24).fill(-70);
+  const dynThrs = new Array(24).fill(-30);
+  let agDb = 0;
+  let railMeterDirty = false;
 
   // ---- analyzer state (bins mirror the C++ layout: 240 log 10..30k)
   const SPEC_BINS = 240, SPEC_FMIN = 10, SPEC_FMAX = 30000;
@@ -524,7 +547,9 @@
       ctx.stroke();
       ctx.fillStyle = sel ? '#0b0d12' : bandColor(b.i, 0.95, 70);
       ctx.fillText('' + (b.i + 1), x, y + 0.5);
-      if (b.dyn) { // dynamic marker ring (engine arrives in M4)
+      if (b.dyn) {
+        // Dynamic band: dashed ring, plus the live ride drawn as a bar from
+        // the static node to where the ride currently sits.
         ctx.beginPath();
         ctx.arc(x, y, 12, 0, Math.PI * 2);
         ctx.setLineDash([2, 3]);
@@ -532,6 +557,20 @@
         ctx.lineWidth = 1;
         ctx.stroke();
         ctx.setLineDash([]);
+        const ride = dynRides[b.i] || 0;
+        if (Math.abs(ride) > 0.05 && usesGainY(b.shape)) {
+          const yr = yOf(clamp(b.gain + ride, -dbRange, dbRange));
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x, yr);
+          ctx.strokeStyle = bandColor(b.i, 0.85);
+          ctx.lineWidth = 3;
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(x, yr, 3.5, 0, Math.PI * 2);
+          ctx.fillStyle = bandColor(b.i, 0.95);
+          ctx.fill();
+        }
       }
     }
 
@@ -559,6 +598,10 @@
     }
     if (uiDirty) { uiDirty = false; render(); }
     if (railDirty) { railDirty = false; syncRail(); }
+    if (railMeterDirty) {
+      railMeterDirty = false;
+      if (railRideMeter) railRideMeter.refresh();
+    }
     meterFrame();
     requestAnimationFrame(frame);
   }
@@ -874,6 +917,8 @@
 
   let railWidgets = [];
   let railBand = -2;
+  let railDynOn = false;
+  let railRideMeter = null;
   function buildRail() {
     rail.innerHTML = '';
     railWidgets = [];
@@ -916,10 +961,85 @@
       (v0, d) => setReal(bandId(i, 'slope'), RANGES.slope, clamp(v0 + d / 4, 6, 96)),
       v => v.toFixed(1) + ' dB/oct', { tip: 'Cut shapes: continuous 6–96 dB/oct' }));
 
+    const dynT = tg(bandId(i, 'dynon'));
+    const dynOnNow = !!(dynT && dynT.getValue());
+    railDynOn = dynOnNow;
     add(toggleEl('DYN',
       () => { const t = tg(bandId(i, 'dynon')); return t && t.getValue(); },
-      v => { const t = tg(bandId(i, 'dynon')); if (t) t.setValue(v); }));
-    railWidgets[railWidgets.length - 1].title = 'Dynamic band (engine arrives in M4)';
+      v => { const t = tg(bandId(i, 'dynon')); if (t) t.setValue(v); railDirty = true; }));
+    railWidgets[railWidgets.length - 1].title = 'Dynamic band: the gain rides the signal';
+
+    if (dynOnNow) {
+      add(dragNumber('RANGE',
+        () => getReal(bandId(i, 'dynrange'), RANGES.dynrange),
+        (v0, d) => setReal(bandId(i, 'dynrange'), RANGES.dynrange, clamp(v0 + d / 8, -24, 24)),
+        fmtDb, { tip: 'Negative: compress above threshold. Positive: expand below.' }));
+      add(toggleEl('AUTO',
+        () => { const t = tg(bandId(i, 'dynauto')); return t && t.getValue(); },
+        v => { const t = tg(bandId(i, 'dynauto')); if (t) t.setValue(v); }));
+      railWidgets[railWidgets.length - 1].title = 'Threshold rides a slow average — reacts to relative peaks';
+      add(dragNumber('THR',
+        () => {
+          const t = tg(bandId(i, 'dynauto'));
+          return t && t.getValue() ? dynThrs[i]
+                                   : getReal(bandId(i, 'dynthresh'), RANGES.dynthresh);
+        },
+        (v0, d) => {
+          const t = tg(bandId(i, 'dynauto'));
+          if (t && t.getValue()) t.setValue(false); // grabbing THR takes manual control
+          setReal(bandId(i, 'dynthresh'), RANGES.dynthresh, clamp(v0 + d / 8, -60, 0));
+        },
+        fmtDb, { tip: 'Drag to set manually (switches Auto off)' }));
+      add(dragNumber('ATK',
+        () => getReal(bandId(i, 'dynatk'), RANGES.dynatk),
+        (v0, d) => setReal(bandId(i, 'dynatk'), RANGES.dynatk, clamp(v0 * Math.exp(d / 40), 0.05, 250)),
+        v => v < 10 ? v.toFixed(1) + ' ms' : Math.round(v) + ' ms'));
+      add(dragNumber('REL',
+        () => getReal(bandId(i, 'dynrel'), RANGES.dynrel),
+        (v0, d) => setReal(bandId(i, 'dynrel'), RANGES.dynrel, clamp(v0 * Math.exp(d / 40), 1, 2500)),
+        v => v < 1000 ? Math.round(v) + ' ms' : (v / 1000).toFixed(2) + ' s'));
+      add(selectEl(['SC: Self', 'SC: Ext'],
+        () => comboIndex(bandId(i, 'dynsc'), 2),
+        v => setComboIndex(bandId(i, 'dynsc'), v)));
+      add(toggleEl('TRK',
+        () => { const t = tg(bandId(i, 'dynscfreqtrack')); return t && t.getValue(); },
+        v => { const t = tg(bandId(i, 'dynscfreqtrack')); if (t) t.setValue(v); }));
+      railWidgets[railWidgets.length - 1].title =
+        'Detector follows the band frequency; off = set it with DET';
+      add(dragNumber('DET',
+        () => {
+          const t = tg(bandId(i, 'dynscfreqtrack'));
+          return t && t.getValue()
+            ? getReal(bandId(i, 'freq'), RANGES.freq)
+            : getReal(bandId(i, 'dynscfreq'), RANGES.freq);
+        },
+        (v0, d) => {
+          const t = tg(bandId(i, 'dynscfreqtrack'));
+          if (t && t.getValue()) t.setValue(false); // grabbing DET decouples
+          setReal(bandId(i, 'dynscfreq'), RANGES.freq,
+                  clamp(v0 * Math.pow(2, d / 60), FMIN, FMAX));
+        },
+        fmtHz, { tip: 'Detector frequency (drag decouples; TRK re-couples)' }));
+
+      const meter = document.createElement('div');
+      meter.className = 'dynmeter';
+      meter.title = 'Current ride';
+      const fill = document.createElement('div');
+      const label = document.createElement('span');
+      meter.append(fill, label);
+      meter.refresh = () => {
+        const ride = dynRides[i] || 0;
+        const half = clamp(Math.abs(ride) / 24, 0, 1) * 50;
+        fill.style.left = ride < 0 ? (50 - half) + '%' : '50%';
+        fill.style.width = half + '%';
+        fill.style.background = bandColor(i, 0.8);
+        label.textContent = (ride > 0 ? '+' : '') + ride.toFixed(1);
+      };
+      rail.appendChild(meter);
+      railWidgets.push(meter);
+      railRideMeter = meter;
+    } else
+      railRideMeter = null;
 
     const listen = document.createElement('button');
     listen.className = 'tgl';
@@ -951,6 +1071,11 @@
 
   function syncRail() {
     if (railBand !== selected) { buildRail(); return; }
+    const b = bandOf(selected);
+    if (b && b.on) {
+      const t = tg(bandId(b.i, 'dynon'));
+      if (!!(t && t.getValue()) !== railDynOn) { buildRail(); return; }
+    }
     for (const w of railWidgets) if (w.refresh) w.refresh();
   }
 
@@ -984,9 +1109,15 @@
       const o = document.createElement('option'); o.value = i; o.textContent = name; mon.appendChild(o);
     }
     mon.addEventListener('change', () => setComboIndex('listenchan', parseInt(mon.value, 10)));
+    const la = $('lookaheadSel');
+    for (const [i, name] of ['Off', '2 ms', '5 ms', '10 ms'].entries()) {
+      const o = document.createElement('option'); o.value = i; o.textContent = name; la.appendChild(o);
+    }
+    la.addEventListener('change', () => setComboIndex('lookahead', parseInt(la.value, 10)));
     setInterval(() => {
       cm.value = '' + comboIndex('channelmode', 3);
       mon.value = '' + comboIndex('listenchan', 5);
+      la.value = '' + comboIndex('lookahead', 4);
     }, 400);
 
     const bindHead = (elId, paramId) => {
@@ -1013,6 +1144,9 @@
     $('outBar').style.transform = `scaleX(${clamp((mOut + 60) / 60, 0, 1)})`;
     $('inDb').textContent = showDb(mInT);
     $('outDb').textContent = showDb(mOutT);
+    $('autoBtn').title = agDb !== 0
+      ? `Loudness-compensated output · currently ${agDb >= 0 ? '+' : ''}${agDb.toFixed(1)} dB`
+      : 'Loudness-compensated output (Match Bypass)';
   }
 
   // -------------------------------------------------------------- events
@@ -1029,7 +1163,20 @@
       }
       railDirty = uiDirty = true;
     });
-    host.on('meters', m => { mInT = m.in; mOutT = m.out; });
+    host.on('meters', m => {
+      mInT = m.in; mOutT = m.out;
+      agDb = m.ag || 0;
+      if (m.rides) {
+        let moved = false;
+        for (let b = 0; b < 24; ++b) {
+          if (Math.abs((m.rides[b] || 0) - dynRides[b]) > 0.05) moved = true;
+          dynRides[b] = m.rides[b] || 0;
+          dynDets[b] = m.dets ? m.dets[b] : -70;
+          dynThrs[b] = m.thrs ? m.thrs[b] : -30;
+        }
+        if (moved) { uiDirty = true; railMeterDirty = true; }
+      }
+    });
     host.on('spectrum', s => { if (!specFrozen) specTarget = s; });
     try {
       const state = await host.call('getUiState');

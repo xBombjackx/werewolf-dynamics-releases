@@ -19,6 +19,11 @@
     output:{ min: -24, max: 12 },
     mix:   { min: 0, max: 100 },
     listen:{ min: 0, max: 24 },
+    dynrange:  { min: -24, max: 24 },
+    dynthresh: { min: -60, max: 0 },
+    dynatk:    { min: 0.05, max: 250, centre: 20 },
+    dynrel:    { min: 1, max: 2500, centre: 150 },
+    dynlink:   { min: 0, max: 100 },
   };
   const skewOf = r => r.centre
     ? Math.log(0.5) / Math.log((r.centre - r.min) / (r.max - r.min)) : 1;
@@ -36,7 +41,8 @@
   };
 
   const CHOICES = { shape: 9, chan: 5, listenchan: 5, channelmode: 3,
-                    phase: 3, quality: 4, chassis: 2, unit: 2 };
+                    phase: 3, quality: 4, chassis: 2, unit: 2,
+                    dynsc: 2, lookahead: 4 };
   const suffixOf = id => (id.match(/^b\d+(.*)$/) || [null, id])[1];
 
   const sliderDefault = id => {
@@ -48,10 +54,19 @@
       case 'input': return toNorm(RANGES.input, 0);
       case 'output': return toNorm(RANGES.output, 0);
       case 'mix': return 1;
+      case 'dynrange': return 0.5;
+      case 'dynthresh': return toNorm(RANGES.dynthresh, -30);
+      case 'dynatk': return 0.5;
+      case 'dynrel': return 0.5;
+      case 'dynlink': return 1;
+      case 'dynscfreq': return toNorm(RANGES.freq, 1000);
       default: return 0;
     }
   };
-  const toggleDefault = id => id === 'power';
+  const toggleDefault = id => {
+    const s = suffixOf(id);
+    return id === 'power' || s === 'dynauto' || s === 'dynscfreqtrack';
+  };
 
   const values = new Map(); // id -> normalised (sliders/combos) or bool
   const listeners = new Map(); // id -> [cb]
@@ -141,7 +156,7 @@
   const boolVal = id => (values.get(id) ?? toggleDefault(id)) ? 1 : 0;
   const bandId = (i, s) => 'b' + (i + 1) + s;
 
-  const BAND_STRIDE = 7;
+  const BAND_STRIDE = 15;
   function snapshot() {
     const globals = new Float64Array([
       real('input', RANGES.input),
@@ -151,6 +166,8 @@
       boolVal('power'),
       Math.round(real('listen', RANGES.listen)),
       comboIdx('listenchan', 5),
+      boolVal('autogain'),
+      comboIdx('lookahead', 4),
     ]);
     const bands = new Float64Array(24 * BAND_STRIDE);
     for (let i = 0; i < 24; i++) {
@@ -162,6 +179,14 @@
       bands[o + 4] = real(bandId(i, 'gain'), RANGES.gain);
       bands[o + 5] = real(bandId(i, 'q'), RANGES.q);
       bands[o + 6] = real(bandId(i, 'slope'), RANGES.slope);
+      bands[o + 7] = boolVal(bandId(i, 'dynon'));
+      bands[o + 8] = real(bandId(i, 'dynrange'), RANGES.dynrange);
+      bands[o + 9] = boolVal(bandId(i, 'dynauto'));
+      bands[o + 10] = real(bandId(i, 'dynthresh'), RANGES.dynthresh);
+      bands[o + 11] = real(bandId(i, 'dynatk'), RANGES.dynatk);
+      bands[o + 12] = real(bandId(i, 'dynrel'), RANGES.dynrel);
+      bands[o + 13] = boolVal(bandId(i, 'dynscfreqtrack'));
+      bands[o + 14] = real(bandId(i, 'dynscfreq'), RANGES.freq);
     }
     return { globals, bands };
   }
@@ -207,12 +232,15 @@
 
   function applyToResponse(snap) {
     const g = snap.globals;
-    resp.wasm.prism_set_globals(g[0], g[1], g[2], g[3], g[4], g[5], g[6]);
+    resp.wasm.prism_set_globals(g[0], g[1], g[2], g[3], g[4], g[5], g[6],
+                                g[7], g[8]);
     const b = snap.bands;
     for (let i = 0; i < 24; i++) {
       const o = i * BAND_STRIDE;
       resp.wasm.prism_set_band(i, b[o], b[o + 1], b[o + 2],
-                               b[o + 3], b[o + 4], b[o + 5], b[o + 6]);
+                               b[o + 3], b[o + 4], b[o + 5], b[o + 6],
+                               b[o + 7], b[o + 8], b[o + 9], b[o + 10],
+                               b[o + 11], b[o + 12], b[o + 13], b[o + 14]);
     }
     resp.wasm.prism_apply();
   }
@@ -302,7 +330,7 @@
     });
     node.port.onmessage = e => {
       const m = e.data;
-      if (m.type === 'meters') emit('meters', { in: m.in, out: m.out });
+      if (m.type === 'meters') emit('meters', m); // in/out/ag/rides/dets/thrs
       if (m.type === 'ready') node.port.postMessage({ type: 'controls', ...snapshot() });
     };
     audio.node = node;

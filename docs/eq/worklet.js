@@ -4,7 +4,9 @@
 // can hang an analyser on the same "pre" point the plugin uses. Controls
 // arrive as one flat message ({globals, bands}) and are applied atomically.
 
-const BAND_STRIDE = 7; // on, shape, chan, freq, gain, q, slope
+// on, shape, chan, freq, gain, q, slope,
+// dynOn, dynRange, dynAuto, dynThr, dynAtk, dynRel, detTrack, detFreq
+const BAND_STRIDE = 15;
 
 function stubImports(module) {
   // STANDALONE_WASM may import a handful of wasi shims; stub them all.
@@ -54,12 +56,15 @@ class PrismWorklet extends AudioWorkletProcessor {
   apply(msg) {
     if (msg.type !== 'controls') return;
     const g = msg.globals;
-    this.wasm.prism_set_globals(g[0], g[1], g[2], g[3], g[4], g[5], g[6]);
+    this.wasm.prism_set_globals(g[0], g[1], g[2], g[3], g[4], g[5], g[6],
+                                g[7], g[8]);
     const b = msg.bands;
     for (let i = 0; i < 24; i++) {
       const o = i * BAND_STRIDE;
       this.wasm.prism_set_band(i, b[o], b[o + 1], b[o + 2],
-                               b[o + 3], b[o + 4], b[o + 5], b[o + 6]);
+                               b[o + 3], b[o + 4], b[o + 5], b[o + 6],
+                               b[o + 7], b[o + 8], b[o + 9], b[o + 10],
+                               b[o + 11], b[o + 12], b[o + 13], b[o + 14]);
     }
     this.wasm.prism_apply();
   }
@@ -93,10 +98,18 @@ class PrismWorklet extends AudioWorkletProcessor {
 
     if (--this.meterCountdown <= 0) {
       this.meterCountdown = 8; // ~every 8 quanta ≈ 21 ms at 48 kHz
+      const rides = new Array(24), dets = new Array(24), thrs = new Array(24);
+      for (let b = 0; b < 24; b++) {
+        rides[b] = this.wasm.prism_band_ride_db(b);
+        dets[b] = this.wasm.prism_band_det_db(b);
+        thrs[b] = this.wasm.prism_band_thr_db(b);
+      }
       this.port.postMessage({
         type: 'meters',
         in: this.wasm.prism_input_db(),
         out: this.wasm.prism_output_db(),
+        ag: this.wasm.prism_autogain_db(),
+        rides, dets, thrs,
       });
     }
     return true;
