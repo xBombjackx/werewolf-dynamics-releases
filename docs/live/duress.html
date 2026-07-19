@@ -170,7 +170,7 @@ const P = { input: 0, output: 1, ratio: 2, brit: 3, attack: 4, release: 5,
 
 // Recipe staging (demo/tools/renderdemos.ps1, duress_61): ratio 6:1,
 // input +8, Match Bypass, output -6 (high-crest OH kit headroom).
-const DEFAULTS = { [P.input]: 8, [P.output]: -6, [P.ratio]: 4,
+const DEFAULTS = { [P.input]: 8, [P.output]: 0, [P.ratio]: 4,
                    [P.attack]: 5, [P.release]: 5,
                    [P.autogain]: 2, [P.power]: 1 };
 
@@ -184,7 +184,7 @@ const KNOBS = [
   { id: P.input,   name: 'Input',   min: -24, max: 24, def: 8,  fmt: v => (v >= 0 ? '+' : '') + v.toFixed(1) + ' dB' },
   { id: P.attack,  name: 'Attack',  min: 0,   max: 10, def: 5,  fmt: v => v.toFixed(1) },
   { id: P.release, name: 'Release', min: 0,   max: 10, def: 5,  fmt: v => v.toFixed(1) },
-  { id: P.output,  name: 'Output',  min: -24, max: 24, def: -6, fmt: v => (v >= 0 ? '+' : '') + v.toFixed(1) + ' dB' },
+  { id: P.output,  name: 'Output',  min: -24, max: 24, def: 0,  fmt: v => (v >= 0 ? '+' : '') + v.toFixed(1) + ' dB' },
 ];
 
 const statusEl = document.getElementById('status');
@@ -607,7 +607,7 @@ const pnukeBtn = document.getElementById('pnuke');
 function applyPreset (ratio, input) {
   setRatio(ratio);
   knobs[0].set(input); // input (fires setParam)
-  knobs[3].set(-6);    // output
+  knobs[3].set(0);     // output (renders used -6 for WAV headroom; live A/B wants unity)
   syncPresetLights();
 }
 p11Btn.addEventListener('click', () => applyPreset(0, 0));
