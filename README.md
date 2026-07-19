@@ -91,6 +91,14 @@ that overrides the envelope the way all-buttons abuse does.
 
 <img src="img/wd-duress.png" width="700" alt="WD Duress faceplate">
 
+**WD Clamp** — three compressors, one power supply. Load an Opto, Mu, FET
+or VCA engine into each of three slots, chain them in any order, and let
+them share a rail like hardware in a rack does. Drive one slot hard and
+its neighbors feel it. The transfer screens are measured curves, not
+drawings, with a dot riding each one at the slot's live input level.
+
+<img src="img/wd-clamp.png" width="700" alt="WD Clamp faceplate">
+
 **WD Pre** — five preamps behind one gain knob. Precision digital wire, a
 Class A British console with its iron, an American op-amp console, a German
 broadcast valve, and a cassette 4-track desk channel. Gain redistributes the
@@ -161,6 +169,11 @@ download. Expected for now.
 
 Open an [issue](../../issues) with your DAW, sample rate, and the plugin
 version. Betas move fast, so check you're on the latest release first.
+
+How do we know the modules are accurate? [docs/ACCURACY.md](docs/ACCURACY.md)
+explains the whole method: the published numbers we calibrate against, the
+automated bench that measures every build, and the audit that checked all
+sixteen plugins against their hardware's spec sheets.
 
 ## License
 
