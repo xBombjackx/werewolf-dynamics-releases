@@ -1,0 +1,36 @@
+# Deploy each published GitHub release to itch.io via butler.
+# The release zip is pushed as-is to the windows channel, versioned by tag,
+# so the itch build is always byte-identical to the GitHub asset.
+name: Deploy to itch.io
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  itch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "${{ github.event.release.tag_name }}" \
+            --repo "${{ github.repository }}" --pattern '*.zip' --dir dist
+          ls -la dist
+
+      - name: Install butler
+        run: |
+          curl -sL https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default -o butler.zip
+          unzip -q butler.zip -d butler
+          chmod +x butler/butler
+          ./butler/butler -V
+
+      - name: Push to itch.io
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          VERSION="${{ github.event.release.tag_name }}"
+          VERSION="${VERSION#v}"
+          ./butler/butler push dist/*.zip xbombjackx/analog-collection:windows --userversion "$VERSION"
+          ./butler/butler status xbombjackx/analog-collection:windows
