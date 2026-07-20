@@ -17,7 +17,7 @@ inside: supply draw, bias, transformer headroom, tube swaps. Set them to
 factory and it behaves like a well-kept unit. Or don't.
 
 All free. Grab the zip from the
-[Releases page](../../releases).
+[Itch.io page](https://xbombjackx.itch.io/analog-collection).
 
 ## 🎧 Hear it first
 
