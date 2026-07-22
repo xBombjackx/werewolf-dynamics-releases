@@ -179,6 +179,11 @@ download. Expected for now.
 Open an [issue](../../issues) with your DAW, sample rate, and the plugin
 version. Betas move fast, so check you're on the latest release first.
 
+Running the rack? [docs/RACK_GUIDE.md](docs/RACK_GUIDE.md) is the user guide:
+what the chassis actually shares, what slot order changes (and what it
+doesn't), the LIVE/TAPE/IDLE lamps, frames, and hardware-honest chaining
+orders for the modules.
+
 How do we know the modules are accurate? [docs/ACCURACY.md](docs/ACCURACY.md)
 explains the whole method: the published numbers we calibrate against, the
 automated bench that measures every build, and the audit that checked all
