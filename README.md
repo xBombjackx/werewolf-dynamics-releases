@@ -151,7 +151,9 @@ honest way to A/B your own processing.
 
 ## Requirements
 
-Windows 10 or 11, 64-bit, and any VST3 or CLAP host.
+Windows 10 or 11, 64-bit, and any VST3 or CLAP host. The macOS beta
+needs macOS 11 or newer and a VST3 or AU host; one universal binary
+covers Apple Silicon and Intel.
 
 ## Install
 
@@ -161,6 +163,13 @@ Unzip the release. Copy the `.vst3` folders into
 per-user alternative: `%LOCALAPPDATA%\Programs\Common\CLAP`). Pick one
 format per plugin, then rescan in your DAW. Everything shows up under
 Werewolf Dynamics.
+
+On the Mac (beta): copy the `.vst3` folders into
+`~/Library/Audio/Plug-Ins/VST3` and the `.component` folders into
+`~/Library/Audio/Plug-Ins/Components`. Logic loads the AU. These
+builds are not notarized yet, so macOS quarantines the download and
+your DAW will act like the plugins don't exist; INSTALL.txt in the
+zip has the one Terminal command that clears it.
 
 Beta builds are not code-signed yet, so Windows may grumble on first
 download. Expected for now.
