@@ -139,6 +139,31 @@ are measured live from the running engines, not drawn. No rack required.
 
 <img src="assets/wd-strip-front.png" width="820" alt="WD Strip channel strip">
 
+**WD Summer Channel** — the desk channel, one per track. A class-A stage
+into real gapped iron, plus a high-pass and low-pass, calibrated so that at
+its nominal setting it does what a good console channel does: tenths of a
+percent, warmth on the lows, nothing in the mids. Every instance drifts a
+little from every other one, keyed to the track name, the way forty channel
+strips built in 1972 drift.
+
+<img src="assets/wd-sumch-front.png" width="340" alt="WD Summer Channel faceplate">
+
+**WD Summer** — the bus those channels sum into, and it behaves like one.
+The more channels you load onto a group, the more the shared supply sags,
+so a busy mix grabs sooner than a sparse one — a mechanism, not a knob. The
+face lists the channels currently alive on the group.
+
+<img src="assets/wd-summer-front.png" width="700" alt="WD Summer faceplate">
+
+**WD Span** — a stereo widener that works with a transformer instead of
+phase. Everything happens to the difference signal, so a mono fold is exact
+by construction, no matter how hard you drive it — the one thing the Haas
+and allpass wideners can't say. Push the iron and the bottom pulls toward
+the centre on its own, because the core saturates on the lows first. No
+crossover anywhere in it.
+
+<img src="assets/wd-span-front.png" width="340" alt="WD Span faceplate">
+
 **WD Delta** — a send/return pair that lets you hear what your whole chain
 is doing: any plugins, anyone's. SEND taps the untouched signal at the top,
 RETURN sits at the end, measures the chain's real latency by correlation,
@@ -187,7 +212,7 @@ orders for the modules.
 How do we know the modules are accurate? [docs/ACCURACY.md](docs/ACCURACY.md)
 explains the whole method: the published numbers we calibrate against, the
 automated bench that measures every build, and the audit that checked all
-sixteen plugins against their hardware's spec sheets.
+every plugin against its hardware's spec sheets.
 
 ## License
 
