@@ -164,6 +164,17 @@ crossover anywhere in it.
 
 <img src="assets/wd-span-front.png" width="340" alt="WD Span faceplate">
 
+**WD Spring** — a real spring tank, not a spring-flavoured algorithm. A
+steel spring carries high frequencies faster than low ones, so every
+reflection comes back smeared into a descending chirp — that is the boing,
+and it is a mechanism rather than a filter, which is why plate algorithms
+can't fake it. Three tanks to choose from: the short bright pan out of a
+guitar amp, the studio rack unit, and the long dark console tank. TENSION
+makes the springs go nonlinear the way a real one does when you hit it hard,
+so loud transients chirp differently from quiet ones.
+
+<img src="assets/wd-spring-front.png" width="340" alt="WD Spring faceplate">
+
 **WD Delta** — a send/return pair that lets you hear what your whole chain
 is doing: any plugins, anyone's. SEND taps the untouched signal at the top,
 RETURN sits at the end, measures the chain's real latency by correlation,
