@@ -23,7 +23,7 @@ All free. Grab the zip from the
 
 **[Audio demos — listen in your browser](https://xbombjackx.github.io/werewolf-dynamics-releases/)**
 
-Eleven A/B demos, one mechanism each. Every variant of a demo is the same
+Fourteen A/B demos, one mechanism each. Every variant of a demo is the same
 performance, sample-locked — switching circuits mid-playback is a 12 ms
 crossfade, so what changes is only the circuit. Loudness-matched, no
 mastering, no cheating.

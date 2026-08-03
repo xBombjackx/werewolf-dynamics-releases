@@ -1,6 +1,22 @@
 # Deploy each published GitHub release to itch.io via butler.
-# The release zip is pushed as-is to the windows channel, versioned by tag,
-# so the itch build is always byte-identical to the GitHub asset.
+# Each platform's zip goes to its own channel, versioned by tag, so the itch
+# build is always byte-identical to the GitHub asset.
+#
+# HISTORY, because this failed silently for three releases (v0.7.1, v0.7.2,
+# v0.7.3) and nobody noticed until 2026-08-02 — itch sat on an old build
+# while GitHub moved on:
+#
+#   * v0.7.1 / v0.7.2 died with "butler: error: unexpected ...:windows".
+#     The push line was `butler push dist/*.zip <channel>`, and those
+#     releases carried TWO zips (Windows and macOS). The glob expanded to
+#     both, so the channel spec arrived as a stray third positional
+#     argument. ANY release with a macOS build attached would have failed.
+#   * v0.7.3 died on duplicate zip entries — the same path present as both a
+#     0-byte file and a directory — which butler refuses. That archive came
+#     from a staging script accidentally invoked twice at once.
+#
+# So: never let a glob reach butler, check the archive before pushing, and
+# fail loudly rather than quietly publishing nothing.
 name: Deploy to itch.io
 
 on:
@@ -11,7 +27,7 @@ jobs:
   itch:
     runs-on: ubuntu-latest
     steps:
-      - name: Download release asset
+      - name: Download release assets
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -30,7 +46,53 @@ jobs:
         env:
           BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
         run: |
+          set -euo pipefail
           VERSION="${{ github.event.release.tag_name }}"
           VERSION="${VERSION#v}"
-          ./butler/butler push dist/*.zip xbombjackx/analog-collection:windows --userversion "$VERSION"
-          ./butler/butler status xbombjackx/analog-collection:windows
+          PROJECT=xbombjackx/analog-collection
+          pushed=0
+
+          push_channel () {
+            channel="$1"
+            pattern="$2"
+            matches=$(find dist -maxdepth 1 -name "$pattern" | sort)
+            count=$(printf '%s' "$matches" | grep -c . || true)
+
+            if [ "$count" -eq 0 ]; then
+              echo "::notice::no $channel asset matching $pattern - skipping"
+              return 0
+            fi
+            if [ "$count" -gt 1 ]; then
+              echo "::error::$count assets match $pattern for the $channel channel"
+              printf '  %s\n' $matches
+              echo "::error::refusing to guess which one to publish"
+              exit 1
+            fi
+
+            zip="$matches"
+            echo "== $channel <- $(basename "$zip")"
+
+            # Reject a malformed archive here instead of letting butler find
+            # it: an entry present as both a file and a directory is what
+            # killed v0.7.3.
+            unzip -t "$zip" > /dev/null
+            dupes=$(unzip -Z1 "$zip" | sed 's:/*$::' | sort | uniq -d | head -20 || true)
+            if [ -n "$dupes" ]; then
+              echo "::error::$zip has entries that collide ignoring trailing slashes"
+              printf '  %s\n' $dupes
+              exit 1
+            fi
+
+            ./butler/butler push "$zip" "$PROJECT:$channel" --userversion "$VERSION"
+            ./butler/butler status "$PROJECT:$channel"
+            pushed=$((pushed + 1))
+          }
+
+          push_channel windows '*Windows*.zip'
+          push_channel mac     '*macOS*.zip'
+
+          if [ "$pushed" -eq 0 ]; then
+            echo "::error::release ${{ github.event.release.tag_name }} had no publishable asset"
+            exit 1
+          fi
+          echo "pushed $pushed channel(s) at version $VERSION"
