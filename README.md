@@ -139,12 +139,14 @@ are measured live from the running engines, not drawn. No rack required.
 
 <img src="assets/wd-strip-front.png" width="820" alt="WD Strip channel strip">
 
-**WD Summer Channel** — the desk channel, one per track. A class-A stage
-into real gapped iron, plus a high-pass and low-pass, calibrated so that at
-its nominal setting it does what a good console channel does: tenths of a
-percent, warmth on the lows, nothing in the mids. Every instance drifts a
-little from every other one, keyed to the track name, the way forty channel
-strips built in 1972 drift.
+**WD Summer Channel** — the desk channel, one per track. Five consoles on
+one selector: the brit desk with its transformer lows and subsonic ring,
+the big clean inline desk that warms everything a little and never clicks,
+the discrete-op-amp desk with steel-core lows and a hard fast corner, the
+EF86 tube console with its always-on glow, and a german broadcast amp that
+stays invisible until you lean on it. Every instance drifts a little from
+every other one, keyed to the track name, the way forty channel strips
+built in 1972 drift.
 
 <img src="assets/wd-sumch-front.png" width="340" alt="WD Summer Channel faceplate">
 
@@ -174,6 +176,26 @@ makes the springs go nonlinear the way a real one does when you hit it hard,
 so loud transients chirp differently from quiet ones.
 
 <img src="assets/wd-spring-front.png" width="340" alt="WD Spring faceplate">
+
+**WD 361** — the tape-side half of a noise reduction unit, used the way
+engineers misused it. Run the encoder and never decode: each band's quiet
+content comes up, loud material stays put, and the top comes up hardest.
+Air and density a compressor can't give you, because a compressor only
+works on the loud end. Three genuinely different machines on the TYPE
+switch, and a DECODE mode that is the opposite tool — detail pushed down,
+dynamics exaggerated.
+
+<img src="assets/wd-361-front.png" width="340" alt="WD 361 faceplate">
+
+**WD Brigade** — a bucket-brigade delay, dark for the same reason the
+originals were. The delay time is the clock, and the filters close down
+with it: a long BBD delay is necessarily dark, a bright one necessarily
+short. Repeats dissolve into mush on their own, the TIME knob glides pitch
+when you grab it, and the built-in compander fights the chain's own hiss —
+switch it out for the honest broken-unit sound. The howl is on the rear
+panel, and it ships off.
+
+<img src="assets/wd-brigade-front.png" width="340" alt="WD Brigade faceplate">
 
 **WD Delta** — a send/return pair that lets you hear what your whole chain
 is doing: any plugins, anyone's. SEND taps the untouched signal at the top,
