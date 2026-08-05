@@ -153,7 +153,10 @@ built in 1972 drift.
 **WD Summer** — the bus those channels sum into, and it behaves like one.
 The more channels you load onto a group, the more the shared supply sags,
 so a busy mix grabs sooner than a sparse one — a mechanism, not a knob. The
-face lists the channels currently alive on the group.
+face lists the channels currently alive on the group. The same five-desk
+BANK selector as the channel, bus-sized: on the big clean inline desk the
+color is not a transformer at all — the mix modulates its own power rails,
+which is what that console's famous glue actually is.
 
 <img src="assets/wd-summer-front.png" width="700" alt="WD Summer faceplate">
 
