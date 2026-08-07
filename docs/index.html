@@ -76,7 +76,11 @@
   dialog.deep .type { font-size: 10px; letter-spacing: 0.22em;
                       color: var(--accent); text-transform: uppercase; }
   dialog.deep p { font-size: 13.5px; color: var(--ink-dim); line-height: 1.6; }
-  dialog.deep img { width: 100%; height: auto; border-radius: 4px; margin: 12px 0 4px; }
+  dialog.deep img { display: block; max-width: 100%; width: auto; height: auto;
+                    max-height: 36vh; border-radius: 4px; margin: 12px auto 4px; }
+  dialog.deep h4 { margin: 14px 0 2px; font-size: 10px; letter-spacing: 0.24em;
+                   color: var(--ink-faint); text-transform: uppercase; }
+  dialog.deep p { margin: 2px 0 0; }
   dialog.deep .close { float: right; background: none; border: 1px solid var(--line);
     color: var(--ink-dim); border-radius: 4px; padding: 4px 10px; cursor: pointer;
     font-size: 12px; }
@@ -171,31 +175,96 @@
     <button class="close" onclick="document.getElementById('deepDlg').close()">close</button>
     <h3 id="deepName"></h3><span class="type" id="deepType"></span>
     <img id="deepImg" alt="">
-    <p id="deepText"></p>
+    <h4>What it is</h4><p id="deepIs"></p>
+    <h4>What it does</h4><p id="deepDoes"></p>
+    <h4>The circuit</h4><p id="deepMore"></p>
   </dialog>
   <script>
   const DEEP = {
-    "wd-opto": { name: "WD OPTO", type: "Compressor · optical tube", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-opto-front.png", text: "The photocell is simulated for real: two time constants, program-dependent memory, the slow settling tail. Push it and the tube stage moves too. Two voicings, tube WD-2A and solid-state WD-3A, plus drive and iron controls the original never gave you. The rear panel has the cell swap and the supply trims." },
-    "wd-mu": { name: "WD MU", type: "Compressor · variable-mu", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-mu-front.png", text: "There is no threshold knob because the circuit does not have one. The six-position time-constant bank sets the recovery character. Bias sits on the front. The back has mismatched tube pairs and the supply draw, so two instances never sound quite the same." },
-    "wd-tec": { name: "WDTEC", type: "Equalizer · passive tube", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-tec-front.png", text: "Program and midrange sections in one wide module. The filter inductors have live magnetic cores: a Core knob sets how hard you push them, and the cores answer with their own saturation. Tubes and iron are always in circuit, like the hardware." },
-    "wd-tape": { name: "WD TAPE", type: "Tape machine", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-tape-front.png", text: "The whole record-and-reproduce chain is in there, aligned by the same procedure used on hardware. Two stock formulations. Speed changes behave like a real transport: a settled speed changes the alignment sound, and turning the knob bends pitch only while the old tape clears the head gap. Every unit number ships with its own transport quirks." },
-    "wd-xq": { name: "WD XQ", type: "Equalizer · parametric, five circuits", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-xq-front.png", text: "Precision digital, two console flavors, a stepped American classic, and an inductor design from 1973. Each circuit constrains the bands the way its hardware did. Dynamic bands work on all five." },
-    "wd-fet": { name: "WD FET", type: "Compressor · FET", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-fet-front.png", text: "The ratio network is solved from the 1176LN drawing, so all-buttons works because the circuit does it, not because the curve was faked. Four laws in one box: the 76 everyone reaches for, a crushed 760 sibling, a germanium path, and a clean precision law." },
-    "wd-vca": { name: "WD VCA", type: "Compressor · VCA bus", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-vca-front.png", text: "Console Bus leans the whole mix back the way the famous desk compressor does. RMS Punch is for the drum bus; its attack table falls out of one capacitor, same as the hardware. The third law is the 2500-class thrust bus. Auto release and an over-easy knee." },
-    "wd-duress": { name: "WD DURESS", type: "Compressor · curve family", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-duress-front.png", text: "1:1 is warm-up distortion with no compression at all. 10:1 borrows an opto release with a twenty-second tail. Nuke is a log-release brickwall. Three distortion modes, two stereo link laws taken from the block diagram, and a British Mode switch that overrides the envelope the way all-buttons abuse does." },
-    "wd-clamp": { name: "WD CLAMP", type: "Compressor rack · three slots", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-clamp-front.png", text: "Load an Opto, Mu, FET or VCA engine into each slot and chain them in any order. They share a rail like hardware in a rack does. The transfer screens are measured curves with a dot riding each one at the slot\u2019s live input level." },
-    "wd-pre": { name: "WD PRE", type: "Preamp · five circuits", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-pre-front.png", text: "Precision digital wire, a Class A British console with its iron, an American op-amp console, a German broadcast valve, and a cassette 4-track desk channel. Gain redistributes the circuit rather than scaling a number; output is only a fader after the iron. Crank the console laws and the transformers actually saturate." },
-    "wd-echo": { name: "WD ECHO", type: "Delay · tape loop echo", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-echo-front.png", text: "Motor-driven transport, three repro heads, spring tank. Repeat rate is a motor, not a delay dial: turn it and everything already on the loop bends with the transport. The time arrow reads the tape forward, palindrome, or backward." },
-    "wd-ax": { name: "WD AX", type: "Exciter", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-ax-front.png", text: "The fundamental never moves because nothing is boosted; a generated sideband is added. The Big Bottom section lifts the decay of a note instead of its hit: sustain without the overload penalty." },
-    "wd-rack": { name: "WD RACK", type: "Chassis · cross-plugin coupling", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-rack-front.png", text: "Put it on your master bus and the modules dialed to its frame are screwed into the same box: a supply that sags when a neighbor works hard, adjacent-slot bleed, a slot map you can reorder. Crank the crosstalk and the rack becomes an effect of its own. Skip it and every module runs clean standalone." },
-    "wd-strip": { name: "WD STRIP", type: "Channel strip", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-strip-front.png", text: "Any of the five Pre laws, either EQ, any of the four compressors. All three stages hang off one rail inside the same process, so the compressor\u2019s knee moves when the preamp leans on the supply. The response curve and transfer display are measured live from the running engines, not drawn." },
-    "wd-sumch": { name: "WD SUMMER CHANNEL", type: "Console channel", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-sumch-front.png", text: "The brit desk with its transformer lows and subsonic ring, the big clean inline desk, the discrete-op-amp desk with steel-core lows, the EF86 tube console, and a german broadcast amp that stays invisible until you lean on it. Every instance drifts a little from every other one, keyed to the track name, the way forty channel strips built in 1972 drift." },
-    "wd-summer": { name: "WD SUMMER", type: "Console bus · summing", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-summer-front.png", text: "The more channels you load onto a group, the more the supply sags, so a crowded session grabs sooner than a sparse one. That is a mechanism, not a knob. The same five desks as the channel, bus-sized; on the big clean desk the color is not a transformer at all, it is the mix working the console\u2019s power rails." },
-    "wd-span": { name: "WD SPAN", type: "Stereo widener · transformer", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-span-front.png", text: "Everything happens to the difference signal, so mono compatibility is exact by construction no matter how hard you drive it. Push the iron and the bottom pulls toward the centre on its own, because a core saturates on the lows first. No crossover anywhere in it." },
-    "wd-spring": { name: "WD SPRING", type: "Reverb · spring tank", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-spring-front.png", text: "A steel spring carries high frequencies faster than low ones, so every reflection comes back smeared into a descending chirp. That is the boing, and plate algorithms cannot fake it. Three tanks: the short bright pan out of a guitar amp, the studio rack unit, and the long dark console tank." },
-    "wd-361": { name: "WD 361", type: "Compander · encode processor", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-361-front.png", text: "Run the encoder and never decode: quiet material comes up, loud material stays put, and the top comes up hardest. That is air and density a compressor cannot give you, because a compressor only works on the loud end. Three TYPE families are genuinely different machines. It does not claim to be noise reduction, because the four-band round trip never nulled on the hardware either." },
-    "wd-brigade": { name: "WD BRIGADE", type: "Delay · bucket brigade", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-brigade-front.png", text: "A slower clock forces the filters to close down with it: a long BBD delay is necessarily dark, a bright one is necessarily short. Repeats dissolve into mush on their own, TIME glides pitch when you grab it, and the compander hides the chain\u2019s hiss. The self-oscillation howl is on a rear switch, shipped off." },
-    "wd-delta": { name: "WD DELTA SEND / RETURN", type: "Monitoring utility · chain difference", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-delta-send-front.png", text: "SEND taps the untouched signal at the top of the chain. RETURN sits at the end, measures the chain\u2019s real latency by correlation, and monitors the difference: raw, or level-matched so louder never reads as better. DRY is instant whole-chain bypass with no PDC hiccup. WET MATCHED plays the chain loudness-matched to its input, and it re-matches in under a second when you bypass something mid-listen." }
+    "wd-opto": { name: "WD OPTO", type: "Compressor · optical tube", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-opto-front.png",
+      is: "An optical tube leveling amplifier in the LA-2A bloodline.",
+      does: "Smooth, slow leveling for vocals, bass, and anything that needs to sit still in the mix. Set Peak Reduction, make up the gain, done. It is hard to make it sound bad, and the harder you push, the more the tube stage joins in.",
+      more: "The photocell is simulated for real: two time constants, program-dependent memory, the slow settling tail. Two voicings, tube WD-2A and solid-state WD-3A, plus drive and iron controls the original never gave you. The rear panel has the cell behavior and supply trims the hardware kept inside." },
+    "wd-mu": { name: "WD MU", type: "Compressor · variable-mu", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-mu-front.png",
+      is: "A variable-mu tube compressor in the classic broadcast-limiter tradition.",
+      does: "Glue. Put it on a bus or a full mix and drive a few dB into it; the tubes lean back instead of clamping. The six-position time-constant bank picks how it breathes, from fast program leveling to long slow recovery.",
+      more: "There is no threshold knob because the circuit does not have one. Bias sits on the front and shifts the operating point of the real simulated 6386 pair. The back has mismatched tubes and supply draw, so two instances never sound quite the same." },
+    "wd-tec": { name: "WDTEC", type: "Equalizer · passive tube", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-tec-front.png",
+      is: "A passive tube program equalizer with the midrange unit alongside.",
+      does: "Broad, musical tone moves: low end that gets bigger without getting muddy, silky top, and the classic boost-and-attenuate-together trick on the lows. Use it where you want an instrument to sound better rather than different.",
+      more: "The filter inductors have live magnetic cores. A Core knob sets how hard the program pushes them, and they answer with their own saturation. Tubes and iron are always in circuit, like the hardware." },
+    "wd-tape": { name: "WD TAPE", type: "Tape machine", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-tape-front.png",
+      is: "A studio tape machine, the whole record-and-reproduce chain.",
+      does: "Tape tone on anything: soft saturation when you push the input, head bump in the lows, a top end that follows the speed, wow and flutter from gentle to broken. Slow the speed for darker and thicker; slam the level for glue.",
+      more: "Aligned by the same procedure used on hardware, with two stock formulations. Speed behaves like a real transport: a settled speed changes the alignment sound, and turning the knob bends pitch only while the old-speed tape clears the head gap. Every unit number ships with its own transport quirks." },
+    "wd-xq": { name: "WD XQ", type: "Equalizer · parametric, five circuits", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-xq-front.png",
+      is: "A parametric equalizer with five selectable circuits under one set of knobs.",
+      does: "One EQ workflow, five sounds: clean digital surgery, two console flavors, a stepped American classic, and a 1973 inductor design. Dynamic mode on any band turns a bell into a frequency-conscious compressor.",
+      more: "Each circuit constrains the bands the way its hardware did: the stepped classic snaps to its real frequencies, the inductor design rings like iron, the digital law does exactly what the numbers say. The drive stage is oversampled where the circuit needs it." },
+    "wd-fet": { name: "WD FET", type: "Compressor · FET", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-fet-front.png",
+      is: "A FET limiting amplifier in the 1176 line, four circuit laws in one box.",
+      does: "Fast punch: drums, vocals, room mics, bass DI. The microsecond attack grabs transients nothing else catches, and all-buttons mode is there for the famous explode.",
+      more: "The ratio network is solved from the 1176LN drawing, so all-buttons works because the circuit does it, not because a curve was faked. Four laws: the 76 everyone reaches for, a crushed 760 sibling, a germanium path, and a clean precision law." },
+    "wd-vca": { name: "WD VCA", type: "Compressor · VCA bus", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-vca-front.png",
+      is: "A stereo VCA bus compressor with three detector brains on one gain cell.",
+      does: "The mix-bus move: two to four dB of slow-attack glue on the master or drum bus. Console Bus leans the mix back the way the famous desk compressor does; RMS Punch is for drums; the third law is the 2500-class thrust bus.",
+      more: "One Blackmer-style cell does the gain. The RMS detector attack table falls out of one capacitor, same as the hardware. Auto release, over-easy knee, and the rail feeds the detector reference, so a sagging supply compresses deeper." },
+    "wd-duress": { name: "WD DURESS", type: "Compressor · curve family", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-duress-front.png",
+      is: "A curve-family compressor in the Distressor spirit.",
+      does: "Pick the ratio, get a whole character: 1:1 is warm-up color with no compression, the middle ratios are everyday drum and bass workhorses, 10:1 borrows an opto release, and Nuke is a brickwall for parallel crush.",
+      more: "Every position is its own engineered curve rather than one knee scaled. Three distortion modes, two stereo link laws taken from the block diagram, and a British Mode switch that overrides the envelope the way all-buttons abuse does." },
+    "wd-clamp": { name: "WD CLAMP", type: "Compressor rack · three slots", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-clamp-front.png",
+      is: "Three compressor slots in one box, on one power supply.",
+      does: "Serial compression without juggling three windows: opto into FET for vocals, VCA into Mu for bus work, any order you like. Each slot does a little, the chain does a lot.",
+      more: "The slots share a rail like hardware in a rack, so driving one hard moves its neighbors\u2019 knees. The transfer screens are measured curves, not drawings, with a dot riding each one at the slot\u2019s live input level." },
+    "wd-pre": { name: "WD PRE", type: "Preamp · five circuits", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-pre-front.png",
+      is: "A preamp with five circuits behind one gain knob.",
+      does: "First-stage color: clean digital gain, British console thickness, American op-amp punch, German broadcast valve grind, cassette-deck junk. Crank the console laws and the transformers genuinely saturate — the cranked-preamp sound people buy preamps for.",
+      more: "Gain redistributes the circuit rather than scaling a number, so every detent is a slightly different amplifier. Output is only a fader after the iron. The rear panel exposes the calibration axis, the iron trim, and the unit scatter." },
+    "wd-echo": { name: "WD ECHO", type: "Delay · tape loop echo", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-echo-front.png",
+      is: "A tape loop echo with a motor, three playback heads, and a spring tank.",
+      does: "Dub echoes, self-oscillating tails, warbly slapback. Turn the rate and every repeat already on the loop bends with the motor, because the rate IS the motor. The time arrow plays the loop forward, palindrome, or backward.",
+      more: "The loop is a real simulated medium with a splice on it. Three repro heads set the rhythm, the spring tank sits where the hardware put it, and the transport misbehaves exactly as much as you ask it to." },
+    "wd-ax": { name: "WD AX", type: "Exciter", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-ax-front.png",
+      is: "A harmonic exciter built from the patents instead of around them.",
+      does: "Air and presence that EQ cannot give, because nothing is boosted: new top end is synthesized and added. Big Bottom lifts the decay of low notes instead of their hit — sustain without eating headroom.",
+      more: "The generated sideband means the fundamental never moves. The patent lineage is followed where it matters and documented where we chose differently." },
+    "wd-rack": { name: "WD RACK", type: "Chassis · cross-plugin coupling", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-rack-front.png",
+      is: "A chassis that couples your other WD plugins into one physical frame.",
+      does: "Put it on the master bus, dial your modules to its frame number, and they are screwed into the same box: hit the compressor hard and the EQ\u2019s supply sags. Crank the crosstalk and the rack becomes an effect of its own.",
+      more: "Shared supply with real sag, adjacent-slot bleed, PSU ripple that phase-locks to the timeline so bounces replay identically, and a slot map you can reorder. Skip it entirely and every module runs clean standalone." },
+    "wd-strip": { name: "WD STRIP", type: "Channel strip", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-strip-front.png",
+      is: "A channel strip: preamp, EQ, and compressor slots in one window.",
+      does: "Whole-channel processing with a model selector on each stage: any of the five Pre laws, either EQ, any of the four compressors. Gate, tilt, and a converter-guard clipper are built in. One instance per track and the mix gets a spine.",
+      more: "All three stages hang off one power rail inside the same process, so the compressor\u2019s knee moves when the preamp leans on the supply. The response curve and transfer display are measured live from the running engines, not drawn." },
+    "wd-sumch": { name: "WD SUMMER CHANNEL", type: "Console channel", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-sumch-front.png",
+      is: "A featherweight console channel, made to sit on every track.",
+      does: "Pick a desk and put one on everything: the brit desk with transformer lows, the big clean inline desk, the discrete-op-amp desk, the tube console, the german broadcast amp. Zero latency, tiny CPU, honest at nominal, real color when driven.",
+      more: "Every instance drifts a little from every other one, keyed to the track name, the way forty channel strips built in 1972 drift. The GROUP control couples channels to a WD Summer bus so the whole session shares one console power supply." },
+    "wd-summer": { name: "WD SUMMER", type: "Console bus · summing", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-summer-front.png",
+      is: "The console bus the channels sum into, with the same five desks.",
+      does: "Put it on the group or master those channels feed. The more channels on the console, the sooner the mix amp grabs — a crowded hot session sounds different from a sparse one, and that is a mechanism, not a knob.",
+      more: "The face lists every channel alive on the group. On the big clean desk the color is not a transformer at all: the mix modulates the console\u2019s power rails and the rails modulate the mix right back, which is what that console\u2019s famous glue actually is." },
+    "wd-span": { name: "WD SPAN", type: "Stereo widener · transformer", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-span-front.png",
+      is: "A stereo widener that works with a transformer instead of phase tricks.",
+      does: "Width that survives the mono fold, by construction. Wide the sides, push the iron, and the low end pulls itself toward the center the way a saturating core naturally does. No crossover in it anywhere.",
+      more: "Everything happens to the difference signal, so mono compatibility is exact no matter how hard you drive it — the claim the Haas and allpass wideners cannot make, because they buy width by spending mono." },
+    "wd-spring": { name: "WD SPRING", type: "Reverb · spring tank", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-spring-front.png",
+      is: "A spring reverb built as an actual dispersive spring, not a spring-flavored algorithm.",
+      does: "The boing, the drip, the surfy crash on transients. Three tanks: the short bright pan out of a guitar amp, the studio rack unit, and the long dark console tank. DAMPING changes the mechanics, not just the brightness.",
+      more: "A steel spring carries high frequencies faster than low ones, so every reflection comes back smeared into a descending chirp. That is a mechanism plate algorithms cannot fake, which is why springs sound like springs." },
+    "wd-361": { name: "WD 361", type: "Compander · encode processor", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-361-front.png",
+      is: "The tape-side half of an A-type noise reduction unit.",
+      does: "The famous studio misuse: run the encoder, never decode. Quiet material comes up, loud material stays put, and the top comes up hardest — air and density a compressor cannot give you, because a compressor only works on the loud end. DECODE is the opposite tool.",
+      more: "Three TYPE families are genuinely different machines: the four-band A-type, a one-band broadband that breathes instead of pumping, and the treble-only B-type. It does not claim to be noise reduction, because the four-band round trip never nulled on the hardware either." },
+    "wd-brigade": { name: "WD BRIGADE", type: "Delay · bucket brigade", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-brigade-front.png",
+      is: "A bucket-brigade analog delay.",
+      does: "Dark repeats that dissolve into mush on their own, pitch glide when you grab TIME, and hiss the compander politely hides — everything people love about BBD boxes. The self-oscillation howl is on a rear switch, shipped off.",
+      more: "The delay time IS the clock, and a slower clock forces the anti-alias filters to close down with it: a long BBD delay is necessarily dark, a bright one necessarily short. Every quirk here exists because the mechanism exists, including the chip-size bandwidth limits." },
+    "wd-delta": { name: "WD DELTA SEND / RETURN", type: "Monitoring utility · chain difference", img: "https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@main/assets/wd-delta-send-front.png",
+      is: "A send/return pair that measures and monitors what your whole plugin chain does.",
+      does: "Drop SEND at the top of a chain and RETURN at the end — any plugins in between, anyone\u2019s. Then listen to only the difference, A/B at matched loudness so louder never wins, or bypass the whole chain instantly with no delay-compensation hiccup.",
+      more: "RETURN finds the chain\u2019s real latency by correlation, no configuration. WET MATCHED re-levels in under a second when you bypass something mid-listen, and the LOOK switch trades a moment of latency for a re-match that lands exactly where the change happened." }
   };
   document.querySelectorAll(".card img").forEach(el => {
     el.addEventListener("click", () => {
@@ -204,7 +273,9 @@
       document.getElementById("deepName").textContent = d.name;
       document.getElementById("deepType").textContent = d.type;
       document.getElementById("deepImg").src = d.img;
-      document.getElementById("deepText").textContent = d.text;
+      document.getElementById("deepIs").textContent = d.is;
+      document.getElementById("deepDoes").textContent = d.does;
+      document.getElementById("deepMore").textContent = d.more;
       document.getElementById("deepDlg").showModal();
     });
   });
