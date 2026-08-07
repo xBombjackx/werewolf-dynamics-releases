@@ -21,7 +21,8 @@ All free. Grab the zip from the
 
 ## 🎧 Hear it first
 
-**[Audio demos — listen in your browser](https://xbombjackx.github.io/werewolf-dynamics-releases/)**
+**[Audio demos — listen in your browser](https://xbombjackx.github.io/werewolf-dynamics-releases/demos/)**
+([the website](https://xbombjackx.github.io/werewolf-dynamics-releases/) has the full tour)
 
 Fourteen A/B demos, one mechanism each. Every variant of a demo is the same
 performance, sample-locked — switching circuits mid-playback is a 12 ms
