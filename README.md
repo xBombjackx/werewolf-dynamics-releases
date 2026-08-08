@@ -132,11 +132,13 @@ of its own. Skip it entirely and every module runs clean standalone.
 <img src="assets/wd-rack-front.png" width="340" alt="WD Rack with modules seated in the chassis">
 
 **WD Strip** — a console channel in one window: preamp into EQ into
-compressor, a model selector on each stage. Any of the five Pre laws, either
-EQ, any of the four compressors. All three stages hang off one power rail
-inside the same process, so the compressor's knee moves when the preamp
-leans on the supply. The response curve and compressor transfer on the face
-are measured live from the running engines, not drawn. No rack required.
+compressor, a model selector on each stage. Any of the seven Pre laws,
+either EQ or one of five desk channel EQs, any of the four compressors or
+the desk channel comp — plus the console bus-driver electronics as the
+output stage. All the stages hang off one power rail inside the same
+process, so the compressor's knee moves when the preamp leans on the
+supply. The response curve and compressor transfer on the face are
+measured live from the running engines, not drawn. No rack required.
 
 <img src="assets/wd-strip-front.png" width="820" alt="WD Strip channel strip">
 
