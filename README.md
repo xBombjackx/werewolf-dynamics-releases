@@ -217,7 +217,9 @@ honest way to A/B your own processing.
 
 Windows 10 or 11, 64-bit, and any VST3 or CLAP host. The macOS build
 runs on macOS 10.15 (Catalina) and newer with a VST3 or AU host; one
-universal binary covers Apple Silicon and Intel.
+universal binary covers Apple Silicon and Intel. On 10.15, keep Safari
+updated — the interfaces draw using the system web engine, and Safari
+updates are what keep that engine current.
 
 ## Install
 
@@ -241,6 +243,24 @@ zip has the one Terminal command that clears it.
 
 Beta builds are not code-signed yet, so Windows may grumble on first
 download. Expected for now.
+
+## Known issues
+
+**Bitwig Studio — bouncing or exporting a track that has a CLAP plugin on
+it stalls the audio engine.** Playback and editing are fine; audio stops the
+moment the bounce starts, and you have to remove the plugin from the project
+to get it back. **Use the VST3 build instead — it is unaffected.** This hits
+every module in CLAP format rather than one in particular, and it is being
+actively investigated.
+
+**macOS 10.15 Catalina — plugin interfaces come up black (v0.7.7 and
+earlier).** Fixed in the next release.
+
+If you are on Catalina it is worth running Software Update anyway. The
+interfaces draw using macOS's built-in web engine, which Safari updates keep
+current, and the version Catalina originally shipped with is missing layout
+features some panels rely on — so a few faces will look cramped until that
+engine is updated, even once the black screen is fixed.
 
 ## Bugs
 
