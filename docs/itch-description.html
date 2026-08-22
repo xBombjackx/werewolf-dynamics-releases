@@ -228,6 +228,25 @@ explains the whole method: the published numbers we calibrate against, the
 automated bench that measures every build, and the audit that checked every
 plugin against its hardware's spec sheets.</p>
 
+<h2>Known issues</h2>
+
+<p><strong>Bitwig Studio &mdash; bouncing or exporting a track that has a CLAP plugin
+on it can stall the audio engine.</strong> The cause turned out to be on Bitwig's
+side: its export engine stalls on CLAP plugins that report a changing latency.
+As of v0.7.8 every oversampled module declares one fixed latency and is immune.
+Two modules genuinely change latency at runtime &mdash; WD Pre (tape stage) and
+WD Delta Return (LOOK) &mdash; so for those two in Bitwig, <strong>use the VST3
+build, which is unaffected.</strong></p>
+
+<p><strong>macOS 10.15 Catalina &mdash; plugin interfaces came up black (v0.7.7 and
+earlier).</strong> Fixed in v0.7.8.</p>
+
+<p>If you are on Catalina it is still worth running Software Update. The
+interfaces draw using macOS's built-in web engine, which Safari updates keep
+current, and the version Catalina originally shipped with is missing layout
+features some panels rely on &mdash; so a few faces will look cramped until that
+engine is updated.</p>
+
 <h2>Bugs</h2>
 
 <p>Betas move fast — check you're on the latest release, then report with your
