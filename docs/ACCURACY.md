@@ -40,7 +40,8 @@ Three kinds of sources, in order of authority:
 
 Every module has an anchors document in this folder (TAPE_ANCHORS.md,
 VARIMU_ANCHORS.md, and so on) that lists its sources and the exact numbers
-we hold ourselves to.
+we hold ourselves to. The full citation list — every paper, manual, and
+method, with what each was used for — is [BIBLIOGRAPHY.md](BIBLIOGRAPHY.md).
 
 ## Physics first, then measurement
 
