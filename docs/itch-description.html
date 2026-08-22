@@ -1,4 +1,4 @@
-<p><strong>Analog gear, simulated from the circuit up. Twenty plugins, free.</strong></p>
+<p><strong>Analog gear, simulated from the circuit up. Twenty-two plugins, free.</strong></p>
 
 <p>Most "analog modeled" plugins are a snapshot: measure the hardware, fit some
 curves, ship the curves. These solve the actual circuit while your audio runs
@@ -163,6 +163,26 @@ the long dark console tank.</p>
 
 <img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@560b235/assets/wd-spring-front.png" width="340" alt="WD Spring faceplate">
 
+<p><strong>WD 361</strong> — the tape-side half of a noise reduction unit, used the way
+engineers misused it. Run the encoder and never decode: each band's quiet
+content comes up, loud material stays put, and the top comes up hardest.
+Air and density a compressor can't give you, because a compressor only
+works on the loud end. Three genuinely different machines on the TYPE
+switch, and a DECODE mode that is the opposite tool — detail pushed down,
+dynamics exaggerated.</p>
+
+<img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@b54754a/assets/wd-361-front.png" width="340" alt="WD 361 faceplate">
+
+<p><strong>WD Brigade</strong> — a bucket-brigade delay, dark for the same reason the
+originals were. The delay time is the clock, and the filters close down
+with it: a long BBD delay is necessarily dark, a bright one necessarily
+short. Repeats dissolve into mush on their own, the TIME knob glides pitch
+when you grab it, and the built-in compander fights the chain's own hiss —
+switch it out for the honest broken-unit sound. The howl is on the rear
+panel, and it ships off.</p>
+
+<img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@b54754a/assets/wd-brigade-front.png" width="340" alt="WD Brigade faceplate">
+
 <p><strong>WD Delta</strong> — a send/return pair that lets you hear what your whole chain
 is doing: any plugins, anyone's. SEND taps the untouched signal at the top,
 RETURN sits at the end, measures the chain's real latency by correlation,
@@ -175,7 +195,11 @@ honest way to A/B your own processing.</p>
 
 <h2>Requirements</h2>
 
-<p>Windows 10 or 11, 64-bit, and any VST3 or CLAP host.</p>
+<p>Windows 10 or 11, 64-bit, and any VST3 or CLAP host. On the Mac: macOS
+10.15 (Catalina) and newer with a VST3 or AU host; one universal binary
+covers Apple Silicon and Intel. On 10.15, keep Safari updated — the
+interfaces draw using the system web engine, and Safari updates are what
+keep that engine current.</p>
 
 <h2>Install</h2>
 
@@ -185,6 +209,13 @@ honest way to A/B your own processing.</p>
 per-user alternative: <code>%LOCALAPPDATA%\Programs\Common\CLAP</code>). Pick one
 format per plugin, then rescan in your DAW. Everything shows up under
 Werewolf Dynamics.</p>
+
+<p>On the Mac: copy the <code>.vst3</code> folders into
+<code>~/Library/Audio/Plug-Ins/VST3</code> and the <code>.component</code> folders into
+<code>~/Library/Audio/Plug-Ins/Components</code>. Logic loads the AU. These builds
+are not notarized yet, so macOS quarantines the download and your DAW will
+act like the plugins don't exist; INSTALL.txt in the zip has the one
+Terminal command that clears it.</p>
 
 <p>Beta builds are not code-signed yet, so Windows may grumble on first
 download. Expected for now.</p>
