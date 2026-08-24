@@ -221,6 +221,13 @@ universal binary covers Apple Silicon and Intel. On 10.15, keep Safari
 updated — the interfaces draw using the system web engine, and Safari
 updates are what keep that engine current.
 
+**Linux (beta)**: a testing build is available as a pre-release — 64-bit
+x86_64, VST3 and CLAP, glibc 2.35+, WebKit2GTK 4.1 for the interfaces
+(`sudo apt install libwebkit2gtk-4.1-0` on Debian/Ubuntu). It passes the
+same automated bench as the Windows release but has had far less time in
+real hosts; the release notes say exactly what that means. Reports from
+distributions other than Ubuntu are especially useful.
+
 ## Install
 
 **Windows, the easy way:** every release since v0.7.5 ships a
