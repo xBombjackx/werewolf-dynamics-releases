@@ -166,7 +166,13 @@ Two things the census found, published per the house rule:
 - **WD Summer Channel ran without the oversampling wrap** the other
   nonlinear modules carry, and its −64 dBc — while still quiet — is
   25 dB behind its neighbors, with the energy confirmed on the exact
-  folded-harmonic positions. It is being wrapped.
+  folded-harmonic positions. The wrap was built and measured (−85 dBc),
+  but it also costs 1.8× on a module designed to sit on forty tracks at
+  once — a budget that is itself a tested contract here. The choice
+  between paying that, using a cheaper anti-aliasing method, or keeping
+  the current number as the deliberate price of forty tracks is being
+  made in the open rather than silently; this table will carry whichever
+  number ships.
 - **WD FET's detector is sample-bound at its fastest attack**: gain
   reduction varies by half a decibel with nothing but the sample-grid
   phase of the input, because a microsecond attack outruns a 23 µs
