@@ -132,6 +132,53 @@ disease: of eleven modules, seven had a filter corner placed at its spec
 frequency instead of below it. That check now runs against every new
 module at build time.
 
+## The aliasing census
+
+In August 2026 we measured aliasing across all seventeen instrumented
+modules, because the question kept coming up and the honest answer is a
+table, not a policy. Method: a sine parked just under 12 kHz — chosen
+because at 44.1 kHz every distortion product of that tone folds, making it
+the worst probe there is — at 0 VU nominal level (−18 dBFS), at each
+module's default settings. Numbers are total folded-product power against
+the fundamental; more negative is cleaner. For reference, −80 dBc is far
+below anything audible in program material.
+
+| module | aliasing at nominal, defaults |
+|---|---|
+| WD XQ (Precision model) | −131 dBc (bit-exact wire) |
+| WD Span | −131 dBc |
+| WD Spring | −126 dBc |
+| WD VCA | −112 dBc |
+| WD Pre | −110 dBc |
+| WD Opto | −109 dBc |
+| WD Strip | −106 dBc |
+| WD AX | −102 dBc |
+| WD 361 | −100 dBc |
+| WD Tape | −98 dBc |
+| WD Duress | −93 dBc |
+| WD Mu | −87 dBc |
+| WD Tec | −87 dBc |
+| WD FET | −80 dBc |
+| WD Summer Channel | −64 dBc |
+
+Two things the census found, published per the house rule:
+
+- **WD Summer Channel ran without the oversampling wrap** the other
+  nonlinear modules carry, and its −64 dBc — while still quiet — is
+  25 dB behind its neighbors, with the energy confirmed on the exact
+  folded-harmonic positions. It is being wrapped.
+- **WD FET's detector is sample-bound at its fastest attack**: gain
+  reduction varies by half a decibel with nothing but the sample-grid
+  phase of the input, because a microsecond attack outruns a 23 µs
+  sampling grid. The fix — running the detector at a higher internal
+  rate — is in progress, with these measurements as the before.
+
+Turn a module's drive to the stop and the numbers get dramatically worse
+on this probe — deliberately. The stops are placed past the musical range
+on purpose, every distortion product of a 12 kHz tone folds by
+construction, and a probe tone is not music. The defaults are the claim;
+the census is how we check it stays true.
+
 ## Honesty rules
 
 Accuracy needs rules for the places where we deviate, because every model
