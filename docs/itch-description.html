@@ -245,6 +245,15 @@ Two modules genuinely change latency at runtime &mdash; WD Pre (tape stage) and
 WD Delta Return (LOOK) &mdash; so for those two in Bitwig, <strong>use the VST3
 build, which is unaffected.</strong></p>
 
+<p><strong>Ableton Live on macOS &mdash; the VST3s don't show up in the browser.</strong>
+Live only scans VST3 folders when <em>Use VST3 System Folders</em> is enabled
+(Settings &rarr; Plug-Ins), and VST3 support needs Live 10.1 or newer &mdash;
+check both first. The AU builds load regardless, so Logic and Live-via-AU
+users are unaffected. The bundles themselves check out (universal binaries,
+plugin metadata present); one report is under investigation, so if the
+toggle is on and they still don't appear, please open an issue with your
+Live and macOS versions.</p>
+
 <p><strong>macOS 10.15 Catalina &mdash; plugin interfaces came up black (v0.7.7 and
 earlier).</strong> Fixed in v0.7.8.</p>
 
