@@ -254,6 +254,16 @@ plugin metadata present); one report is under investigation, so if the
 toggle is on and they still don't appear, please open an issue with your
 Live and macOS versions.</p>
 
+<p><strong>Windows &mdash; CLAP faces opened cropped, with only the top-left part of
+the panel visible, on displays scaled above 100% (v0.7.8 and earlier).</strong>
+The VST3s were unaffected. Fixed in v0.7.9.</p>
+
+<p><strong>Linux beta 1 &mdash; every plugin interface was a blank white window.</strong>
+The plugin looked for the web engine by its development library name, which
+only exists with the -dev packages installed. Fixed in Linux beta 2; on beta 1,
+<code>sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev</code> works around it.
+The Windows builds under Wine are not supported (they need the WebView2 runtime).</p>
+
 <p><strong>macOS 10.15 Catalina &mdash; plugin interfaces came up black (v0.7.7 and
 earlier).</strong> Fixed in v0.7.8.</p>
 

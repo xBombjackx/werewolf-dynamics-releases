@@ -159,20 +159,23 @@ below anything audible in program material.
 | WD Mu | −87 dBc |
 | WD Tec | −87 dBc |
 | WD FET | −80 dBc |
-| WD Summer Channel | −64 dBc |
+| WD Summer Channel | −86 dBc (was −64 until 2026-09-01) |
 
 Two things the census found, published per the house rule:
 
 - **WD Summer Channel ran without the oversampling wrap** the other
-  nonlinear modules carry, and its −64 dBc — while still quiet — is
+  nonlinear modules carry, and its −64 dBc — while still quiet — was
   25 dB behind its neighbors, with the energy confirmed on the exact
   folded-harmonic positions. The wrap was built and measured (−85 dBc),
   but it also costs 1.8× on a module designed to sit on forty tracks at
-  once — a budget that is itself a tested contract here. The choice
-  between paying that, using a cheaper anti-aliasing method, or keeping
-  the current number as the deliberate price of forty tracks is being
-  made in the open rather than silently; this table will carry whichever
-  number ships.
+  once — a budget that is itself a tested contract here. **Decided
+  2026-09-01: the wrap runs on every seat.** The default seat now
+  measures −85.9 dBc (H2′; H3′ −98.3) on the census probe and is gated
+  at the −80 suite bar like every other module. The price is real and
+  published: ~52–58 instances per core instead of ~101 (MSVC Release, the
+  bench box) — about 2% of a core per instance, gated at >40 — so forty
+  tracks of it is roughly 5–10% of a modern 8-core. Latency is still
+  zero (the wrap is IIR both ways).
 - **WD FET's detector is sample-bound at its fastest attack**: gain
   reduction varies by half a decibel with nothing but the sample-grid
   phase of the input, because a microsecond attack outruns a 23 µs

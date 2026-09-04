@@ -261,6 +261,16 @@ Two shipping modules genuinely change latency at runtime — WD Pre (tape
 stage) and WD Delta Return (LOOK) — so for those two in Bitwig, **use the
 VST3 build, which is unaffected.**
 
+**Windows — CLAP faces opened cropped, with only the top-left part of the
+panel visible, on displays scaled above 100% (v0.7.8 and earlier).** The
+VST3s were unaffected. Fixed in v0.7.9.
+
+**Linux beta 1 — every plugin interface was a blank white window.** The
+plugin looked for the web engine by its development library name, which only
+exists with the `-dev` packages installed. Fixed in Linux beta 2; on beta 1,
+`sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev` works around it. The
+Windows builds under Wine are not supported (they need the WebView2 runtime).
+
 **macOS 10.15 Catalina — plugin interfaces came up black (v0.7.7 and
 earlier).** Fixed in v0.7.8.
 
