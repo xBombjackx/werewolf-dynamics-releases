@@ -272,7 +272,8 @@ exists with the `-dev` packages installed. Fixed in Linux beta 2; on beta 1,
 Windows builds under Wine are not supported (they need the WebView2 runtime).
 
 **macOS 10.15 Catalina — plugin interfaces came up black (v0.7.7 and
-earlier).** Fixed in v0.7.8.
+earlier).** Fixed in v0.7.8, and from v0.8.0 the faces also load on the
+Safari 13.1 engine Catalina originally shipped with.
 
 If you are on Catalina it is still worth running Software Update. The
 interfaces draw using macOS's built-in web engine, which Safari updates keep
