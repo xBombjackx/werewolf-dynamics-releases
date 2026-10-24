@@ -24,7 +24,7 @@
   header { text-align: center; margin-bottom: 6px; }
   header .mark { font-size: 22px; font-weight: 800; letter-spacing: 0.16em; }
   header .mark span { color: var(--accent); }
-  header .sub { font-size: 9px; letter-spacing: 0.3em; color: var(--ink-faint); text-transform: uppercase; margin-top: 4px; }
+  header .sub { font-size: 10px; letter-spacing: 0.3em; color: var(--ink-faint); text-transform: uppercase; margin-top: 4px; }
 
   .demo {
     width: min(720px, 96vw);
@@ -45,25 +45,25 @@
   button:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
   .play { width: 44px; height: 34px; font-size: 13px; color: var(--ink); display: flex; align-items: center; justify-content: center; }
   .play.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-  .loop { height: 34px; padding: 0 10px; font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; }
+  .loop { height: 34px; padding: 0 10px; font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; }
   .loop.on { color: var(--accent); border-color: var(--accent); }
 
   .bar { flex: 1; height: 34px; position: relative; cursor: pointer; background: var(--well); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
-  .bar .fill { position: absolute; inset: 0 auto 0 0; width: 0%; background: color-mix(in srgb, var(--accent) 22%, transparent); }
+  .bar .fill { position: absolute; inset: 0 auto 0 0; width: 0%; background: rgba(242, 169, 60, 0.22); }
   .bar .head { position: absolute; top: 0; bottom: 0; left: 0%; width: 2px; background: var(--accent); }
-  .bar .time { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font: 500 9px var(--mono); color: var(--ink-faint); pointer-events: none; }
+  .bar .time { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font: 500 10px var(--mono); color: var(--ink-faint); pointer-events: none; }
 
   .vol { display: flex; align-items: center; gap: 6px; }
-  .vol label { font-size: 8.5px; font-weight: 700; letter-spacing: 0.12em; color: var(--ink-faint); text-transform: uppercase; }
+  .vol label { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: var(--ink-faint); text-transform: uppercase; }
   .vol input { width: 74px; accent-color: var(--accent); }
 
   .stems { display: flex; gap: 0; margin-top: 12px; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; background: var(--well); }
-  .stems button { flex: 1; border: 0; border-radius: 0; padding: 10px 6px; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faint); background: none; }
+  .stems button { flex: 1; border: 0; border-radius: 0; padding: 10px 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faint); background: none; }
   .stems button + button { border-left: 1px solid var(--line-soft); }
   .stems button.on { background: var(--accent); color: var(--on-accent); }
 
   .ratios { display: flex; gap: 0; margin-top: 12px; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; background: var(--well); }
-  .ratios button { flex: 1; border: 0; border-radius: 0; padding: 9px 2px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-faint); background: none; }
+  .ratios button { flex: 1; border: 0; border-radius: 0; padding: 9px 2px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-faint); background: none; }
   .ratios button + button { border-left: 1px solid var(--line-soft); }
   .ratios button.on { background: var(--accent); color: var(--on-accent); }
 
@@ -75,27 +75,27 @@
   }
   .knob { display: flex; flex-direction: column; align-items: center; gap: 4px; user-select: none; }
   .knob canvas { cursor: ns-resize; touch-action: none; }
-  .knob .kname { font-size: 8.5px; font-weight: 700; letter-spacing: 0.14em; color: var(--ink-dim); text-transform: uppercase; }
-  .knob .kval { font: 500 9px var(--mono); color: var(--ink-faint); min-height: 11px; }
+  .knob .kname { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: var(--ink-dim); text-transform: uppercase; }
+  .knob .kval { font: 500 10px var(--mono); color: var(--ink-faint); min-height: 11px; }
 
   .switches { display: flex; flex-direction: column; gap: 6px; }
-  .switches button { padding: 7px 10px; font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; min-width: 92px; }
+  .switches button { padding: 7px 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; min-width: 92px; }
   .switches button.on { color: var(--accent); border-color: var(--accent); }
   .switches button.power.on { background: var(--accent); color: var(--on-accent); }
 
   .meterrow { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
   .meter { flex: 1; height: 26px; position: relative; background: var(--well); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
-  .meter .grfill { position: absolute; inset: 0 auto 0 0; width: 0%; background: color-mix(in srgb, var(--accent) 30%, transparent); }
-  .meter .scale { position: absolute; inset: 0; display: flex; justify-content: space-between; padding: 0 6px; align-items: center; font: 500 8px var(--mono); color: var(--ink-faint); pointer-events: none; }
-  .readout { font: 500 10px var(--mono); color: var(--ink-dim); min-width: 190px; text-align: right; }
+  .meter .grfill { position: absolute; inset: 0 auto 0 0; width: 0%; background: rgba(242, 169, 60, 0.30); }
+  .meter .scale { position: absolute; inset: 0; display: flex; justify-content: space-between; padding: 0 6px; align-items: center; font: 500 9.5px var(--mono); color: var(--ink-faint); pointer-events: none; }
+  .readout { font: 500 11px var(--mono); color: var(--ink-dim); min-width: 190px; text-align: right; }
 
   .presets { display: flex; gap: 6px; margin-top: 12px; }
-  .presets button { padding: 7px 12px; font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+  .presets button { padding: 7px 12px; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
   .presets button.on { color: var(--accent); border-color: var(--accent); }
 
-  .status { margin-top: 8px; font: 500 9px var(--mono); color: var(--ink-faint); min-height: 12px; letter-spacing: 0.06em; }
-  .keys { font-size: 9px; color: var(--ink-faint); letter-spacing: 0.08em; }
-  footer { font-size: 9px; color: var(--ink-faint); letter-spacing: 0.14em; text-transform: uppercase; margin-top: 8px; }
+  .status { margin-top: 8px; font: 500 10px var(--mono); color: var(--ink-faint); min-height: 12px; letter-spacing: 0.06em; }
+  .keys { font-size: 10px; color: var(--ink-faint); letter-spacing: 0.08em; }
+  footer { font-size: 10px; color: var(--ink-faint); letter-spacing: 0.14em; text-transform: uppercase; margin-top: 8px; }
   a { color: var(--ink-dim); }
 </style>
 </head>
@@ -113,7 +113,9 @@
     The curve-family compressor — eight engineered curves, British Mode, the
     summing link, residual color generators, oversampled like the plugin —
     compiled to WebAssembly and processing the stem while you listen.
-    Autogain matches loudness to bypass, so POWER is an honest A/B. INPUT is
+    Autogain matches loudness to bypass, so POWER is an honest A/B (it
+    listens for 3 seconds, then holds; turning a knob re-matches it within
+    about a second). INPUT is
     the compression control: it drives program into each curve's fixed
     threshold. Start at 6:1 like the manual says, then hit Nuke — or drop in
     your own vocal; it stays on your machine, nothing is uploaded.
@@ -482,6 +484,7 @@ async function selectStem (i) {
   if (i === activeStem) return;
   activeStem = i;
   syncStemLights();
+  if (node) node.port.postMessage({ t: 'reset' });
   if (playing) {
     try { await loadStem(i); } catch (err) { status(err.message); return; }
     startOffset = 0;
@@ -530,6 +533,7 @@ async function loadUserClip (file) {
   status(`${file.name} · ${decoded.duration.toFixed(1)}s · local only`);
   activeStem = i;
   syncStemLights();
+  if (node) node.port.postMessage({ t: 'reset' });
   startOffset = 0;
   if (playing) spinUp(0);
 }
