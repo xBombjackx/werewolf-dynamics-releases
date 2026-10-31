@@ -263,7 +263,11 @@ VST3 build, which is unaffected.**
 
 **Windows — CLAP faces opened cropped, with only the top-left part of the
 panel visible, on displays scaled above 100% (v0.7.8 and earlier).** The
-VST3s were unaffected. Fixed in v0.7.9.
+VST3s were unaffected. Fixed in v0.7.9 for REAPER's default HiDPI mode; with
+REAPER's HiDPI mode on "Aware" or "Aware + ignore" the faces still drew too
+large through v0.8.0. v0.8.1 should fix this; it is tested here but not yet
+confirmed by the reporter. If a CLAP face still opens cropped, the VST3 build
+works, and an issue with your REAPER version and HiDPI mode helps.
 
 **Linux beta 1 — every plugin interface was a blank white window.** The
 plugin looked for the web engine by its development library name, which only
