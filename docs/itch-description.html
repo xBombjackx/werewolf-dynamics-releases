@@ -256,7 +256,11 @@ Live and macOS versions.</p>
 
 <p><strong>Windows &mdash; CLAP faces opened cropped, with only the top-left part of
 the panel visible, on displays scaled above 100% (v0.7.8 and earlier).</strong>
-The VST3s were unaffected. Fixed in v0.7.9.</p>
+The VST3s were unaffected. Fixed in v0.7.9 for REAPER's default HiDPI mode; with
+REAPER's HiDPI mode on "Aware" or "Aware + ignore" the faces still drew too
+large through v0.8.0. v0.8.1 should fix this; it is tested here but not yet
+confirmed by the reporter. If a CLAP face still opens cropped, the VST3 build
+works, and an issue with your REAPER version and HiDPI mode helps.</p>
 
 <p><strong>Linux beta 1 &mdash; every plugin interface was a blank white window.</strong>
 The plugin looked for the web engine by its development library name, which
@@ -265,7 +269,8 @@ only exists with the -dev packages installed. Fixed in Linux beta 2; on beta 1,
 The Windows builds under Wine are not supported (they need the WebView2 runtime).</p>
 
 <p><strong>macOS 10.15 Catalina &mdash; plugin interfaces came up black (v0.7.7 and
-earlier).</strong> Fixed in v0.7.8.</p>
+earlier).</strong> Fixed in v0.7.8, and from v0.8.0 the faces also load on the
+Safari 13.1 engine Catalina originally shipped with.</p>
 
 <p>If you are on Catalina it is still worth running Software Update. The
 interfaces draw using macOS's built-in web engine, which Safari updates keep
