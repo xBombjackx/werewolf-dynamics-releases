@@ -18,7 +18,7 @@ Run real C++ plugin engines directly inside your browser using WebAssembly (no u
 - **[WD Tape — Live](https://xbombjackx.github.io/werewolf-dynamics-releases/live/tape.html)** — hysteresis tape machine across 3.75 to 30 ips
 - **[WD Echo — Live](https://xbombjackx.github.io/werewolf-dynamics-releases/live/echo.html)** — motor-driven tape loop delay with 3 heads & spring tank
 - **[WD Spring — Live](https://xbombjackx.github.io/werewolf-dynamics-releases/live/spring.html)** — dispersive steel spring reverb tank
-- **[Werewolf Digital EQ — Live](https://xbombjackx.github.io/werewolf-dynamics-releases/eq/)** — standalone digital EQ workbench
+- **[WD XQ — Live](https://xbombjackx.github.io/werewolf-dynamics-releases/live/xq.html)** — five EQ circuits (Precision, Console E/G, Discrete 550, Inductor 73) with dynamic bands and line-stage drive
 - **[17 Sample-Locked A/B Audio Demos](https://xbombjackx.github.io/werewolf-dynamics-releases/demos/)** ([full website tour](https://xbombjackx.github.io/werewolf-dynamics-releases/)) — switch circuits mid-phrase with a 12 ms crossfade, loudness-matched.
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/mighty_bombjack)
