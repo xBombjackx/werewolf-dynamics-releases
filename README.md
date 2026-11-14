@@ -1,308 +1,148 @@
-# Werewolf Dynamics
+# Werewolf Dynamics — Analog Collection (v0.9.0)
 ![Downloads](https://img.shields.io/github/downloads/xBombjackx/werewolf-dynamics-releases/total)
 
+Analog gear, simulated from the circuit up. Twenty-six free audio plugins (**22 Core + 4 Preview Mode**) built as live circuit solvers — VST3, CLAP, and AU for Windows, macOS, and Linux Beta.
 
-Analog gear, simulated from the circuit up.
+Most "analog modeled" plugins take a static measurement and fit waveshapers over it. These solve the circuit while your audio runs through it: tube bias shifts under load, transformer cores saturate from magnetic flux (so lows saturate before highs), and optical cells remember program history. If a meter moves or a transfer curve bends on screen, the running circuit caused it.
 
-Most "analog modeled" plugins are a snapshot: measure the hardware, fit some
-curves, ship the curves. These solve the actual circuit while your audio runs
-through it. The tube bias shifts when you hit it hard. The transformer core
-saturates from flux, so it cares about frequency, not just level. The opto
-cell remembers what you played ten seconds ago. Nothing is drawn on; if a
-meter moves or a curve bends, something in the circuit did it.
+Grab the latest installers and bundles from the **[Itch.io release page](https://xbombjackx.itch.io/analog-collection)** or **[GitHub Releases](https://github.com/xBombjackx/werewolf-dynamics-releases/releases)**.
 
-And since the whole circuit is in there, you get the screwdriver too. Every
-module has a rear panel with the service trims the hardware kept locked
-inside: supply draw, bias, transformer headroom, tube swaps. Set them to
-factory and it behaves like a well-kept unit. Or don't.
+## Live in Your Browser (8 WebAssembly Plugins + 17 A/B Demos)
 
-All free. Grab the zip from the
-[Itch.io page](https://xbombjackx.itch.io/analog-collection).
+Run real C++ plugin engines directly inside your browser using WebAssembly (no uploads, local file drop supported):
 
-## 🎧 Hear it first
-
-**[Audio demos — listen in your browser](https://xbombjackx.github.io/werewolf-dynamics-releases/demos/)**
-([the website](https://xbombjackx.github.io/werewolf-dynamics-releases/) has the full tour)
-
-Fourteen A/B demos, one mechanism each. Every variant of a demo is the same
-performance, sample-locked — switching circuits mid-playback is a 12 ms
-crossfade, so what changes is only the circuit. Loudness-matched, no
-mastering, no cheating.
+- **[WD Opto — Live](https://xbombjackx.github.io/werewolf-dynamics-releases/live/opto.html)** — optical cell chemistry + tube/transformer stage
+- **[WD Duress — Live](https://xbombjackx.github.io/werewolf-dynamics-releases/live/duress.html)** — eight curve families, British Mode, residual drive
+- **[WD Pre — Live](https://xbombjackx.github.io/werewolf-dynamics-releases/live/pre.html)** — seven preamp circuits behind one stepped input stage
+- **[WD FET — Live](https://xbombjackx.github.io/werewolf-dynamics-releases/live/fet.html)** — microsecond JFET limiter + All-Buttons ratio network
+- **[WD Tape — Live](https://xbombjackx.github.io/werewolf-dynamics-releases/live/tape.html)** — hysteresis tape machine across 3.75 to 30 ips
+- **[WD Echo — Live](https://xbombjackx.github.io/werewolf-dynamics-releases/live/echo.html)** — motor-driven tape loop delay with 3 heads & spring tank
+- **[WD Spring — Live](https://xbombjackx.github.io/werewolf-dynamics-releases/live/spring.html)** — dispersive steel spring reverb tank
+- **[Werewolf Digital EQ — Live](https://xbombjackx.github.io/werewolf-dynamics-releases/eq/)** — standalone digital EQ workbench
+- **[17 Sample-Locked A/B Audio Demos](https://xbombjackx.github.io/werewolf-dynamics-releases/demos/)** ([full website tour](https://xbombjackx.github.io/werewolf-dynamics-releases/)) — switch circuits mid-phrase with a 12 ms crossfade, loudness-matched.
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/mighty_bombjack)
 
-## The lineup
+## Core Lineup (22 Plugins)
 
-**WD Opto** — optical tube compressor in the LA-2A bloodline. The photocell
-is the real thing: two time constants, program-dependent memory, that slow
-settling tail. Two voicings (tube WD-2A, solid-state WD-3A) plus drive and
-iron controls the original never gave you.
+**WD Opto** — optical tube leveling amplifier with T4 photocell memory, two voicings (`WD-2A` tube, `WD-3A` solid-state), and continuous THD/Iron/Tilt controls.
 
 <img src="assets/wd-opto-front.png" width="340" alt="WD Opto faceplate">
 
-**WD Mu** — variable-mu compressor built around a simulated 6386 push-pull
-stage and the classic six-position time-constant bank. No threshold knob,
-because the circuit doesn't have one; you drive it and it leans back. Bias
-knob on the front, mismatched tube pairs on the back.
+**WD Mu** — variable-mu compressor built around a simulated 6386 push-pull stage, six time constants, front-panel bias control, and rear-panel mismatched tube trims.
 
 <img src="assets/wd-mu-front.png" width="340" alt="WD Mu faceplate">
 
-**WDTec** — passive tube EQ, program and midrange sections in one wide
-module. The boost you can't get wrong, with a twist: the filter inductors
-have live magnetic cores, and a Core knob sets how hard you push them.
-
-<img src="assets/wd-tec-front.png" width="700" alt="WDTec faceplate">
-
-**WD Tape** — a full tape machine. Record head, bias oscillator, reproduce
-head, all of it, aligned by the same procedure a tech would use on the
-hardware. Two stock formulations. Every unit number ships with its own
-transport quirks.
-
-<img src="assets/wd-tape-front.png" width="700" alt="WD Tape faceplate">
-
-**WD XQ** — one parametric EQ, five circuits. Precision digital, two console
-flavors, a stepped American classic, and an inductor design from 1973. The
-knobs stay put while the circuit underneath changes what they're allowed to
-do. Dynamic bands on all five.
-
-<img src="assets/wd-xq-front.png" width="820" alt="WD XQ faceplate">
-
-**WD FET** — FET compressor with four circuit laws in one box: the 76
-everyone reaches for, a crushed 760 sibling, a germanium path, and a clean
-precision law. The ratio network is solved from the 1176LN drawing, so
-all-buttons works because the circuit does it, not because we faked the
-curve. Attack is measured in microseconds.
+**WD FET** — JFET limiting amplifier spanning four circuit laws, three output stages (`Class A`, `Push-Pull`, `Triode`), microsecond attack, and coupled All-Buttons resistor ladder.
 
 <img src="assets/wd-fet-front.png" width="700" alt="WD FET faceplate">
 
-**WD VCA** — stereo bus compressor built around one Blackmer-style gain
-cell. Two detector brains: Console Bus leans the whole mix back the way the
-famous desk compressor does, RMS Punch is for the drum bus. Auto release,
-over-easy knee, and the RMS detector's attack table falls out of one
-capacitor, same as the hardware.
+**WD VCA** — stereo VCA bus compressor offering Console Bus, RMS Punch, and American discrete bus thrust detectors on one gain cell.
 
 <img src="assets/wd-vca-front.png" width="700" alt="WD VCA faceplate">
 
-**WD Duress** — a curve-family compressor in the Distressor spirit. Every
-ratio position is its own engineered curve: 1:1 is warm-up distortion with
-no compression at all, 10:1 borrows an opto release with a twenty-second
-tail, and Nuke is a log-release brickwall. Three distortion modes, two
-stereo link laws taken from the block diagram, and a British Mode switch
-that overrides the envelope the way all-buttons abuse does.
+**WD Duress** — eight-curve compressor family from `1:1` warm saturation through opto-style `10:1` and `Nuke` brickwall crush, with `Dist 2`/`Dist 3` modes and British Mode.
 
 <img src="assets/wd-duress-front.png" width="700" alt="WD Duress faceplate">
 
-**WD Clamp** — three compressors, one power supply. Load an Opto, Mu, FET
-or VCA engine into each of three slots, chain them in any order, and let
-them share a rail like hardware in a rack does. Drive one slot hard and
-its neighbors feel it. The transfer screens are measured curves, not
-drawings, with a dot riding each one at the slot's live input level.
+**WD Clamp** — three reorderable compressor slots (`Opto`, `Mu`, `FET`, `VCA`) on one shared supply rail, live measured transfer curves, and a `-10 / -20 dB` input pad.
 
 <img src="assets/wd-clamp-front.png" width="700" alt="WD Clamp faceplate">
 
-**WD Pre** — five preamps behind one gain knob. Precision digital wire, a
-Class A British console with its iron, an American op-amp console, a German
-broadcast valve, and a cassette 4-track desk channel. Gain redistributes the
-circuit, so every detent is a slightly different amplifier; output is only a
-fader after the iron.
+**WD Tec** — passive program low/high shelf and midrange EQ sections coupled through live magnetic inductor cores and push-pull tube makeup.
+
+<img src="assets/wd-tec-front.png" width="700" alt="WD Tec faceplate">
+
+**WD XQ** — one parametric EQ face driving five distinct topologies (clean digital, two consoles, stepped American graphic/bell, and 1973 inductor law) with per-band dynamic mode.
+
+<img src="assets/wd-xq-front.png" width="714" alt="WD XQ faceplate">
+
+**WD Pre** — seven preamp topologies behind one stepped input stage (`Precision`, `Class A 73`, `Op-Amp 12`, `Tube 76`, `Porta`, `Clean E`, `Tube Tone`) with `Match` autogain.
 
 <img src="assets/wd-pre-front.png" width="340" alt="WD Pre faceplate">
 
-**WD Echo** — tape loop echo where the loop is real enough to have a splice.
-Motor-driven transport, three repro heads, spring tank. Repeat rate is a
-motor, not a delay dial: turn it and everything already on the loop bends
-with the transport. The time arrow reads the tape forward, palindrome, or
-straight-up backward.
+**WD Tape** — full studio and portable magnetic tape machine modeling record electronics, hysteresis core, bias oscillator, head bump, gap loss, and transport wow/flutter.
 
-<img src="assets/wd-echo-front.png" width="700" alt="WD Echo faceplate">
+<img src="assets/wd-tape-front.png" width="700" alt="WD Tape faceplate">
 
-**WD AX** — the exciter, built from the patents instead of around them. It
-adds a generated sideband rather than boosting EQ, so the fundamental never
-moves. The Big Bottom section lifts the decay of a note instead of its hit:
-sustain without the overload penalty.
+**WD AX** — phase-aligned harmonic exciter adding upper sidebands and decay-weighted low-end weight without boosting EQ peaks.
 
 <img src="assets/wd-ax-front.png" width="340" alt="WD AX faceplate">
 
-**WD Rack** — the chassis. Put it on your master bus, give your modules the
-same frame number, and suddenly they're screwed into the same box: shared
-power supply that sags when a neighbor works hard, adjacent-slot bleed, a
-slot map you can reorder. Crank the crosstalk and the rack becomes an effect
-of its own. Skip it entirely and every module runs clean standalone.
-
-<img src="assets/wd-rack-front.png" width="340" alt="WD Rack with modules seated in the chassis">
-
-**WD Strip** — a console channel in one window: preamp into EQ into
-compressor, a model selector on each stage. Any of the seven Pre laws,
-either EQ or one of five desk channel EQs, any of the four compressors or
-the desk channel comp — plus the console bus-driver electronics as the
-output stage. All the stages hang off one power rail inside the same
-process, so the compressor's knee moves when the preamp leans on the
-supply. The response curve and compressor transfer on the face are
-measured live from the running engines, not drawn. No rack required.
-
-<img src="assets/wd-strip-front.png" width="820" alt="WD Strip channel strip">
-
-**WD Summer Channel** — the desk channel, one per track. Five consoles on
-one selector: the brit desk with its transformer lows and subsonic ring,
-the big clean inline desk that warms everything a little and never clicks,
-the discrete-op-amp desk with steel-core lows and a hard fast corner, the
-EF86 tube console with its always-on glow, and a german broadcast amp that
-stays invisible until you lean on it. Every instance drifts a little from
-every other one, keyed to the track name, the way forty channel strips
-built in 1972 drift.
-
-<img src="assets/wd-sumch-front.png" width="340" alt="WD Summer Channel faceplate">
-
-**WD Summer** — the bus those channels sum into, and it behaves like one.
-The more channels you load onto a group, the more the shared supply sags,
-so a busy mix grabs sooner than a sparse one — a mechanism, not a knob. The
-face lists the channels currently alive on the group. The same five-desk
-BANK selector as the channel, bus-sized: on the big clean inline desk the
-color is not a transformer at all — the mix modulates its own power rails,
-which is what that console's famous glue actually is.
-
-<img src="assets/wd-summer-front.png" width="700" alt="WD Summer faceplate">
-
-**WD Span** — a stereo widener that works with a transformer instead of
-phase. Everything happens to the difference signal, so a mono fold is exact
-by construction, no matter how hard you drive it — the one thing the Haas
-and allpass wideners can't say. Push the iron and the bottom pulls toward
-the centre on its own, because the core saturates on the lows first. No
-crossover anywhere in it.
-
-<img src="assets/wd-span-front.png" width="340" alt="WD Span faceplate">
-
-**WD Spring** — a real spring tank, not a spring-flavoured algorithm. A
-steel spring carries high frequencies faster than low ones, so every
-reflection comes back smeared into a descending chirp — that is the boing,
-and it is a mechanism rather than a filter, which is why plate algorithms
-can't fake it. Three tanks to choose from: the short bright pan out of a
-guitar amp, the studio rack unit, and the long dark console tank. TENSION
-makes the springs go nonlinear the way a real one does when you hit it hard,
-so loud transients chirp differently from quiet ones.
-
-<img src="assets/wd-spring-front.png" width="340" alt="WD Spring faceplate">
-
-**WD 361** — the tape-side half of a noise reduction unit, used the way
-engineers misused it. Run the encoder and never decode: each band's quiet
-content comes up, loud material stays put, and the top comes up hardest.
-Air and density a compressor can't give you, because a compressor only
-works on the loud end. Three genuinely different machines on the TYPE
-switch, and a DECODE mode that is the opposite tool — detail pushed down,
-dynamics exaggerated.
+**WD 361** — single-ended four-band upward compander encoder and decode processor spanning `A-Type`, `Broadband`, and treble `B-Type` topologies.
 
 <img src="assets/wd-361-front.png" width="340" alt="WD 361 faceplate">
 
-**WD Brigade** — a bucket-brigade delay, dark for the same reason the
-originals were. The delay time is the clock, and the filters close down
-with it: a long BBD delay is necessarily dark, a bright one necessarily
-short. Repeats dissolve into mush on their own, the TIME knob glides pitch
-when you grab it, and the built-in compander fights the chain's own hiss —
-switch it out for the honest broken-unit sound. The howl is on the rear
-panel, and it ships off.
+**WD Strip** — standalone channel strip uniting 7 preamps, desk/parametric EQ curves, 5 compressor engines, gate, tilt, and shared internal power supply.
+
+<img src="assets/wd-strip-front.png" width="820" alt="WD Strip faceplate">
+
+**WD Summer Channel** — zero-latency per-track desk channel with five selectable console topologies, deterministic component spread, and loudness-neutral overdrive.
+
+<img src="assets/wd-sumch-front.png" width="340" alt="WD Summer Channel faceplate">
+
+**WD Summer** — summing bus partner receiving live channel loading and power-rail sag from linked `WD Summer Channel` tracks.
+
+<img src="assets/wd-summer-front.png" width="700" alt="WD Summer faceplate">
+
+**WD Rack** — cross-instance chassis coordinator sharing power rail sag, neighbor bleed, reorderable slot routing, and timeline-locked PSU ripple across up to 8 frames.
+
+<img src="assets/wd-rack-front.png" width="340" alt="WD Rack faceplate">
+
+**WD Echo** — motor-driven continuous magnetic tape loop delay with three repro heads, physical splice modulation, spring reverb tank, and Forward/Palindrome/Reverse arrow.
+
+<img src="assets/wd-echo-front.png" width="700" alt="WD Echo faceplate">
+
+**WD Brigade** — analog bucket-brigade delay where delay length sets the clock rate and naturally closes reconstruction filters into dark repeats.
 
 <img src="assets/wd-brigade-front.png" width="340" alt="WD Brigade faceplate">
 
-**WD Delta** — a send/return pair that lets you hear what your whole chain
-is doing: any plugins, anyone's. SEND taps the untouched signal at the top,
-RETURN sits at the end, measures the chain's real latency by correlation,
-and monitors the difference — raw, or level-matched so louder never reads
-as different. A DRY mode gives you instant whole-chain bypass with no PDC
-hiccup, and WET MATCHED plays the chain loudness-matched to its input: the
-honest way to A/B your own processing.
+**WD Spring** — physical dispersive steel spring reverb across `Combo Pan`, `Studio Outboard`, and `Tall Console` tanks with nonlinear spring tension chirp.
+
+<img src="assets/wd-spring-front.png" width="340" alt="WD Spring faceplate">
+
+**WD Span** — difference-channel transformer stereo widener where saturating lows tighten toward center while mono fold stays bit-exact.
+
+<img src="assets/wd-span-front.png" width="340" alt="WD Span faceplate">
+
+**WD Delta Send / Return** — auto-correlated delay finder, loudness-matched chain delta monitor, and clickless chain bypass for any third-party or WD plugin chain.
 
 <img src="assets/wd-delta-send-front.png" width="220" alt="WD Delta Send faceplate"> <img src="assets/wd-delta-return-front.png" width="220" alt="WD Delta Return faceplate">
 
-## Requirements
+## Preview Mode (4 New Plugins in v0.9.0)
 
-Windows 10 or 11, 64-bit, and any VST3 or CLAP host. The macOS build
-runs on macOS 10.15 (Catalina) and newer with a VST3 or AU host; one
-universal binary covers Apple Silicon and Intel. On 10.15, keep Safari
-updated — the interfaces draw using the system web engine, and Safari
-updates are what keep that engine current.
+Included in all v0.9.0 bundles for mixing while visual polish and edge behaviors continue toward v1.0:
 
-**Linux (beta)**: a testing build is available as a pre-release — 64-bit
-x86_64, VST3 and CLAP, glibc 2.35+, WebKit2GTK 4.1 for the interfaces
-(`sudo apt install libwebkit2gtk-4.1-0` on Debian/Ubuntu). It passes the
-same automated bench as the Windows release but has had far less time in
-real hosts; the release notes say exactly what that means. Reports from
-distributions other than Ubuntu are especially useful.
+**WD Horse Girl** — linked two-channel spectral sculptor operating across `LO / HI`, `MID / SIDE`, or `LEFT / RIGHT` axes with live energy blobs and zone listener telemetry.
 
-## Install
+<img src="assets/wd-horsegirl-front.png" width="620" alt="WD Horse Girl faceplate">
 
-**Windows, the easy way:** every release since v0.7.5 ships a
-`WerewolfDynamics-...-Windows-Installer.exe` that puts the VST3s and
-CLAPs where they belong. Run it, rescan, done.
+**WD Damper** — adaptive resonance suppressor separating sharp narrow ringing lines from wide intentional vocal and mix weight across 16 smoothed bands.
 
-**Windows, by hand:** unzip the release. Copy the `.vst3` folders into
-`C:\Program Files\Common Files\VST3`, or the `.clap` files into
-`C:\Program Files\Common Files\CLAP` (create it if it doesn't exist —
-per-user alternative: `%LOCALAPPDATA%\Programs\Common\CLAP`). Pick one
-format per plugin, then rescan in your DAW. Everything shows up under
-Werewolf Dynamics.
+<img src="assets/wd-damper-front.png" width="620" alt="WD Damper faceplate">
 
-On the Mac: copy the `.vst3` folders into
-`~/Library/Audio/Plug-Ins/VST3` and the `.component` folders into
-`~/Library/Audio/Plug-Ins/Components`. Logic loads the AU. These
-builds are not notarized yet, so macOS quarantines the download and
-your DAW will act like the plugins don't exist; INSTALL.txt in the
-zip has the one Terminal command that clears it.
+**WD Annihilator** — three-band saturation lab running independent analog destruction circuits (`Triode`, `Diode`, `Negative Iron`, `Tape`, `Wreck`) on one power rail.
 
-Beta builds are not code-signed yet, so Windows may grumble on first
-download. Expected for now.
+<img src="assets/wd-annihilator-front.png" width="600" alt="WD Annihilator faceplate">
 
-## Known issues
+**WD VU** — calibrated ballistic analog VU and PPM peak meter bridge with selectable studio headroom reference points.
 
-**Bitwig Studio — bouncing or exporting a track that has a CLAP plugin on
-it can stall the audio engine.** The cause turned out to be on Bitwig's side:
-its export engine stalls on CLAP plugins that report a changing latency. As
-of v0.7.8 every oversampled module declares one fixed latency and is immune.
-Two shipping modules genuinely change latency at runtime — WD Pre (tape
-stage) and WD Delta Return (LOOK) — so for those two in Bitwig, **use the
-VST3 build, which is unaffected.**
+<img src="assets/wd-vu-front.png" width="280" alt="WD VU faceplate">
 
-**Windows — CLAP faces opened cropped, with only the top-left part of the
-panel visible, on displays scaled above 100% (v0.7.8 and earlier).** The
-VST3s were unaffected. Fixed in v0.7.9 for REAPER's default HiDPI mode; with
-REAPER's HiDPI mode on "Aware" or "Aware + ignore" the faces still drew too
-large through v0.8.0. v0.8.1 should fix this; it is tested here but not yet
-confirmed by the reporter. If a CLAP face still opens cropped, the VST3 build
-works, and an issue with your REAPER version and HiDPI mode helps.
+## Requirements & Install
 
-**Linux beta 1 — every plugin interface was a blank white window.** The
-plugin looked for the web engine by its development library name, which only
-exists with the `-dev` packages installed. Fixed in Linux beta 2; on beta 1,
-`sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev` works around it. The
-Windows builds under Wine are not supported (they need the WebView2 runtime).
+- **Windows 10 / 11 (64-bit VST3 + CLAP):** Run `WerewolfDynamics-v0.9.0-Windows-Installer.exe`, or copy `.vst3` bundles into `C:\Program Files\Common Files\VST3` and `.clap` files into `C:\Program Files\Common Files\CLAP`.
+- **macOS 10.15+ (Universal VST3 + AU):** Copy `.vst3` into `/Library/Audio/Plug-Ins/VST3` and `.component` into `/Library/Audio/Plug-Ins/Components`, then run the single `xattr` quarantine command inside `INSTALL.txt` (these builds are not notarized yet).
+- **Linux x86_64 (Beta, VST3 + CLAP):** Requires glibc 2.35+ and WebKitGTK 4.1 (`sudo apt install libwebkit2gtk-4.1-0`). Extract into `~/.vst3` and `~/.clap`.
 
-**macOS 10.15 Catalina — plugin interfaces came up black (v0.7.7 and
-earlier).** Fixed in v0.7.8, and from v0.8.0 the faces also load on the
-Safari 13.1 engine Catalina originally shipped with.
+## Host Notes
 
-If you are on Catalina it is still worth running Software Update. The
-interfaces draw using macOS's built-in web engine, which Safari updates keep
-current, and the version Catalina originally shipped with is missing layout
-features some panels rely on — so a few faces will look cramped until that
-engine is updated.
+- **Latency & PDC behavior:** 25 of 26 plugins hold constant latency across all parameter moves during playback so DAW plugin delay compensation never drops out. Only `WD Delta Return` updates reported delay (on the message thread) when toggling `LOOK` (`0` vs. `850 ms` lookahead). In Bitwig, `WD Delta Return` is best used in VST3 format while toggling `LOOK`; `WD Pre` and `WD Damper` set sample-rate latency strictly at `prepareToPlay` and hold constant during playback.
+- **Direct keyboard entry:** Double-click any parameter readout to type an exact numerical value (`k`, `kHz`, `Hz`, `dB`, `ms`, `s`, `%`).
+- **Guides & verification:** See [docs/RACK_GUIDE.md](docs/RACK_GUIDE.md) and [docs/ACCURACY.md](docs/ACCURACY.md).
 
-## Bugs
+## Bugs & License
 
-Open an [issue](../../issues) with your DAW, sample rate, and the plugin
-version. Betas move fast, so check you're on the latest release first.
+Open an [issue](../../issues) with your DAW, sample rate, OS, and plugin version.
 
-Running the rack? [docs/RACK_GUIDE.md](docs/RACK_GUIDE.md) is the user guide:
-what the chassis actually shares, what slot order changes (and what it
-doesn't), the LIVE/TAPE/IDLE lamps, frames, and hardware-honest chaining
-orders for the modules.
-
-How do we know the modules are accurate? [docs/ACCURACY.md](docs/ACCURACY.md)
-explains the whole method: the published numbers we calibrate against, the
-automated bench that measures every build, and the audit that checked all
-every plugin against its hardware's spec sheets.
-
-## License
-
-Free to use on anything you make, commercial included. Not open source, and
-please don't re-host the files; see [LICENSE.txt](LICENSE.txt) for the short
-plain-English version. Built with [JUCE](https://juce.com) and the Steinberg
-VST 3 SDK. VST is a registered trademark of Steinberg Media Technologies GmbH.
+Free to use for personal and commercial music production; please link here instead of re-hosting the binaries — see [LICENSE.txt](LICENSE.txt). Built with [JUCE](https://juce.com) and the Steinberg VST 3 SDK. VST is a registered trademark of Steinberg Media Technologies GmbH.

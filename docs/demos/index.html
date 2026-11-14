@@ -94,15 +94,22 @@
 <div class="keys">Space = play/pause the last demo you touched &middot; keys 1&ndash;4 switch its variants</div>
 
 <section class="demo">
-  <h2>Live — run the plugins in your browser</h2>
+  <h2>Live — run 8 plugins in your browser (WebAssembly)</h2>
   <p class="blurb">
-    Not recordings: the real engines compiled to WebAssembly, processing in
-    real time while you turn the controls. Load your own clip — it stays on
-    your machine, nothing is uploaded.
+    Not recordings: the real circuit-solved engines compiled to WebAssembly,
+    processing in real time while you turn the controls. Load any built-in stem
+    or drop in your own clip — it stays on your machine, nothing is uploaded.
   </p>
   <div style="display:flex; gap:6px; flex-wrap:wrap;">
-    <a href="../live/duress.html" style="display:inline-block; padding:8px 14px; font-size:9px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); background:var(--well); border:1px solid var(--accent); border-radius:4px; text-decoration:none;">WD Duress &mdash; live</a>
-    <a href="../eq/" style="display:inline-block; padding:8px 14px; font-size:9px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); background:var(--well); border:1px solid var(--accent); border-radius:4px; text-decoration:none;">Werewolf Digital EQ &mdash; live</a>
+    <a href="../live/opto.html" style="display:inline-block; padding:8px 12px; font-size:9px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); background:var(--well); border:1px solid var(--accent); border-radius:4px; text-decoration:none;">WD Opto &mdash; live</a>
+    <a href="../live/duress.html" style="display:inline-block; padding:8px 12px; font-size:9px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); background:var(--well); border:1px solid var(--accent); border-radius:4px; text-decoration:none;">WD Duress &mdash; live</a>
+    <a href="../live/pre.html" style="display:inline-block; padding:8px 12px; font-size:9px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); background:var(--well); border:1px solid var(--accent); border-radius:4px; text-decoration:none;">WD Pre &mdash; live</a>
+    <a href="../live/fet.html" style="display:inline-block; padding:8px 12px; font-size:9px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); background:var(--well); border:1px solid var(--accent); border-radius:4px; text-decoration:none;">WD FET &mdash; live</a>
+    <a href="../live/tape.html" style="display:inline-block; padding:8px 12px; font-size:9px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); background:var(--well); border:1px solid var(--accent); border-radius:4px; text-decoration:none;">WD Tape &mdash; live</a>
+    <a href="../live/echo.html" style="display:inline-block; padding:8px 12px; font-size:9px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); background:var(--well); border:1px solid var(--accent); border-radius:4px; text-decoration:none;">WD Echo &mdash; live</a>
+    <a href="../live/spring.html" style="display:inline-block; padding:8px 12px; font-size:9px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); background:var(--well); border:1px solid var(--accent); border-radius:4px; text-decoration:none;">WD Spring &mdash; live</a>
+    <a href="../eq/" style="display:inline-block; padding:8px 12px; font-size:9px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); background:var(--well); border:1px solid var(--accent); border-radius:4px; text-decoration:none;">Werewolf Digital EQ &mdash; live</a>
+    <a href="../" style="display:inline-block; padding:8px 12px; font-size:9px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--ink-dim); background:var(--well); border:1px solid var(--line); border-radius:4px; text-decoration:none;">&larr; Home</a>
   </div>
 </section>
 
@@ -141,7 +148,7 @@ const DEMOS = [
   },
   {
     title: 'WD Duress — this compressor stresses me out',
-    blurb: 'Drums, loudness matched. 1:1 is the circuit doing nothing. 6:1 is where the manual says to start. Nuke is the last detent. You\'ll be el8ed.',
+    blurb: 'Drums, loudness matched. 1:1 is the circuit doing nothing. 6:1 is where the manual says to start. Nuke is the last detent with all-buttons attitude.',
     variants: [
       { label: '1:1',  file: '../audio/duress_11.wav' },
       { label: '6:1',  file: '../audio/duress_61.wav' },
@@ -183,7 +190,7 @@ const DEMOS = [
     ],
   },
   {
-    title: 'WDTec — open the loop',
+    title: 'WD Tec — open the loop',
     blurb: 'The passive EQ with one curve, three ways. Loop closed is the calibrated line. Open the loop and the tubes come through. Then DRIVE runs the open loop hot.',
     variants: [
       { label: 'Loop closed', file: '../audio/tec_closed.wav' },
@@ -236,7 +243,7 @@ const DEMOS = [
   },
   {
     title: 'WD Span — the bottom pulls in by itself',
-    blurb: 'Drums, widened the same amount both times. The only difference is whether the side channel runs through a transformer. With the core in, the low end tightens toward the centre while the cymbals and room stay wide — because a core saturates on the lows first, not because a crossover said so. Mono folds identically either way.',
+    blurb: 'Drums, widened the same amount both times. The only difference is whether the side channel runs through a transformer. With the core in, the low end tightens toward the center while the cymbals and room stay wide — because a core saturates on the lows first, not because a crossover said so. Mono folds identically either way.',
     variants: [
       { label: 'Core out', file: '../audio/span_wire.wav' },
       { label: 'Core in',  file: '../audio/span_iron.wav' },
@@ -248,6 +255,32 @@ const DEMOS = [
     variants: [
       { label: 'Calibrated', file: '../audio/sumch_honest.wav' },
       { label: 'Dimed',      file: '../audio/sumch_dimed.wav' },
+    ],
+  },
+  {
+    title: 'WD Brigade — clock-starved bucket brigade',
+    blurb: 'One guitar riff through a bucket-brigade delay at 38 ms slapback, 220 ms dark repeat, and Long-line clock-starved mud. In a real BBD the clock rate IS the anti-alias cutoff — lengthen the delay and the top end closes down on its own.',
+    variants: [
+      { label: 'Short 38 ms', file: '../audio/brigade_short.wav' },
+      { label: 'Long 220 ms', file: '../audio/brigade_long.wav' },
+      { label: 'Mud',         file: '../audio/brigade_mud.wav' },
+    ],
+  },
+  {
+    title: 'WD 361 — four-band compander air',
+    blurb: 'A vocal encoded upward with no decoder in return. Compare four-band A-type lift, single-band broadband breathing, and treble-only B-type air — quiet detail comes up while transients stay put.',
+    variants: [
+      { label: 'A-Type 4-Band', file: '../audio/wd361_atype.wav' },
+      { label: 'Broadband',     file: '../audio/wd361_broad.wav' },
+      { label: 'B-Type Air',    file: '../audio/wd361_btype.wav' },
+    ],
+  },
+  {
+    title: 'WD Annihilator — three-band saturation lab (Preview)',
+    blurb: 'Switch between Negative Iron bass destruction on guitar and Triode/Quantum multi-band drum crunch, both sharing one supply inside WD Annihilator.',
+    variants: [
+      { label: 'Negative Iron Bass', file: '../audio/annihilator_negiron_bass.wav' },
+      { label: 'Quantum Drums',      file: '../audio/annihilator_quantum_drums.wav' },
     ],
   },
 ];

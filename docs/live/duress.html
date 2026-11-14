@@ -94,7 +94,16 @@
   .presets button.on { color: var(--accent); border-color: var(--accent); }
 
   .status { margin-top: 8px; font: 500 10px var(--mono); color: var(--ink-faint); min-height: 12px; letter-spacing: 0.06em; }
-  .keys { font-size: 10px; color: var(--ink-faint); letter-spacing: 0.08em; }
+  .keys { font-size: 10px; color: var(--ink-faint); letter-spacing: 0.08em; text-align: center; }
+  .nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; width: min(720px, 96vw); }
+  .nav a {
+    padding: 5px 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; text-decoration: none;
+    color: var(--ink-dim); background: var(--panel);
+    border: 1px solid var(--line); border-radius: 4px;
+  }
+  .nav a:hover { border-color: var(--accent); color: var(--ink); }
+  .nav a.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
   footer { font-size: 10px; color: var(--ink-faint); letter-spacing: 0.14em; text-transform: uppercase; margin-top: 8px; }
   a { color: var(--ink-dim); }
 </style>
@@ -106,6 +115,18 @@
   <div class="sub">wd duress &middot; running live in your browser</div>
 </header>
 <div class="keys">Space = play/pause &middot; drag &amp; drop your own clip anywhere &middot; this is the real engine compiled to WebAssembly, not a recording</div>
+<nav class="nav" aria-label="Live engines">
+  <a href="opto.html">WD Opto</a>
+  <a href="duress.html" class="on">WD Duress</a>
+  <a href="pre.html">WD Pre</a>
+  <a href="fet.html">WD FET</a>
+  <a href="tape.html">WD Tape</a>
+  <a href="echo.html">WD Echo</a>
+  <a href="spring.html">WD Spring</a>
+  <a href="../eq/">Digital EQ</a>
+  <a href="../demos/">17 A/B Demos</a>
+  <a href="../">Home</a>
+</nav>
 
 <section class="demo">
   <h2>WD Duress — live</h2>
@@ -177,7 +198,11 @@ const DEFAULTS = { [P.input]: 8, [P.output]: 0, [P.ratio]: 4,
                    [P.autogain]: 2, [P.power]: 1 };
 
 const STEMS = [
-  { label: 'Drums', file: '../audio/duress_11.wav' },
+  { label: 'Drums',    file: '../audio/duress_11.wav' },
+  { label: 'Male Vox', file: '../audio/malevox_wire.wav' },
+  { label: 'Bass',     file: '../audio/ax_parked.wav' },
+  { label: 'E-Guitar', file: '../audio/eguitar_wire.wav' },
+  { label: 'Mix Bus',  file: '../audio/sumch_honest.wav' },
 ];
 
 const RATIOS = ['1:1', '2:1', '3:1', '4:1', '6:1', '10:1', '20:1', 'NUKE'];

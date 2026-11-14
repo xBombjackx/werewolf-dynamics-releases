@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Werewolf Dynamics — WD Pre, Live</title>
+<style>
+  :root {
+    --room: #0B0C0E; --panel: #17181B; --chassis: #121316; --well: #101114;
+    --ink: #E8E6E1; --ink-dim: #8B8D93; --ink-faint: #55575D;
+    --line: #2A2C31; --line-soft: #222428;
+    --accent: #F2A93C; --accent-hi: #F7BC62; --on-accent: #131313;
+    --sans: "Segoe UI", system-ui, sans-serif;
+    --mono: "Cascadia Mono", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; padding: 34px 16px;
+    background: var(--room); color: var(--ink);
+    font-family: var(--sans);
+    display: flex; flex-direction: column; align-items: center; gap: 16px;
+  }
+  header { text-align: center; margin-bottom: 4px; }
+  header .mark { font-size: 22px; font-weight: 800; letter-spacing: 0.16em; }
+  header .mark span { color: var(--accent); }
+  header .sub { font-size: 10px; letter-spacing: 0.3em; color: var(--ink-faint); text-transform: uppercase; margin-top: 4px; }
+
+  .demo {
+    width: min(720px, 96vw);
+    background: var(--panel);
+    border: 1px solid rgba(0,0,0,0.75); border-radius: 6px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+    padding: 14px 16px 16px;
+  }
+  .demo h2 { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; }
+  .demo .blurb { margin: 6px 0 12px; font-size: 11.5px; line-height: 1.5; color: var(--ink-dim); }
+
+  .transport { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  button {
+    font-family: inherit; cursor: pointer;
+    background: var(--well); color: var(--ink-dim);
+    border: 1px solid var(--line); border-radius: 4px;
+  }
+  button:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+  .play { width: 44px; height: 34px; font-size: 13px; color: var(--ink); display: flex; align-items: center; justify-content: center; }
+  .play.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .loop { height: 34px; padding: 0 10px; font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; }
+  .loop.on { color: var(--accent); border-color: var(--accent); }
+
+  .bar { flex: 1; min-width: 150px; height: 34px; position: relative; cursor: pointer; background: var(--well); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+  .bar .fill { position: absolute; inset: 0 auto 0 0; width: 0%; background: rgba(242, 169, 60, 0.22); }
+  .bar .head { position: absolute; top: 0; bottom: 0; left: 0%; width: 2px; background: var(--accent); }
+  .bar .time { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font: 500 10px var(--mono); color: var(--ink-faint); pointer-events: none; }
+
+  .vol { display: flex; align-items: center; gap: 6px; }
+  .vol label { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: var(--ink-faint); text-transform: uppercase; }
+  .vol input { width: 72px; accent-color: var(--accent); }
+
+  .stems, .laws { display: flex; gap: 0; margin-top: 12px; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; background: var(--well); flex-wrap: wrap; }
+  .stems button, .laws button { flex: 1; border: 0; border-radius: 0; padding: 9px 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-faint); background: none; min-width: 82px; }
+  .stems button + button, .laws button + button { border-left: 1px solid var(--line-soft); }
+  .stems button.on, .laws button.on { background: var(--accent); color: var(--on-accent); }
+
+  .rack {
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 8px;
+    margin-top: 14px; padding: 12px 10px 10px;
+    background: var(--chassis); border: 1px solid var(--line); border-radius: 5px;
+    flex-wrap: wrap;
+  }
+  .knob { display: flex; flex-direction: column; align-items: center; gap: 4px; user-select: none; }
+  .knob canvas { cursor: ns-resize; touch-action: none; }
+  .knob .kname { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: var(--ink-dim); text-transform: uppercase; }
+  .knob .kval { font: 500 10px var(--mono); color: var(--ink-faint); min-height: 11px; }
+
+  .switches { display: flex; flex-direction: column; gap: 6px; }
+  .switches button { padding: 7px 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; min-width: 102px; }
+  .switches button.on { color: var(--accent); border-color: var(--accent); }
+  .switches button.power.on { background: var(--accent); color: var(--on-accent); }
+
+  .meterrow { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+  .meter { flex: 1; height: 26px; position: relative; background: var(--well); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+  .meter .grfill { position: absolute; inset: 0 auto 0 0; width: 0%; background: rgba(242, 169, 60, 0.30); }
+  .meter .scale { position: absolute; inset: 0; display: flex; justify-content: space-between; padding: 0 6px; align-items: center; font: 500 9.5px var(--mono); color: var(--ink-faint); pointer-events: none; }
+  .readout { font: 500 11px var(--mono); color: var(--ink-dim); min-width: 240px; text-align: right; }
+
+  .presets { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+  .presets button { padding: 7px 12px; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+  .presets button.on { color: var(--accent); border-color: var(--accent); }
+
+  .status { margin-top: 8px; font: 500 10px var(--mono); color: var(--ink-faint); min-height: 12px; letter-spacing: 0.06em; }
+  .keys { font-size: 10px; color: var(--ink-faint); letter-spacing: 0.08em; text-align: center; }
+  .nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; width: min(720px, 96vw); }
+  .nav a {
+    padding: 5px 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; text-decoration: none;
+    color: var(--ink-dim); background: var(--panel);
+    border: 1px solid var(--line); border-radius: 4px;
+  }
+  .nav a:hover { border-color: var(--accent); color: var(--ink); }
+  .nav a.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  footer { font-size: 10px; color: var(--ink-faint); letter-spacing: 0.14em; text-transform: uppercase; margin-top: 8px; }
+  a { color: var(--ink-dim); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="mark">WEREWOLF <span>DYNAMICS</span></div>
+  <div class="sub">wd pre &middot; running live in your browser</div>
+</header>
+<div class="keys">Space = play/pause &middot; drag &amp; drop your own clip anywhere &middot; real circuit engine compiled to WebAssembly, not a recording</div>
+<nav class="nav" aria-label="Live engines">
+  <a href="opto.html">WD Opto</a>
+  <a href="duress.html">WD Duress</a>
+  <a href="pre.html" class="on">WD Pre</a>
+  <a href="fet.html">WD FET</a>
+  <a href="tape.html">WD Tape</a>
+  <a href="echo.html">WD Echo</a>
+  <a href="spring.html">WD Spring</a>
+  <a href="../eq/">Digital EQ</a>
+  <a href="../demos/">17 A/B Demos</a>
+  <a href="../">Home</a>
+</nav>
+
+<section class="demo">
+  <h2>WD Pre — live</h2>
+  <p class="blurb">
+    Seven preamp circuits behind one stepped gain stage — clean precision,
+    Class A British console iron, American op-amp punch, broadcast tube,
+    4-track cassette desk, inline clean console, and grid-driven valve tone.
+    Push GAIN and TOAST to saturate the input and output stages while MATCH
+    autogain keeps bypass loudness honest.
+  </p>
+
+  <div class="transport">
+    <button class="play" id="play" title="Play / pause">&#9654;</button>
+    <button class="loop on" id="loop" title="Loop">LOOP</button>
+    <button class="loop" id="pick" title="Load an audio file from your computer">YOUR CLIP&hellip;</button>
+    <input id="fileIn" type="file" accept="audio/*" hidden>
+    <div class="bar" id="bar"><div class="fill"></div><div class="head"></div><div class="time">0:00</div></div>
+    <div class="vol"><label for="vol">Vol</label><input id="vol" type="range" min="0" max="100" value="60"></div>
+  </div>
+
+  <div class="stems" id="stems"></div>
+  <div class="laws" id="laws"></div>
+
+  <div class="rack" id="rack">
+    <div class="switches">
+      <button id="source">LINE</button>
+      <button id="pad">PAD 0</button>
+      <button id="autogain" class="on">MATCH ON</button>
+      <button id="power" class="power on">POWER</button>
+    </div>
+  </div>
+
+  <div class="meterrow">
+    <div class="meter"><div class="grfill" id="grfill"></div>
+      <div class="scale"><span>STRESS 0</span><span>5</span><span>10</span><span>15</span><span>20</span></div>
+    </div>
+    <div class="readout" id="readout">Stress 0.0 &middot; Eff +0.0 &middot; AG +0.0 dB</div>
+  </div>
+
+  <div class="presets">
+    <button id="p73" class="on">CLASS A WARM</button>
+    <button id="p76">TUBE GRIND</button>
+    <button id="porta">PORTA CRUSH</button>
+  </div>
+
+  <div class="status" id="status">loading engine&hellip;</div>
+</section>
+
+<footer>same dsp core as the plugin &middot; parity-gated against the native build every release</footer>
+
+<script>
+const WASM_FILE = 'wd-pre.wasm';
+const P = { power: 0, law: 1, source: 2, z: 3, gain: 4, pad: 5, toast: 6,
+            hpf: 7, lpf: 8, phase: 9, autogain: 10, level: 11, cal: 12,
+            iron: 13, unit: 14, coloron: 15, delta: 16, denorm: 17 };
+
+const DEFAULTS = { [P.power]: 1, [P.law]: 1, [P.source]: 0, [P.z]: 0, [P.gain]: 30,
+                   [P.pad]: 0, [P.toast]: 45, [P.hpf]: 0, [P.lpf]: 0, [P.phase]: 0,
+                   [P.autogain]: 1, [P.level]: 0, [P.cal]: 1, [P.iron]: 1.0,
+                   [P.unit]: 1, [P.coloron]: 1, [P.delta]: 0, [P.denorm]: 1 };
+
+const STEMS = [
+  { label: 'Drums',    file: '../audio/duress_11.wav' },
+  { label: 'Male Vox', file: '../audio/malevox_wire.wav' },
+  { label: 'Bass',     file: '../audio/ax_parked.wav' },
+  { label: 'E-Guitar', file: '../audio/eguitar_wire.wav' },
+  { label: 'Mix Bus',  file: '../audio/sumch_honest.wav' },
+];
+const DEFAULT_STEM = 1;
+const LAWS = ['Precision', 'Class A 73', 'Op-Amp 12', 'Tube 76', 'Porta', 'Clean E', 'Tube Tone'];
+
+const KNOBS = [
+  { id: P.gain,  name: 'Gain',   min: -25, max: 80,  def: 30,  fmt: v => (v >= 0 ? '+' : '') + v.toFixed(0) + ' dB' },
+  { id: P.toast, name: 'Toast',  min: 0,   max: 100, def: 45,  fmt: v => v.toFixed(0) + ' %' },
+  { id: P.iron,  name: 'Iron',   min: 0.5, max: 2.0, def: 1.0, fmt: v => v.toFixed(2) + 'x' },
+  { id: P.hpf,   name: 'HPF',    min: 0,   max: 400, def: 0,   fmt: v => v < 1 ? 'OFF' : v.toFixed(0) + ' Hz' },
+  { id: P.level, name: 'Output', min: -24, max: 24,  def: 0,   fmt: v => (v >= 0 ? '+' : '') + v.toFixed(1) + ' dB' },
+];
+
+const statusEl = document.getElementById('status');
+const SMOKE = new URLSearchParams(location.search).has('smoke');
+let playing = false, ctx = null;
+const smokeStamp = () => {
+  if (SMOKE)
+    document.title = `SMOKE ${playing ? 'PLAYING' : 'STOPPED'}`
+      + ` | ctx ${ctx ? ctx.state : 'none'}`
+      + ` | ${document.getElementById('readout').textContent}`
+      + ` | ${statusEl.textContent || 'no errors'}`;
+};
+const status = t => { statusEl.textContent = t; smokeStamp(); };
+
+class Knob {
+  constructor (spec, parent, onChange) {
+    this.spec = spec;
+    this.value = spec.def;
+    this.onChange = onChange;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'knob';
+    this.cv = document.createElement('canvas');
+    const dpr = devicePixelRatio || 1;
+    this.px = 56;
+    this.cv.width = this.cv.height = this.px * dpr;
+    this.cv.style.width = this.cv.style.height = this.px + 'px';
+    this.cv.getContext('2d').scale(dpr, dpr);
+    const name = document.createElement('div');
+    name.className = 'kname';
+    name.textContent = spec.name;
+    this.val = document.createElement('div');
+    this.val.className = 'kval';
+    wrap.append(this.cv, name, this.val);
+    parent.appendChild(wrap);
+
+    this.cv.addEventListener('pointerdown', e => {
+      this.cv.setPointerCapture(e.pointerId);
+      this.dragY = e.clientY;
+      this.dragV = this.value;
+    });
+    this.cv.addEventListener('pointermove', e => {
+      if (this.dragY === undefined) return;
+      const range = this.spec.max - this.spec.min;
+      const scale = e.shiftKey ? 600 : 150;
+      this.set(this.dragV + (this.dragY - e.clientY) / scale * range);
+    });
+    this.cv.addEventListener('pointerup', () => { this.dragY = undefined; });
+    this.cv.addEventListener('dblclick', () => this.set(this.spec.def));
+    this.draw();
+  }
+
+  set (v, silent) {
+    this.value = Math.min(this.spec.max, Math.max(this.spec.min, v));
+    this.draw();
+    this.val.textContent = this.spec.fmt(this.value);
+    if (!silent) this.onChange(this.spec.id, this.value);
+  }
+
+  draw () {
+    const g = this.cv.getContext('2d'), s = this.px, cx = s / 2, cy = s / 2, r = s / 2 - 6;
+    const t = (this.value - this.spec.min) / (this.spec.max - this.spec.min || 1);
+    const a0 = Math.PI * 0.75, a1 = Math.PI * 2.25, a = a0 + t * (a1 - a0);
+    g.clearRect(0, 0, s, s);
+    g.lineWidth = 3; g.lineCap = 'round';
+    g.strokeStyle = '#2A2C31';
+    g.beginPath(); g.arc(cx, cy, r, a0, a1); g.stroke();
+    g.strokeStyle = '#F2A93C';
+    g.beginPath(); g.arc(cx, cy, r, a0, a); g.stroke();
+    g.fillStyle = '#17181B';
+    g.beginPath(); g.arc(cx, cy, r - 6, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#E8E6E1'; g.lineWidth = 2;
+    g.beginPath();
+    g.moveTo(cx + Math.cos(a) * 4, cy + Math.sin(a) * 4);
+    g.lineTo(cx + Math.cos(a) * (r - 8), cy + Math.sin(a) * (r - 8));
+    g.stroke();
+  }
+}
+
+const state = { ...DEFAULTS };
+let worklet = null, outGain = null, srcNode = null;
+let wasmBytes = null, wasmMod = null;
+let stemBufs = new Map(), activeStem = DEFAULT_STEM, curBuf = null;
+let startTime = 0, offset = 0, loop = true, customName = null;
+
+function setParam(id, v) {
+  state[id] = v;
+  if (worklet) worklet.port.postMessage({ t: 'p', id, v });
+}
+
+function pushAllParams() {
+  if (!worklet) return;
+  for (const [id, v] of Object.entries(state))
+    worklet.port.postMessage({ t: 'p', id: Number(id), v });
+}
+
+const rackEl = document.getElementById('rack');
+const swEl = rackEl.querySelector('.switches');
+const knobs = {};
+for (const spec of KNOBS) {
+  const k = new Knob(spec, rackEl, setParam);
+  rackEl.insertBefore(k.cv.parentElement, swEl);
+  knobs[spec.id] = k;
+  k.val.textContent = spec.fmt(spec.def);
+}
+
+const lawsEl = document.getElementById('laws');
+LAWS.forEach((label, idx) => {
+  const b = document.createElement('button');
+  b.textContent = label;
+  b.onclick = () => { setParam(P.law, idx); syncButtons(); };
+  lawsEl.appendChild(b);
+});
+
+const srcBtn = document.getElementById('source');
+const padBtn = document.getElementById('pad');
+const agBtn = document.getElementById('autogain');
+const powerBtn = document.getElementById('power');
+
+function syncButtons() {
+  [...lawsEl.children].forEach((b, idx) => b.classList.toggle('on', Math.round(state[P.law]) === idx));
+  const line = state[P.source] > 0.5;
+  srcBtn.textContent = line ? 'LINE' : 'MIC';
+  srcBtn.classList.toggle('on', !line);
+  const pd = state[P.pad] > 0.5;
+  padBtn.textContent = pd ? 'PAD -20' : 'PAD 0';
+  padBtn.classList.toggle('on', pd);
+  const ag = state[P.autogain] > 0.5;
+  agBtn.textContent = ag ? 'MATCH ON' : 'MATCH OFF';
+  agBtn.classList.toggle('on', ag);
+  powerBtn.classList.toggle('on', state[P.power] > 0.5);
+}
+
+srcBtn.onclick = () => { setParam(P.source, state[P.source] > 0.5 ? 0 : 1); syncButtons(); };
+padBtn.onclick = () => { setParam(P.pad, state[P.pad] > 0.5 ? 0 : 1); syncButtons(); };
+agBtn.onclick = () => { setParam(P.autogain, state[P.autogain] > 0.5 ? 0 : 1); syncButtons(); };
+powerBtn.onclick = () => { setParam(P.power, state[P.power] > 0.5 ? 0 : 1); syncButtons(); };
+syncButtons();
+
+function applyPreset(btnId, vals) {
+  document.querySelectorAll('.presets button').forEach(b => b.classList.toggle('on', b.id === btnId));
+  for (const [id, v] of Object.entries(vals)) {
+    const numId = Number(id);
+    setParam(numId, v);
+    if (knobs[numId]) knobs[numId].set(v, true);
+  }
+  syncButtons();
+}
+
+document.getElementById('p73').onclick = () =>
+  applyPreset('p73', { [P.law]: 1, [P.source]: 0, [P.pad]: 0, [P.gain]: 30, [P.toast]: 45, [P.iron]: 1.0, [P.hpf]: 0, [P.level]: 0, [P.autogain]: 1, [P.power]: 1 });
+document.getElementById('p76').onclick = () =>
+  applyPreset('p76', { [P.law]: 3, [P.source]: 0, [P.pad]: 0, [P.gain]: 48, [P.toast]: 75, [P.iron]: 1.35, [P.hpf]: 60, [P.level]: 0, [P.autogain]: 1, [P.power]: 1 });
+document.getElementById('porta').onclick = () =>
+  applyPreset('porta', { [P.law]: 4, [P.source]: 1, [P.pad]: 0, [P.gain]: 42, [P.toast]: 85, [P.iron]: 1.4, [P.hpf]: 80, [P.level]: 0, [P.autogain]: 1, [P.power]: 1 });
+
+const stemsEl = document.getElementById('stems');
+STEMS.forEach((s, i) => {
+  const b = document.createElement('button');
+  b.textContent = s.label;
+  if (i === activeStem) b.classList.add('on');
+  b.onclick = () => selectStem(i);
+  stemsEl.appendChild(b);
+});
+
+async function loadWasmBytes() {
+  if (wasmBytes) return;
+  const res = await fetch(WASM_FILE);
+  if (!res.ok) throw new Error(`failed to fetch ${WASM_FILE} (${res.status})`);
+  wasmBytes = await res.arrayBuffer();
+  wasmMod = await WebAssembly.compile(wasmBytes);
+}
+
+async function ensureAudio() {
+  if (!ctx) {
+    ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+    outGain = ctx.createGain();
+    outGain.gain.value = document.getElementById('vol').value / 100;
+    outGain.connect(ctx.destination);
+  }
+  if (ctx.state === 'suspended') await ctx.resume();
+  if (!worklet) {
+    status('loading wasm engine…');
+    await loadWasmBytes();
+    await ctx.audioWorklet.addModule('wd-worklet.js');
+    try {
+      worklet = new AudioWorkletNode(ctx, 'wd-live', {
+        numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2],
+        processorOptions: { module: wasmMod },
+      });
+    } catch {
+      worklet = new AudioWorkletNode(ctx, 'wd-live', {
+        numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2],
+        processorOptions: { bytes: wasmBytes.slice(0) },
+      });
+    }
+    worklet.connect(outGain);
+    worklet.port.onmessage = ({ data: m }) => {
+      if (m.t === 'ready') {
+        pushAllParams();
+        status(customName ? `playing custom clip: ${customName}` : `ready · ${STEMS[activeStem].label} · live at ${ctx.sampleRate} Hz`);
+      } else if (m.t === 'error') {
+        status(`worklet error: ${m.message}`);
+      } else if (m.t === 'meters') {
+        const stress = Math.max(0, Math.min(20, m.gr));
+        document.getElementById('grfill').style.width = `${(stress / 20) * 100}%`;
+        const effStr = (m.tube >= 0 ? '+' : '') + m.tube.toFixed(1);
+        const agStr = (m.ag >= 0 ? '+' : '') + m.ag.toFixed(1);
+        document.getElementById('readout').textContent = `Stress ${stress.toFixed(1)} · Eff ${effStr} · AG ${agStr} dB`;
+        smokeStamp();
+      }
+    };
+  }
+}
+
+async function loadStemBuffer(idx) {
+  const key = STEMS[idx].file;
+  if (stemBufs.has(key)) return stemBufs.get(key);
+  status(`loading ${STEMS[idx].label}…`);
+  const res = await fetch(key);
+  if (!res.ok) throw new Error(`stem HTTP ${res.status}`);
+  const arr = await res.arrayBuffer();
+  const buf = await ctx.decodeAudioData(arr);
+  stemBufs.set(key, buf);
+  return buf;
+}
+
+function stopSource() {
+  if (srcNode) {
+    try { srcNode.onended = null; srcNode.stop(); srcNode.disconnect(); } catch {}
+    srcNode = null;
+  }
+}
+
+function curPos() {
+  if (!curBuf) return 0;
+  const elapsed = playing ? (ctx.currentTime - startTime) : 0;
+  const t = offset + elapsed;
+  return loop && curBuf.duration > 0 ? (t % curBuf.duration) : Math.min(t, curBuf.duration);
+}
+
+function startPlayback(fromSec) {
+  if (!curBuf || !worklet) return;
+  stopSource();
+  srcNode = ctx.createBufferSource();
+  srcNode.buffer = curBuf;
+  srcNode.loop = loop;
+  srcNode.connect(worklet);
+  offset = Math.max(0, Math.min(fromSec, Math.max(0, curBuf.duration - 0.01)));
+  startTime = ctx.currentTime;
+  playing = true;
+  srcNode.onended = () => {
+    if (!loop) { playing = false; offset = 0; syncPlayBtn(); smokeStamp(); }
+  };
+  srcNode.start(0, offset);
+  syncPlayBtn();
+  status(customName ? `custom clip: ${customName} · live @ ${ctx.sampleRate} Hz` : `${STEMS[activeStem].label} · live @ ${ctx.sampleRate} Hz`);
+}
+
+function syncPlayBtn() {
+  const pb = document.getElementById('play');
+  pb.classList.toggle('on', playing);
+  pb.innerHTML = playing ? '&#9646;&#9646;' : '&#9654;';
+}
+
+async function togglePlay() {
+  try {
+    await ensureAudio();
+    if (!curBuf) curBuf = await loadStemBuffer(activeStem);
+    if (playing) {
+      offset = curPos();
+      stopSource();
+      playing = false;
+      syncPlayBtn();
+      smokeStamp();
+    } else {
+      startPlayback(offset);
+    }
+  } catch (e) {
+    status(`error: ${e.message}`);
+  }
+}
+
+async function selectStem(idx) {
+  activeStem = idx;
+  customName = null;
+  [...stemsEl.children].forEach((b, i) => b.classList.toggle('on', i === idx));
+  try {
+    const wasPlaying = playing;
+    await ensureAudio();
+    curBuf = await loadStemBuffer(idx);
+    if (wasPlaying || !playing) startPlayback(0);
+  } catch (e) {
+    status(`error: ${e.message}`);
+  }
+}
+
+async function loadCustomFile(file) {
+  try {
+    await ensureAudio();
+    const arr = await file.arrayBuffer();
+    curBuf = await ctx.decodeAudioData(arr);
+    customName = file.name;
+    [...stemsEl.children].forEach(b => b.classList.remove('on'));
+    startPlayback(0);
+  } catch (e) {
+    status(`could not decode file: ${e.message}`);
+  }
+}
+
+document.getElementById('play').onclick = togglePlay;
+document.getElementById('loop').onclick = function () {
+  loop = !loop;
+  this.classList.toggle('on', loop);
+  if (srcNode) srcNode.loop = loop;
+};
+document.getElementById('vol').oninput = function () {
+  if (outGain) outGain.gain.value = this.value / 100;
+};
+document.getElementById('pick').onclick = () => document.getElementById('fileIn').click();
+document.getElementById('fileIn').onchange = e => { if (e.target.files[0]) loadCustomFile(e.target.files[0]); };
+
+document.getElementById('bar').onclick = e => {
+  if (!curBuf) return;
+  const r = e.currentTarget.getBoundingClientRect();
+  const frac = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+  const target = frac * curBuf.duration;
+  if (playing) startPlayback(target);
+  else offset = target;
+};
+
+window.addEventListener('dragover', e => e.preventDefault());
+window.addEventListener('drop', e => {
+  e.preventDefault();
+  const f = e.dataTransfer?.files?.[0];
+  if (f) loadCustomFile(f);
+});
+window.addEventListener('keydown', e => {
+  if (e.code === 'Space' && !['INPUT', 'TEXTAREA', 'BUTTON'].includes(document.activeElement.tagName)) {
+    e.preventDefault();
+    togglePlay();
+  }
+});
+
+function fmtTime(s) {
+  s = Math.max(0, s);
+  return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+}
+function tick() {
+  if (curBuf) {
+    const p = curPos(), pct = curBuf.duration > 0 ? (p / curBuf.duration) * 100 : 0;
+    document.querySelector('#bar .fill').style.width = `${pct}%`;
+    document.querySelector('#bar .head').style.left = `${pct}%`;
+    document.querySelector('#bar .time').textContent = fmtTime(p);
+  }
+  requestAnimationFrame(tick);
+}
+tick();
+
+loadWasmBytes().then(() => status('ready — press play')).catch(e => status(`load error: ${e.message}`));
+if (SMOKE) { smokeStamp(); setTimeout(() => togglePlay(), 50); }
+</script>
+</body>
+</html>
