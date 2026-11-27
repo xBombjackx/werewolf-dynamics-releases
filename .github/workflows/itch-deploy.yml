@@ -22,6 +22,23 @@ name: Deploy to itch.io
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g. v0.9.1; blank = latest release)"
+        required: false
+        default: ""
+      channels:
+        description: "Channels to push"
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - mac-and-linux
+          - mac
+          - linux-beta
+          - windows
 
 jobs:
   itch:
@@ -31,8 +48,18 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release download "${{ github.event.release.tag_name }}" \
-            --repo "${{ github.repository }}" --pattern '*.zip' --dir dist
+          set -euo pipefail
+          TAG="${{ github.event.release.tag_name || inputs.tag }}"
+          if [ -z "$TAG" ]; then
+            TAG=$(gh release view --repo "${{ github.repository }}" --json tagName --jq .tagName)
+          fi
+          echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
+          mkdir -p dist
+          gh release download "$TAG" \
+            --repo "${{ github.repository }}" \
+            --pattern '*.zip' \
+            --pattern '*.tar.gz' \
+            --dir dist
           ls -la dist
 
       - name: Install butler
@@ -47,8 +74,8 @@ jobs:
           BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
         run: |
           set -euo pipefail
-          VERSION="${{ github.event.release.tag_name }}"
-          VERSION="${VERSION#v}"
+          VERSION="${RELEASE_TAG#v}"
+          CHANNELS="${{ inputs.channels || 'all' }}"
           PROJECT=xbombjackx/analog-collection
           pushed=0
 
@@ -69,30 +96,50 @@ jobs:
               exit 1
             fi
 
-            zip="$matches"
-            echo "== $channel <- $(basename "$zip")"
+            asset="$matches"
+            echo "== $channel <- $(basename "$asset")"
 
-            # Reject a malformed archive here instead of letting butler find
-            # it: an entry present as both a file and a directory is what
-            # killed v0.7.3.
-            unzip -t "$zip" > /dev/null
-            dupes=$(unzip -Z1 "$zip" | sed 's:/*$::' | sort | uniq -d | head -20 || true)
-            if [ -n "$dupes" ]; then
-              echo "::error::$zip has entries that collide ignoring trailing slashes"
-              printf '  %s\n' $dupes
-              exit 1
-            fi
+            case "$asset" in
+              *.zip)
+                # Reject a malformed archive here instead of letting butler find
+                # it: an entry present as both a file and a directory is what
+                # killed v0.7.3.
+                unzip -t "$asset" > /dev/null
+                dupes=$(unzip -Z1 "$asset" | sed 's:/*$::' | sort | uniq -d | head -20 || true)
+                if [ -n "$dupes" ]; then
+                  echo "::error::$asset has entries that collide ignoring trailing slashes"
+                  printf '  %s\n' $dupes
+                  exit 1
+                fi
+                ;;
+              *.tar.gz)
+                tar -tzf "$asset" > /dev/null
+                ;;
+            esac
 
-            ./butler/butler push "$zip" "$PROJECT:$channel" --userversion "$VERSION"
+            ./butler/butler push "$asset" "$PROJECT:$channel" --userversion "$VERSION"
             ./butler/butler status "$PROJECT:$channel"
             pushed=$((pushed + 1))
           }
 
-          push_channel windows '*Windows*.zip'
-          push_channel mac     '*macOS*.zip'
+          case "$CHANNELS" in
+            all|windows)
+              push_channel windows '*Windows*.zip'
+              ;;
+          esac
+          case "$CHANNELS" in
+            all|mac-and-linux|mac)
+              push_channel mac '*macOS*.zip'
+              ;;
+          esac
+          case "$CHANNELS" in
+            all|mac-and-linux|linux-beta)
+              push_channel linux-beta '*Linux*.tar.gz'
+              ;;
+          esac
 
           if [ "$pushed" -eq 0 ]; then
-            echo "::error::release ${{ github.event.release.tag_name }} had no publishable asset"
+            echo "::error::release $RELEASE_TAG had no publishable asset for channels=$CHANNELS"
             exit 1
           fi
           echo "pushed $pushed channel(s) at version $VERSION"
