@@ -1,7 +1,7 @@
 # WD Rack — User Guide
 
 *How the chassis works, what slot order means, and how to chain the modules.
-Written for users; the engineering specs live in the development repo.*
+Written for users; the engineering specs live in [docs/CHASSIS_SEGMENT.md](CHASSIS_SEGMENT.md) and [docs/rack-backplane-crosstalk.md](rack-backplane-crosstalk.md).*
 
 ---
 
@@ -17,7 +17,7 @@ So there are two different "orders" in your session, and they do different
 things:
 
 - **Insert order on a track** — which plugin processes before which. This is
-  normal DAW signal flow; the rack has nothing to do with it. See §6 for
+  normal DAW signal flow; the rack has nothing to do with it. See §7 for
   chaining advice.
 - **Slot order in the rack** — where each module physically sits in the
   chassis. This never changes signal routing. It changes *who bleeds into
@@ -40,8 +40,8 @@ zero) and every module returns to its exact standalone behavior, bit for bit.
    on the rack's face fills in as the modules register, with your DAW's track
    names and colors.
 4. Turn the **Crosstalk** knob to taste. Zero is a hard bypass. Noon is a
-   healthy vintage chassis. The top third is a maintenance nightmare, on
-   purpose.
+   healthy vintage chassis. The top third pushes bleed and sag into obvious
+   lo-fi overload.
 5. Reorder slots with the ▲▼ buttons if you want particular modules to be
    neighbors (or not). Watch the Shared Supply Rail meter breathe while the
    mix plays.
@@ -152,13 +152,13 @@ one: **WD Strip** wires preamp → EQ → compressor, the console channel order
 
 General laws worth stealing:
 
-- **Preamp first.** WD Pre is an input stage by nature — its five laws are
+- **Preamp first.** WD Pre is an input stage by nature — its seven laws are
   about what happens to a signal *entering* the chain. Drive it for color,
   then everything downstream reacts to that color.
 - **Corrective EQ before compression, sweetening EQ after.** Cut the boom
   and rumble (WD XQ's high-pass, or a surgical band) before a compressor so
   it doesn't pump on frequencies you're about to remove. Broad musical
-  strokes (WDTec's program curves, XQ's air band) sit naturally after.
+  strokes (WD Tec's program curves, XQ's air band) sit naturally after.
 - **Fast catch before slow ride.** The classic serial-compression pair puts
   the fast unit first to catch peaks (WD FET, or WD Duress on its quicker
   curves) and the slow smooth unit after to ride the level (WD Opto, WD Mu).
@@ -169,7 +169,7 @@ General laws worth stealing:
 - **Tape near the end.** WD Tape's head-chain saturation and compression
   respond to everything that came before; it is the "print it" stage.
   WD AX (exciter) works well right after tape, restoring the top edge the
-  medium rounds off — that is what it was invented for.
+  tape medium rounds off.
 - **Echo where you'd patch it.** WD Echo is a send effect first (its spatial
   tape medium loves a dedicated return track), an insert only when you want
   the whole signal through the loop.
@@ -180,7 +180,7 @@ General laws worth stealing:
 Two worked examples:
 
 **Vocal track:** WD Pre (73 law, a little iron) → WD FET (fast, catching
-2–3 dB) → WD Opto (riding another 3–4 dB) → WDTec (program low + air).
+2–3 dB) → WD Opto (riding another 3–4 dB) → WD Tec (program low + air).
 
 **Mix bus:** WD XQ (gentle corrective, high-pass the mud) → WD VCA (Console
 Bus, 1–2 dB of glue) → WD Tape (the print stage) → WD AX (a breath of edge).
@@ -198,10 +198,11 @@ do it.
 - **CPU.** The coordinator itself is a bookkeeper — the rail math is a few
   envelope followers over shared memory. The audible work happens inside
   the modules you already loaded.
-- **Defaults are honest.** ×1 on Sag, Ripple, and Bus Bar are the measured
-  hardware values, not "off". The knobs above ×1 are deliberately too far —
-  that is the house three-regime law: nominal is honest, mid-travel is
-  musical, the stops are an effect, proudly.
+- **Defaults are hardware baselines.** ×1 on Sag, Ripple, and Bus Bar
+  represents the measured hardware values, not "off." Turning any of them
+  higher pushes beyond normal studio behavior: ×1 gives calibrated hardware
+  response, mid-travel adds musical exaggeration, and the maximum settings
+  serve as deliberate special effects.
 - **The UI window can be resized** by dragging its corner; the faceplate
   scales to fit.
 

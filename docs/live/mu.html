@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Werewolf Dynamics — WD Mu, Live</title>
+</head>
+<body>
+<script type="module">
+import { mountLiveDemo } from './wd-live-page.js';
+
+const P = { power: 0, mode: 1, tc: 2, chmode: 3, bias: 4, input: 5, mix: 6, output: 7, hpf: 8, cal: 9, iron: 10, ag: 11, color: 12, unit: 13, pair: 14, denorm: 15 };
+const tcNames = ['TC1', 'TC2', 'TC3', 'TC4', 'TC5', 'TC6'];
+mountLiveDemo({
+  page: 'mu.html',
+  title: 'WD Mu',
+  wasm: 'wd-mu.wasm',
+  defaultStem: 4,
+  blurb: 'Push-pull variable-mu tube compressor compiled to WebAssembly. Choose Mastering for clean transformer headroom or Broadcast for heavy core iron saturation, dial in bias from clean glue to aggressive grid crunch, and switch Stereo Linked or Mid/Side.',
+  defaults: { [P.power]: 1, [P.mode]: 0, [P.tc]: 0, [P.chmode]: 0, [P.bias]: 0.25, [P.input]: 0, [P.mix]: 100, [P.output]: 0, [P.hpf]: 0, [P.cal]: 1, [P.iron]: 1, [P.ag]: 1, [P.color]: 1, [P.unit]: 1, [P.pair]: 0, [P.denorm]: 1 },
+  modes: { param: P.mode, labels: ['Mastering (Clean Iron)', 'Broadcast (Heavy Iron)'] },
+  knobs: [
+    { id: P.input,  name: 'Input',  min: -18, max: 18,  def: 0,    fmt: v => (v >= 0 ? '+' : '') + v.toFixed(1) + ' dB' },
+    { id: P.bias,   name: 'Bias',   min: -1,  max: 1,   def: 0.25, fmt: v => (v >= 0 ? '+' : '') + v.toFixed(2) },
+    { id: P.tc,     name: 'TC',     min: 0,   max: 5,   step: 1, def: 0, fmt: v => tcNames[Math.round(v)] || 'TC1' },
+    { id: P.iron,   name: 'Iron',   min: 0.5, max: 2.0, def: 1.0,  fmt: v => 'x' + v.toFixed(2) },
+    { id: P.mix,    name: 'Mix',    min: 0,   max: 100, def: 100,  fmt: v => v.toFixed(0) + ' %' },
+    { id: P.output, name: 'Output', min: -24, max: 12,  def: 0,    fmt: v => (v >= 0 ? '+' : '') + v.toFixed(1) + ' dB' },
+  ],
+  switches: [
+    { param: P.ag, labels: ['MATCH: OFF', 'MATCH: ON'] },
+    { param: P.chmode, values: [0, 2], labels: ['CH: LINKED', 'CH: MID/SIDE'] },
+    { param: P.color, labels: ['COLOR: OFF', 'COLOR: ON'] },
+    { param: P.power, label: 'POWER', power: true },
+  ],
+  presets: [
+    { label: 'Mix Glue', vals: { [P.mode]: 0, [P.bias]: 0.25, [P.input]: 2, [P.tc]: 4, [P.iron]: 1.0 } },
+    { label: 'Broadcast Crush', vals: { [P.mode]: 1, [P.bias]: 0.75, [P.input]: 6, [P.tc]: 1, [P.iron]: 1.6 } },
+    { label: 'Mid/Side Bloom', vals: { [P.mode]: 1, [P.chmode]: 2, [P.bias]: 0.5, [P.input]: 4, [P.tc]: 5 } },
+  ],
+  meter: {
+    ticks: ['GR 0', '-5', '-10', '-15', '-20 dB'],
+    init: 'GR 0.0 dB · AG +0.0 dB',
+    pct: m => (m.gr / 20) * 100,
+    text: m => `GR ${m.gr.toFixed(1)} dB · AG ${m.ag >= 0 ? '+' : ''}${m.ag.toFixed(1)} dB`,
+  },
+});
+</script>
+</body>
+</html>

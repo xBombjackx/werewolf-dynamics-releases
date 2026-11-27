@@ -1,10 +1,11 @@
-# Bibliography — the research under the suite
+# Bibliography — the research behind the suite
 
 Companion to [ACCURACY.md](ACCURACY.md). That document explains how the
-modules are proven; this one lists what they are built from. Three kinds of
-sources: peer-reviewed papers the cores implement, manufacturer documents
-that anchor the calibration, and standard methods that need no single
-citation. Where we hold a copy, the file is named under `docs/references/`.
+modules are verified; this one lists what they are built from. The suite draws
+on three kinds of sources: peer-reviewed papers that the DSP cores implement,
+manufacturer documents that anchor the calibration, and standard methods that
+need no single citation. Where we hold a copy, the file is named under
+`docs/references/`.
 
 Per-module anchor documents (`*_ANCHORS.md` in this folder) list the exact
 numbers each bench gates against.
@@ -44,7 +45,7 @@ numbers each bench gates against.
   the fit targets.
 
 **Magnetic hysteresis (tape, transformers, inductors — WD Tape, iron
-stages suite-wide, WDTec's inductors)**
+stages suite-wide, WD Tec's inductors)**
 
 - D. C. Jiles, D. L. Atherton, "Theory of Ferromagnetic Hysteresis",
   *Journal of Magnetism and Magnetic Materials* 61, 1986 — the hysteresis
@@ -57,12 +58,12 @@ stages suite-wide, WDTec's inductors)**
   Transformers Based on the Jiles-Atherton Model", *Proc. DAFx-16*, Brno,
   2016 — J-A inside circuit elements, the pattern our transformer and
   inductor cores use.
-- In-house on top: domain dispersion — several J-A cores at spread standing
-  fields, averaged, because a single loop has a reversal kink that rides
-  quiet program as a distortion floor; real iron is millions of domains and
-  has no single kink.
+- Our extension adds magnetic domain dispersion by averaging multiple J-A
+  cores across offset bias fields. A single hysteresis loop has a sharp
+  reversal kink that adds distortion to quiet signals, whereas real iron
+  contains millions of domains and has no single kink.
 
-**Passive equalizer networks (the Pultec class — WDTec)**
+**Passive equalizer networks (the Pultec class — WD Tec)**
 
 - Barrera, Lizarraga-Seijas, Font, "Modeling the Pultec EQP-1A with Wave
   Digital Filters", *Proc. SMC 2024*. (`barrera2024_eqp1a_wdf.pdf`,
@@ -91,8 +92,8 @@ stages suite-wide, WDTec's inductors)**
 - J. Parker, V. Zavalishin, E. Le Bivic, "Reducing the Aliasing of
   Nonlinear Waveshaping Using Continuous-Time Convolution", *Proc.
   DAFx-16*, Brno, 2016 — first-order antiderivative anti-aliasing (ADAA1),
-  applied to the residual of the clip guard and of the diode/triode laws
-  so the identity path stays exact.
+  applied to the nonlinear residual of the clip guard and the diode/triode
+  stages so clean signals pass unaltered.
 
 ## Manufacturer documents (calibration authority)
 
@@ -116,8 +117,8 @@ documents record each number used.
 - Semi-implicit backward Euler for the stiff opto carrier equations;
   bilinear-transform discretization for linear networks.
 - Polyphase IIR half-band 2× oversampling with no integer latency
-  (`Source/dsp/Oversample2x.h`), applied per module where the aliasing
-  audit measured it necessary.
+  (`Source/dsp/Oversample2x.h`), applied to each module where the aliasing
+  audit showed it was needed.
 - ANSI VU ballistics (second-order, 2.1 Hz, ζ 0.62) for the meters.
 
 ## License hygiene

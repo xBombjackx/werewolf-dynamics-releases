@@ -112,13 +112,27 @@
 <div class="keys">Space = play/pause &middot; drag &amp; drop your own clip anywhere &middot; real circuit engine compiled to WebAssembly, not a recording</div>
 <nav class="nav" aria-label="Live engines">
   <a href="opto.html">WD Opto</a>
+  <a href="mu.html">WD Mu</a>
+  <a href="1b.html">WD 1B</a>
+  <a href="tbar.html">WD T-Bar</a>
+  <a href="fet.html">WD FET</a>
+  <a href="vca.html">WD VCA</a>
   <a href="duress.html">WD Duress</a>
   <a href="pre.html">WD Pre</a>
-  <a href="fet.html">WD FET</a>
+  <a href="tec.html">WD Tec</a>
+  <a href="xq.html">WD XQ</a>
   <a href="tape.html">WD Tape</a>
+  <a href="ax.html">WD AX</a>
+  <a href="361.html">WD 361</a>
   <a href="echo.html" class="on">WD Echo</a>
   <a href="spring.html">WD Spring</a>
-  <a href="xq.html">WD XQ</a>
+  <a href="brigade.html">WD Brigade</a>
+  <a href="span.html">WD Span</a>
+  <a href="sumch.html">WD Sum Ch</a>
+  <a href="summer.html">WD Summer</a>
+  <a href="annihilator.html">WD Annihilator</a>
+  <a href="damper.html">WD Damper</a>
+  <a href="outboard.html">WD Outboard</a>
   <a href="../demos/">17 A/B Demos</a>
   <a href="../">Home</a>
 </nav>
@@ -126,17 +140,18 @@
 <section class="demo">
   <h2>WD Echo — live</h2>
   <p class="blurb">
-    Motor-driven magnetic tape loop delay with three playback heads, physical
-    tape splice, and integrated spring tank across all twelve head/spring
-    combinations. Grab RATE while playing and repeats already written to the
-    loop bend with the capstan motor, or flip ARROW for palindrome and reverse
-    playback.
+    Tape loop delay running live in WebAssembly with three playback heads, a
+    physical tape splice, and an integrated spring tank across twelve routing
+    modes. Turning RATE while audio plays shifts the pitch of stored repeats
+    as the capstan motor speeds up or slows down, INTENSITY sets feedback,
+    WOW/WEAR adds tape wobble and age, and ARROW switches between forward,
+    palindrome (alternating forward and reverse), and reverse playback.
   </p>
 
   <div class="transport">
     <button class="play" id="play" title="Play / pause">&#9654;</button>
     <button class="loop on" id="loop" title="Loop">LOOP</button>
-    <button class="loop" id="pick" title="Load an audio file from your computer">YOUR CLIP&hellip;</button>
+    <button class="loop" id="pick" title="Load a local audio file">YOUR CLIP&hellip;</button>
     <input id="fileIn" type="file" accept="audio/*" hidden>
     <div class="bar" id="bar"><div class="fill"></div><div class="head"></div><div class="time">0:00</div></div>
     <div class="vol"><label for="vol">Vol</label><input id="vol" type="range" min="0" max="100" value="60"></div>
@@ -171,7 +186,7 @@
   <div class="status" id="status">loading engine&hellip;</div>
 </section>
 
-<footer>same dsp core as the plugin &middot; parity-gated against the native build every release</footer>
+<footer>same DSP core as the plugin &middot; verified against the desktop build every release</footer>
 
 <script>
 const WASM_FILE = 'wd-echo.wasm';

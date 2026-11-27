@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Werewolf Dynamics — WD Summer, Live</title>
+</head>
+<body>
+<script type="module">
+import { mountLiveDemo } from './wd-live-page.js';
+
+const P = { power: 0, bank: 1, drive: 2, crowd: 3, output: 4, color: 5, denorm: 6 };
+mountLiveDemo({
+  page: 'summer.html',
+  title: 'WD Summer',
+  wasm: 'wd-summer.wasm',
+  defaultStem: 4,
+  blurb: 'Console mix-bus summing amplifier compiled to WebAssembly across five console architectures with 2x oversampling. Dial in Drive and simulated Crowd channels to push the mix amp and bus transformer core without changing volume.',
+  defaults: { [P.power]: 1, [P.bank]: 0, [P.drive]: 1.5, [P.crowd]: 16, [P.output]: 0, [P.color]: 1, [P.denorm]: 1 },
+  modes: { param: P.bank, labels: ['WD-N Brit', 'WD-S Clean', 'WD-A Steel', 'WD-T Tube', 'WD-G German'] },
+  knobs: [
+    { id: P.drive,  name: 'Drive',  min: 0.25, max: 4,  def: 1.5, fmt: v => 'x' + v.toFixed(2) },
+    { id: P.crowd,  name: 'Crowd',  min: 1,    max: 32, step: 1, def: 16, fmt: v => Math.round(v) + ' ch' },
+    { id: P.output, name: 'Output', min: -12,  max: 12, def: 0,   fmt: v => (v >= 0 ? '+' : '') + v.toFixed(1) + ' dB' },
+  ],
+  switches: [
+    { param: P.color, labels: ['COLOR: OFF', 'COLOR: ON'] },
+    { param: P.power, label: 'POWER', power: true },
+  ],
+  presets: [
+    { label: 'Calibrated Mix Bus', vals: { [P.bank]: 0, [P.drive]: 1.5, [P.crowd]: 16 } },
+    { label: 'Loaded Inline Desk', vals: { [P.bank]: 1, [P.drive]: 2.8, [P.crowd]: 28 } },
+    { label: 'Steel Bus Drive', vals: { [P.bank]: 2, [P.drive]: 3.2, [P.crowd]: 24 } },
+  ],
+  meter: {
+    ticks: ['FLUX 0.0', '0.25', '0.50', '0.75', '1.0'],
+    init: 'Bus Flux 0.000 · Crowd 0.00',
+    pct: m => Math.min(100, m.gr * 100),
+    text: m => `Bus Flux ${m.gr.toFixed(3)} · Crowd ${m.ag.toFixed(2)}`,
+  },
+});
+</script>
+</body>
+</html>

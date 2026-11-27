@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Werewolf Dynamics — WD Span, Live</title>
+</head>
+<body>
+<script type="module">
+import { mountLiveDemo } from './wd-live-page.js';
+
+const P = { power: 0, width: 1, iron: 2, drive: 3, shuffle: 4, output: 5, color: 6, denorm: 7 };
+mountLiveDemo({
+  page: 'span.html',
+  title: 'WD Span',
+  wasm: 'wd-span.wasm',
+  defaultStem: 4,
+  blurb: 'Stereo imager built on transformer magnetics rather than time delay or allpass phase tricks, compiled to WebAssembly. Shapes the Side difference signal through saturating core hysteresis and a magnetizing shunt so mono sum cancels error cleanly while lows naturally center.',
+  defaults: { [P.power]: 1, [P.width]: 115, [P.iron]: 40, [P.drive]: 1.5, [P.shuffle]: 1.0, [P.output]: 0, [P.color]: 1, [P.denorm]: 1 },
+  knobs: [
+    { id: P.width,   name: 'Width',      min: 0,    max: 200, def: 115, fmt: v => v.toFixed(0) + ' %' },
+    { id: P.iron,    name: 'Side Iron',  min: 0,    max: 100, def: 40,  fmt: v => v.toFixed(0) + ' %' },
+    { id: P.drive,   name: 'Core Drive', min: 0.25, max: 8,   def: 1.5, fmt: v => 'x' + v.toFixed(2) },
+    { id: P.shuffle, name: 'LF Shuffle', min: -6,   max: 6,   def: 1.0, fmt: v => (v >= 0 ? '+' : '') + v.toFixed(1) + ' dB' },
+    { id: P.output,  name: 'Output',     min: -12,  max: 12,  def: 0,   fmt: v => (v >= 0 ? '+' : '') + v.toFixed(1) + ' dB' },
+  ],
+  switches: [
+    { param: P.color, labels: ['COLOR: OFF', 'COLOR: ON'] },
+    { param: P.power, label: 'POWER', power: true },
+  ],
+  presets: [
+    { label: 'Wide Mix Safe Bass', vals: { [P.width]: 130, [P.iron]: 55, [P.drive]: 2.0, [P.shuffle]: -2.0 } },
+    { label: 'Vintage Wide Bloom', vals: { [P.width]: 150, [P.iron]: 75, [P.drive]: 3.5, [P.shuffle]: 2.5 } },
+    { label: 'Mono Anchor Check', vals: { [P.width]: 0, [P.iron]: 0, [P.shuffle]: 0 } },
+  ],
+  meter: {
+    ticks: ['FLUX 0.0', '0.5', '1.0', '1.5', '2.0'],
+    init: 'Side -70.0 dB · Corr +1.00 · Flux 0.00',
+    pct: m => Math.min(100, m.tube * 50),
+    text: m => `Side ${m.gr.toFixed(1)} dB · Corr ${m.ag.toFixed(2)} · Flux ${m.tube.toFixed(2)}`,
+  },
+});
+</script>
+</body>
+</html>

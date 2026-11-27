@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Werewolf Dynamics — WD VCA, Live</title>
+</head>
+<body>
+<script type="module">
+import { mountLiveDemo } from './wd-live-page.js';
+
+const P = { power: 0, model: 1, cell: 2, thresh: 3, ratio: 4, atk: 5, rel: 6, knee: 7, hpf: 8, thrust: 9, oldtype: 10, makeup: 11, input: 12, mix: 13, output: 14, cal: 15, ag: 16, color: 17, unit: 18, denorm: 19 };
+const atkLabels = ['0.1 ms', '0.3 ms', '1 ms', '3 ms', '10 ms', '30 ms'];
+const relLabels = ['0.1 s', '0.3 s', '0.6 s', '1.2 s', 'Auto'];
+mountLiveDemo({
+  page: 'vca.html',
+  title: 'WD VCA',
+  wasm: 'wd-vca.wasm',
+  defaultStem: 0,
+  blurb: 'Three-detector discrete VCA compressor compiled to WebAssembly: switch between Console Bus glue, RMS leveler, and Thrust Bus sidechain tilt with feed-forward or feedback topology and 2x oversampled discrete op-amp color.',
+  defaults: { [P.power]: 1, [P.model]: 0, [P.cell]: 0, [P.thresh]: -18, [P.ratio]: 4, [P.atk]: 3, [P.rel]: 4, [P.knee]: 1, [P.hpf]: 0, [P.thrust]: 1, [P.oldtype]: 0, [P.makeup]: 0, [P.input]: 0, [P.mix]: 100, [P.output]: 0, [P.cal]: 1, [P.ag]: 1, [P.color]: 1, [P.unit]: 1, [P.denorm]: 1 },
+  modes: { param: P.model, labels: ['Console Bus', 'RMS Glue', 'Thrust Bus'] },
+  knobs: [
+    { id: P.thresh, name: 'Thresh',  min: -40, max: 0,   def: -18, fmt: v => v.toFixed(1) + ' dB' },
+    { id: P.ratio,  name: 'Ratio',   min: 1.5, max: 20,  def: 4,   fmt: v => v.toFixed(1) + ':1' },
+    { id: P.atk,    name: 'Attack',  min: 0,   max: 5,   step: 1, def: 3, fmt: v => atkLabels[Math.round(v)] || '3 ms' },
+    { id: P.rel,    name: 'Release', min: 0,   max: 4,   step: 1, def: 4, fmt: v => relLabels[Math.round(v)] || 'Auto' },
+    { id: P.mix,    name: 'Mix',     min: 0,   max: 100, def: 100, fmt: v => v.toFixed(0) + ' %' },
+    { id: P.output, name: 'Output',  min: -24, max: 12,  def: 0,   fmt: v => (v >= 0 ? '+' : '') + v.toFixed(1) + ' dB' },
+  ],
+  switches: [
+    { param: P.ag, labels: ['MATCH: OFF', 'MATCH: ON'] },
+    { param: P.thrust, values: [0, 1, 2], labels: ['THRUST: NORM', 'THRUST: MED', 'THRUST: LOUD'] },
+    { param: P.hpf, values: [0, 1, 2, 3], labels: ['HPF: OFF', 'HPF: 60 HZ', 'HPF: 100 HZ', 'HPF: 200 HZ'] },
+    { param: P.power, label: 'POWER', power: true },
+  ],
+  presets: [
+    { label: 'Mix Bus Glue', vals: { [P.model]: 0, [P.thresh]: -18, [P.ratio]: 4, [P.atk]: 4, [P.rel]: 4, [P.hpf]: 1 } },
+    { label: 'Drum Smack', vals: { [P.model]: 2, [P.thresh]: -24, [P.ratio]: 8, [P.atk]: 2, [P.thrust]: 2, [P.mix]: 70 } },
+    { label: 'Smooth RMS', vals: { [P.model]: 1, [P.thresh]: -20, [P.ratio]: 3, [P.knee]: 1 } },
+  ],
+  meter: {
+    ticks: ['GR 0', '-5', '-10', '-15', '-20 dB'],
+    init: 'GR 0.0 dB · AG +0.0 dB',
+    pct: m => (m.gr / 20) * 100,
+    text: m => `GR ${m.gr.toFixed(1)} dB · AG ${m.ag >= 0 ? '+' : ''}${m.ag.toFixed(1)} dB`,
+  },
+});
+</script>
+</body>
+</html>

@@ -111,13 +111,27 @@
 <div class="keys">Space = play/pause &middot; drag &amp; drop your own clip anywhere &middot; real circuit engine compiled to WebAssembly, not a recording</div>
 <nav class="nav" aria-label="Live engines">
   <a href="opto.html">WD Opto</a>
+  <a href="mu.html">WD Mu</a>
+  <a href="1b.html">WD 1B</a>
+  <a href="tbar.html">WD T-Bar</a>
+  <a href="fet.html">WD FET</a>
+  <a href="vca.html">WD VCA</a>
   <a href="duress.html">WD Duress</a>
   <a href="pre.html">WD Pre</a>
-  <a href="fet.html">WD FET</a>
+  <a href="tec.html">WD Tec</a>
+  <a href="xq.html" class="on">WD XQ</a>
   <a href="tape.html">WD Tape</a>
+  <a href="ax.html">WD AX</a>
+  <a href="361.html">WD 361</a>
   <a href="echo.html">WD Echo</a>
   <a href="spring.html">WD Spring</a>
-  <a href="xq.html" class="on">WD XQ</a>
+  <a href="brigade.html">WD Brigade</a>
+  <a href="span.html">WD Span</a>
+  <a href="sumch.html">WD Sum Ch</a>
+  <a href="summer.html">WD Summer</a>
+  <a href="annihilator.html">WD Annihilator</a>
+  <a href="damper.html">WD Damper</a>
+  <a href="outboard.html">WD Outboard</a>
   <a href="../demos/">17 A/B Demos</a>
   <a href="../">Home</a>
 </nav>
@@ -125,17 +139,18 @@
 <section class="demo">
   <h2>WD XQ — live</h2>
   <p class="blurb">
-    One parametric EQ panel driving five circuit models: clean digital
-    Precision, two analog console EQs (Console E and Console G), the stepped
-    Discrete 550 proportional-Q network, and the three-band Inductor 73 stage.
-    Flip MID DYN so the midrange band rides with the signal instead of sitting
-    static, or push LINE DRIVE into the output stage.
+    Parametric EQ running live in WebAssembly with five circuit models under
+    one set of controls: clean digital Precision, two analog console EQs
+    (Console E and Console G), a stepped proportional-Q discrete EQ, and a
+    three-band British inductor stage. Engage MID DYN to scale Mid Gain
+    dynamically toward your boost or cut when signal crosses threshold, or
+    raise LINE DRIVE to saturate the output stage.
   </p>
 
   <div class="transport">
     <button class="play" id="play" title="Play / pause">&#9654;</button>
     <button class="loop on" id="loop" title="Loop">LOOP</button>
-    <button class="loop" id="pick" title="Load an audio file from your computer">YOUR CLIP&hellip;</button>
+    <button class="loop" id="pick" title="Load a local audio file">YOUR CLIP&hellip;</button>
     <input id="fileIn" type="file" accept="audio/*" hidden>
     <div class="bar" id="bar"><div class="fill"></div><div class="head"></div><div class="time">0:00</div></div>
     <div class="vol"><label for="vol">Vol</label><input id="vol" type="range" min="0" max="100" value="60"></div>
@@ -170,7 +185,7 @@
   <div class="status" id="status">loading engine&hellip;</div>
 </section>
 
-<footer>same dsp core as the plugin &middot; parity-gated against the native build every release</footer>
+<footer>same DSP core as the plugin &middot; verified against the desktop build every release</footer>
 
 <script>
 const WASM_FILE = 'wd-xq.wasm';
@@ -347,7 +362,7 @@ function syncButtons() {
   if (loMidKnob) {
     const is3Band = m === 4;
     loMidKnob.wrap.style.opacity = is3Band ? '0.38' : '1';
-    loMidKnob.wrap.title = is3Band ? 'Three-band Inductor 73 uses Low, Mid, and High' : '';
+    loMidKnob.wrap.title = is3Band ? 'Three-band British inductor mode uses Low, Mid, and High' : '';
   }
   hpfIdx = state[P.hpOn] < 0.5 ? 0 : (state[P.hpFreq] >= 100 ? 2 : 1);
   hpfBtn.textContent = HPF_STEPS[hpfIdx].label;

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Werewolf Dynamics — WD Tec, Live</title>
+</head>
+<body>
+<script type="module">
+import { mountLiveDemo } from './wd-live-page.js';
+
+const P = { power: 0, eqpin: 1, loB: 2, loA: 3, loF: 4, hiB: 5, hiBw: 6, hiF: 7, hiA: 8, hiAF: 9, meqin: 10, mLo: 11, mLoF: 12, mDip: 13, mDipF: 14, mHi: 15, mHiF: 16, drive: 17, core: 18, color: 19, input: 20, output: 21, denorm: 22 };
+mountLiveDemo({
+  page: 'tec.html',
+  title: 'WD Tec',
+  wasm: 'wd-tec.wasm',
+  defaultStem: 4,
+  blurb: 'Dual passive RLC program and midrange equalizer compiled to WebAssembly using full nodal analysis. Boost and attenuate low frequencies simultaneously for the classic bass weight-and-dip curve, push DRIVE through the iron line stage, and blend transformer saturation.',
+  defaults: { [P.power]: 1, [P.eqpin]: 1, [P.loB]: 3.5, [P.loA]: 2.0, [P.loF]: 60, [P.hiB]: 2.5, [P.hiBw]: 5, [P.hiF]: 8000, [P.hiA]: 0, [P.hiAF]: 10000, [P.meqin]: 1, [P.mLo]: 0, [P.mLoF]: 300, [P.mDip]: 1.5, [P.mDipF]: 500, [P.mHi]: 0, [P.mHiF]: 3000, [P.drive]: 4, [P.core]: 0.5, [P.color]: 1, [P.input]: 0, [P.output]: 0, [P.denorm]: 1 },
+  modes: { param: P.loF, values: [20, 30, 60, 100], labels: ['Low 20 Hz', 'Low 30 Hz', 'Low 60 Hz', 'Low 100 Hz'] },
+  knobs: [
+    { id: P.loB,    name: 'Lo Boost', min: 0,   max: 10,    def: 3.5, fmt: v => v.toFixed(1) },
+    { id: P.loA,    name: 'Lo Atten', min: 0,   max: 10,    def: 2.0, fmt: v => v.toFixed(1) },
+    { id: P.hiB,    name: 'Hi Boost', min: 0,   max: 10,    def: 2.5, fmt: v => v.toFixed(1) },
+    { id: P.hiBw,   name: 'Hi BW',    min: 0,   max: 10,    def: 5.0, fmt: v => v.toFixed(1) },
+    { id: P.mDip,   name: 'Mid Dip',  min: 0,   max: 10,    def: 1.5, fmt: v => v.toFixed(1) },
+    { id: P.drive,  name: 'Drive',    min: 0,   max: 24,    def: 4.0, fmt: v => '+' + v.toFixed(1) + ' dB' },
+    { id: P.output, name: 'Output',   min: -24, max: 12,    def: 0.0, fmt: v => (v >= 0 ? '+' : '') + v.toFixed(1) + ' dB' },
+  ],
+  switches: [
+    { param: P.eqpin, labels: ['EQP: OUT', 'EQP: IN'] },
+    { param: P.meqin, labels: ['MEQ: OUT', 'MEQ: IN'] },
+    { param: P.color, labels: ['COLOR: OFF', 'COLOR: ON'] },
+    { param: P.power, label: 'POWER', power: true },
+  ],
+  presets: [
+    { label: 'Low-End Trick', vals: { [P.loF]: 60, [P.loB]: 4.5, [P.loA]: 4.0, [P.hiB]: 3.0, [P.mDip]: 1.5 } },
+    { label: 'Deep Sub Lift', vals: { [P.loF]: 30, [P.loB]: 6.0, [P.loA]: 1.5, [P.hiB]: 4.0, [P.drive]: 8 } },
+    { label: 'Hot Iron Polish', vals: { [P.drive]: 18, [P.core]: 0.85, [P.hiB]: 3.5, [P.loB]: 2.5 } },
+  ],
+  meter: {
+    ticks: ['FLUX 0.00', '0.25', '0.50', '0.75', '1.00'],
+    init: 'Filter Flux 0.000 · Iron Flux 0.000',
+    pct: m => Math.max(m.gr, m.ag) * 100,
+    text: m => `Filter Flux ${m.gr.toFixed(3)} · Iron Flux ${m.ag.toFixed(3)}`,
+  },
+});
+</script>
+</body>
+</html>

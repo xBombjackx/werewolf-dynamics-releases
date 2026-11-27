@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Werewolf Dynamics — WD Summer Channel, Live</title>
+</head>
+<body>
+<script type="module">
+import { mountLiveDemo } from './wd-live-page.js';
+
+const P = { power: 0, bank: 1, drive: 2, edge: 3, hpf: 4, lpf: 5, output: 6, color: 7, seat: 8, denorm: 9 };
+mountLiveDemo({
+  page: 'sumch.html',
+  title: 'WD Summer Channel',
+  wasm: 'wd-sumch.wasm',
+  defaultStem: 0,
+  blurb: 'Per-track analog console channel compiled to WebAssembly across five calibrated desk topologies (Brit Iron, Big Clean, US Steel, Tube Console, German Broadcast) with class-A saturation, Edge knee shaping, utility filters, and output transformer core.',
+  defaults: { [P.power]: 1, [P.bank]: 0, [P.drive]: 1.8, [P.edge]: 0.5, [P.hpf]: 0, [P.lpf]: 0, [P.output]: 0, [P.color]: 1, [P.seat]: 0, [P.denorm]: 1 },
+  modes: { param: P.bank, labels: ['WD-N Brit', 'WD-S Clean', 'WD-A Steel', 'WD-T Tube', 'WD-G German'] },
+  knobs: [
+    { id: P.drive,  name: 'Drive',  min: 0.25, max: 8,   def: 1.8, fmt: v => 'x' + v.toFixed(2) },
+    { id: P.edge,   name: 'Edge',   min: 0,    max: 1,   def: 0.5, fmt: v => (v * 100).toFixed(0) + ' %' },
+    { id: P.hpf,    name: 'HPF',    min: 0,    max: 250, def: 0,   fmt: v => v < 20 ? 'Off' : v.toFixed(0) + ' Hz' },
+    { id: P.seat,   name: 'Seat',   min: 0,    max: 8,   step: 1, def: 0, fmt: v => Math.round(v) === 0 ? 'Ref' : 'Ch ' + Math.round(v) },
+    { id: P.output, name: 'Output', min: -12,  max: 12,  def: 0,   fmt: v => (v >= 0 ? '+' : '') + v.toFixed(1) + ' dB' },
+  ],
+  switches: [
+    { param: P.color, labels: ['COLOR: OFF', 'COLOR: ON'] },
+    { param: P.power, label: 'POWER', power: true },
+  ],
+  presets: [
+    { label: 'Brit Drum Weight', vals: { [P.bank]: 0, [P.drive]: 2.5, [P.edge]: 0.5, [P.hpf]: 35 } },
+    { label: 'Discrete Steel Punch', vals: { [P.bank]: 2, [P.drive]: 3.2, [P.edge]: 0.85, [P.hpf]: 0 } },
+    { label: 'German Clean Velvet', vals: { [P.bank]: 4, [P.drive]: 4.0, [P.edge]: 0.4, [P.seat]: 3 } },
+  ],
+  meter: {
+    ticks: ['FLUX 0.0', '0.25', '0.50', '0.75', '1.0'],
+    init: 'Iron Flux 0.000 · Peak -70.0 dB',
+    pct: m => Math.min(100, m.gr * 100),
+    text: m => `Iron Flux ${m.gr.toFixed(3)} · Peak ${m.ag.toFixed(1)} dB`,
+  },
+});
+</script>
+</body>
+</html>

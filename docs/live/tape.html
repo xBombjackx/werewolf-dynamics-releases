@@ -111,13 +111,27 @@
 <div class="keys">Space = play/pause &middot; drag &amp; drop your own clip anywhere &middot; real circuit engine compiled to WebAssembly, not a recording</div>
 <nav class="nav" aria-label="Live engines">
   <a href="opto.html">WD Opto</a>
+  <a href="mu.html">WD Mu</a>
+  <a href="1b.html">WD 1B</a>
+  <a href="tbar.html">WD T-Bar</a>
+  <a href="fet.html">WD FET</a>
+  <a href="vca.html">WD VCA</a>
   <a href="duress.html">WD Duress</a>
   <a href="pre.html">WD Pre</a>
-  <a href="fet.html">WD FET</a>
+  <a href="tec.html">WD Tec</a>
+  <a href="xq.html">WD XQ</a>
   <a href="tape.html" class="on">WD Tape</a>
+  <a href="ax.html">WD AX</a>
+  <a href="361.html">WD 361</a>
   <a href="echo.html">WD Echo</a>
   <a href="spring.html">WD Spring</a>
-  <a href="xq.html">WD XQ</a>
+  <a href="brigade.html">WD Brigade</a>
+  <a href="span.html">WD Span</a>
+  <a href="sumch.html">WD Sum Ch</a>
+  <a href="summer.html">WD Summer</a>
+  <a href="annihilator.html">WD Annihilator</a>
+  <a href="damper.html">WD Damper</a>
+  <a href="outboard.html">WD Outboard</a>
   <a href="../demos/">17 A/B Demos</a>
   <a href="../">Home</a>
 </nav>
@@ -125,16 +139,17 @@
 <section class="demo">
   <h2>WD Tape — live</h2>
   <p class="blurb">
-    Record electronics, hysteresis core, bias oscillator, head-bump geometry,
-    transport wow/flutter, and gap-loss reproduce head compiled live to
-    WebAssembly. Switch speeds between 3.75 and 30 ips or switch from a
-    calibrated studio deck to a worn portable deck with flutter cranked.
+    Analog tape machine running live in WebAssembly with five deck electronics
+    models, three tape formulations, and speeds from 3.75 to 30 ips. Shape low
+    end with head bump, dial in bias, flutter, and head wear, or switch from
+    a calibrated studio deck to a worn portable transport while Match keeps
+    bypass loudness steady.
   </p>
 
   <div class="transport">
     <button class="play" id="play" title="Play / pause">&#9654;</button>
     <button class="loop on" id="loop" title="Loop">LOOP</button>
-    <button class="loop" id="pick" title="Load an audio file from your computer">YOUR CLIP&hellip;</button>
+    <button class="loop" id="pick" title="Load a local audio file">YOUR CLIP&hellip;</button>
     <input id="fileIn" type="file" accept="audio/*" hidden>
     <div class="bar" id="bar"><div class="fill"></div><div class="head"></div><div class="time">0:00</div></div>
     <div class="vol"><label for="vol">Vol</label><input id="vol" type="range" min="0" max="100" value="60"></div>
@@ -147,7 +162,7 @@
   <div class="rack" id="rack">
     <div class="switches">
       <button id="voicing">STUDIO DECK</button>
-      <button id="stock">STOCK: 456</button>
+      <button id="stock">STOCK: WORKHORSE</button>
       <button id="autogain" class="on">MATCH ON</button>
       <button id="power" class="power on">POWER</button>
     </div>
@@ -169,7 +184,7 @@
   <div class="status" id="status">loading engine&hellip;</div>
 </section>
 
-<footer>same dsp core as the plugin &middot; parity-gated against the native build every release</footer>
+<footer>same DSP core as the plugin &middot; verified against the desktop build every release</footer>
 
 <script>
 const WASM_FILE = 'wd-tape.wasm';
@@ -195,7 +210,7 @@ const DEFAULT_STEM = 4;
 
 const MACHINES = ['Reference', 'Swiss', 'American', 'Tube', 'Japanese'];
 const SPEEDS = ['3.75 ips', '7.5 ips', '15 ips', '30 ips'];
-const STOCKS = ['STOCK: 456', 'STOCK: GP9', 'STOCK: OLD REEL'];
+const STOCKS = ['STOCK: WORKHORSE', 'STOCK: HIGH OUTPUT', 'STOCK: OLD REEL'];
 
 const KNOBS = [
   { id: P.input,    name: 'Input',     min: -18, max: 18,  def: 8,    fmt: v => (v >= 0 ? '+' : '') + v.toFixed(1) + ' dB' },

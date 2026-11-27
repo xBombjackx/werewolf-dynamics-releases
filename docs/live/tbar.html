@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Werewolf Dynamics — WD T-Bar, Live</title>
+</head>
+<body>
+<script type="module">
+import { mountLiveDemo } from './wd-live-page.js';
+
+const P = { power: 0, thresh: 1, ratio: 2, atk: 3, rel: 4, autorel: 5, hpf: 6, tilt: 7, look: 8, input: 9, mix: 10, output: 11, thd: 12, iron: 13, color: 14, chmode: 15, cal: 16, ag: 17, unit: 18, pair: 19, denorm: 20 };
+mountLiveDemo({
+  page: 'tbar.html',
+  title: 'WD T-Bar',
+  wasm: 'wd-tbar.wasm',
+  defaultStem: 0,
+  blurb: 'Lookahead variable-mu pulse leveler compiled to WebAssembly. Stepped ratios (1.5:1 to 10:1), optional up-to-1 ms lookahead, dual-store Auto Release, and a 2x oversampled matched-triode color stage.',
+  defaults: { [P.power]: 1, [P.thresh]: -16, [P.ratio]: 2, [P.atk]: 5, [P.rel]: 250, [P.autorel]: 0, [P.hpf]: 20, [P.tilt]: 0, [P.look]: 0.5, [P.input]: 0, [P.mix]: 100, [P.output]: 0, [P.thd]: 35, [P.iron]: 40, [P.color]: 1, [P.chmode]: 0, [P.cal]: 1, [P.ag]: 1, [P.unit]: 1, [P.pair]: 0, [P.denorm]: 1 },
+  modes: { param: P.ratio, labels: ['1.5:1', '2:1', '4:1', '10:1'] },
+  knobs: [
+    { id: P.thresh, name: 'Thresh',    min: -36, max: 0,    def: -16, fmt: v => v.toFixed(1) + ' dB' },
+    { id: P.atk,    name: 'Attack',    min: 0.5, max: 100,  def: 5,   fmt: v => v.toFixed(1) + ' ms' },
+    { id: P.rel,    name: 'Release',   min: 40,  max: 3000, def: 250, fmt: v => v.toFixed(0) + ' ms' },
+    { id: P.look,   name: 'Lookahead', min: 0,   max: 1.0,  def: 0.5, fmt: v => v.toFixed(2) + ' ms' },
+    { id: P.thd,    name: 'Triode',    min: 0,   max: 100,  def: 35,  fmt: v => v.toFixed(0) + ' %' },
+    { id: P.iron,   name: 'Iron',      min: 0,   max: 100,  def: 40,  fmt: v => v.toFixed(0) + ' %' },
+    { id: P.mix,    name: 'Mix',       min: 0,   max: 100,  def: 100, fmt: v => v.toFixed(0) + ' %' },
+    { id: P.output, name: 'Output',    min: -24, max: 12,   def: 0,   fmt: v => (v >= 0 ? '+' : '') + v.toFixed(1) + ' dB' },
+  ],
+  switches: [
+    { param: P.autorel, labels: ['AUTO REL: OFF', 'AUTO REL: ON'] },
+    { param: P.ag, labels: ['MATCH: OFF', 'MATCH: ON'] },
+    { param: P.color, labels: ['COLOR: OFF', 'COLOR: ON'] },
+    { param: P.power, label: 'POWER', power: true },
+  ],
+  presets: [
+    { label: 'Drum Punch', vals: { [P.ratio]: 2, [P.thresh]: -18, [P.atk]: 8, [P.rel]: 180, [P.look]: 0.25 } },
+    { label: 'Zero-Overshoot Limit', vals: { [P.ratio]: 3, [P.thresh]: -20, [P.atk]: 0.5, [P.look]: 1.0, [P.autorel]: 1 } },
+    { label: 'Warm Mix Glue', vals: { [P.ratio]: 0, [P.thresh]: -14, [P.atk]: 15, [P.autorel]: 1, [P.iron]: 55 } },
+  ],
+  meter: {
+    ticks: ['GR 0', '-5', '-10', '-15', '-20 dB'],
+    init: 'GR 0.0 dB · AG +0.0 dB',
+    pct: m => (m.gr / 20) * 100,
+    text: m => `GR ${m.gr.toFixed(1)} dB · AG ${m.ag >= 0 ? '+' : ''}${m.ag.toFixed(1)} dB`,
+  },
+});
+</script>
+</body>
+</html>

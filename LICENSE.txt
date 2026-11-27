@@ -1,23 +1,25 @@
-Werewolf Dynamics — End User License Agreement (Freeware Beta)
+Werewolf Dynamics — End User License Agreement
 
 Copyright (c) 2026 Werewolf Dynamics. All rights reserved.
 
 This agreement covers the Werewolf Dynamics plugin binaries distributed
-through this repository's Releases page ("the Software").
+through authorized Werewolf Dynamics channels, including the KVR Audio
+Marketplace, itch.io, Plugin Boutique, and the official Releases repository
+("the Software").
 
 WHAT YOU MAY DO
 
 1. Download and install the Software on machines you own or control.
 2. Use the Software in your own audio work, personal or commercial,
-   including in music, film, games, and broadcast, with no fee and no
-   attribution required.
+   including in music, film, games, and broadcast, with no royalties and
+   no attribution required.
 
 WHAT YOU MAY NOT DO
 
 3. Redistribute the Software. Do not re-host, bundle, mirror, or include
-   the files in any other package or installer — link people to this
-   repository's Releases page instead.
-4. Sell, rent, sublicense, or otherwise charge for the Software.
+   the files in any other package or installer — link people to an
+   authorized Werewolf Dynamics distribution page instead.
+4. Resell, rent, lease, or sublicense the Software.
 5. Reverse engineer, decompile, disassemble, or modify the Software,
    except where applicable law expressly permits it despite this term.
 6. Use the "Werewolf Dynamics" name, the "WD" plugin marks, or the
@@ -27,8 +29,7 @@ OWNERSHIP
 
 7. The Software is licensed, not sold. Werewolf Dynamics retains all
    right, title, and interest in the Software and its trade names.
-   This is a beta: features may change or disappear between releases,
-   and any release may stop being available.
+   Features and Preview Mode modules may evolve across updates.
 
 NO WARRANTY
 
@@ -36,7 +37,7 @@ NO WARRANTY
    express or implied, including fitness for a particular purpose.
    To the maximum extent permitted by law, Werewolf Dynamics is not
    liable for any damages arising from use of the Software — including
-   lost work, lost audio, or damaged sessions. Save often; it's a beta.
+   lost work, lost audio, or damaged sessions.
 
 TERMINATION
 

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Werewolf Dynamics — WD Brigade, Live</title>
+</head>
+<body>
+<script type="module">
+import { mountLiveDemo } from './wd-live-page.js';
+
+const P = { power: 0, stages: 1, time: 2, repeats: 3, modD: 4, modR: 5, spread: 6, comp: 7, noise: 8, mix: 9, output: 10, hpf: 11, lpf: 12, denorm: 13 };
+mountLiveDemo({
+  page: 'brigade.html',
+  title: 'WD Brigade',
+  wasm: 'wd-brigade.wasm',
+  defaultStem: 3,
+  blurb: 'Asynchronous clocked bucket-brigade analog delay compiled to WebAssembly. Long times drop the clock rate and 8th-order anti-alias cutoff together so repeats naturally smear darker with every echo, wrapped inside an integrated compander.',
+  defaults: { [P.power]: 1, [P.stages]: 2, [P.time]: 160, [P.repeats]: 38, [P.modD]: 18, [P.modR]: 0.6, [P.spread]: 25, [P.comp]: 1, [P.noise]: 15, [P.mix]: 38, [P.output]: 0, [P.hpf]: 20, [P.lpf]: 20000, [P.denorm]: 1 },
+  modes: { param: P.stages, labels: ['1024-Stage Chip', '2048-Stage Chip', '4096-Stage Chip'] },
+  knobs: [
+    { id: P.time,    name: 'Time',      min: 20,   max: 600, def: 160, fmt: v => v.toFixed(0) + ' ms' },
+    { id: P.repeats, name: 'Repeats',   min: 0,    max: 95,  def: 38,  fmt: v => v.toFixed(0) + ' %' },
+    { id: P.modD,    name: 'Mod Depth', min: 0,    max: 100, def: 18,  fmt: v => v.toFixed(0) + ' %' },
+    { id: P.modR,    name: 'Mod Rate',  min: 0.05, max: 8,   def: 0.6, fmt: v => v.toFixed(2) + ' Hz' },
+    { id: P.spread,  name: 'Spread',    min: 0,    max: 100, def: 25,  fmt: v => v.toFixed(0) + ' %' },
+    { id: P.mix,     name: 'Mix',       min: 0,    max: 100, def: 38,  fmt: v => v.toFixed(0) + ' %' },
+    { id: P.output,  name: 'Output',    min: -12,  max: 12,  def: 0,   fmt: v => (v >= 0 ? '+' : '') + v.toFixed(1) + ' dB' },
+  ],
+  switches: [
+    { param: P.comp, labels: ['COMPANDER: OFF', 'COMPANDER: ON'] },
+    { param: P.power, label: 'POWER', power: true },
+  ],
+  presets: [
+    { label: 'Chorus Doubler', vals: { [P.stages]: 0, [P.time]: 28, [P.repeats]: 12, [P.modD]: 45, [P.modR]: 0.9, [P.spread]: 40, [P.mix]: 42 } },
+    { label: 'Warm Analog Echo', vals: { [P.stages]: 2, [P.time]: 240, [P.repeats]: 45, [P.modD]: 12, [P.spread]: 30, [P.mix]: 35 } },
+    { label: 'Dark Cavern', vals: { [P.stages]: 2, [P.time]: 480, [P.repeats]: 68, [P.modD]: 28, [P.spread]: 65, [P.mix]: 48 } },
+  ],
+  meter: {
+    ticks: ['BW 0', '4k', '8k', '12k', '16k Hz'],
+    init: 'Clock 0 Hz · BW 0 Hz · Delay 0 ms',
+    pct: m => Math.min(100, (m.ag / 16000) * 100),
+    text: m => `Clock ${Math.round(m.gr)} Hz · BW ${Math.round(m.ag)} Hz · ${m.tube.toFixed(0)} ms`,
+  },
+});
+</script>
+</body>
+</html>

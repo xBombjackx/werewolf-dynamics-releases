@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Werewolf Dynamics — WD Outboard, Live</title>
+</head>
+<body>
+<script type="module">
+import { mountLiveDemo } from './wd-live-page.js';
+
+const P = { power: 0, flavor: 1, input: 2, drive: 3, ceil: 4, color: 5, mix: 6, output: 7, delta: 8, unit: 9, denorm: 10 };
+mountLiveDemo({
+  page: 'outboard.html',
+  title: 'WD Outboard',
+  wasm: 'wd-outboard.wasm',
+  defaultStem: 4,
+  blurb: 'Zero-latency converter and transformer color stage compiled to WebAssembly. Switch among Reference Clean (bit-exact wire at unity trims), coupled Nickel/Iron hysteresis, vintage R-2R multibit linearity texture, and smooth ADAA soft-clip AD conversion.',
+  defaults: { [P.power]: 1, [P.flavor]: 1, [P.input]: 0, [P.drive]: 45, [P.ceil]: -0.3, [P.color]: 1, [P.mix]: 100, [P.output]: 0, [P.delta]: 0, [P.unit]: 1, [P.denorm]: 1 },
+  modes: { param: P.flavor, labels: ['Reference Clean', 'Nickel / Iron', '90s R-2R Multibit', 'Soft-Clip AD'] },
+  knobs: [
+    { id: P.input,  name: 'Input',   min: -18,  max: 18,  def: 0,    fmt: v => (v >= 0 ? '+' : '') + v.toFixed(1) + ' dB' },
+    { id: P.drive,  name: 'Drive',   min: 0,    max: 100, def: 45,   fmt: v => v.toFixed(0) + ' %' },
+    { id: P.ceil,   name: 'Ceiling', min: -6,   max: 0,   def: -0.3, fmt: v => v.toFixed(1) + ' dBFS' },
+    { id: P.mix,    name: 'Mix',     min: 0,    max: 100, def: 100,  fmt: v => v.toFixed(0) + ' %' },
+    { id: P.output, name: 'Output',  min: -18,  max: 18,  def: 0,    fmt: v => (v >= 0 ? '+' : '') + v.toFixed(1) + ' dB' },
+  ],
+  switches: [
+    { param: P.color, labels: ['COLOR: OFF', 'COLOR: ON'] },
+    { param: P.delta, labels: ['DELTA: OFF', 'DELTA: ON'] },
+    { param: P.power, label: 'POWER', power: true },
+  ],
+  presets: [
+    { label: 'Nickel Master Bus', vals: { [P.flavor]: 1, [P.drive]: 42, [P.ceil]: -0.3 } },
+    { label: '90s Multibit Converter', vals: { [P.flavor]: 2, [P.drive]: 65, [P.input]: 2 } },
+    { label: 'Soft-Clip Ceiling', vals: { [P.flavor]: 3, [P.drive]: 70, [P.ceil]: -0.5, [P.input]: 3 } },
+  ],
+  meter: {
+    ticks: ['CLIP 0%', '25%', '50%', '75%', '100%'],
+    init: 'Clip 0.00 · THD 0.00',
+    pct: m => Math.min(100, Math.max(m.gr, m.ag) * 100),
+    text: m => `Clip ${m.gr.toFixed(2)} · THD ${m.ag.toFixed(2)}`,
+  },
+});
+</script>
+</body>
+</html>

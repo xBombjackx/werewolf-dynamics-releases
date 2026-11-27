@@ -5,13 +5,13 @@ That claim is easy to make and hard to prove. This document explains how we
 prove it: what "accurate" means here, how it gets measured, and what happens
 when a measurement disagrees with us.
 
-The short version: the original manufacturers published numbers. Distortion
-at a stated level. Frequency response within a stated window. Attack times,
-knee shapes, noise floors. Those numbers are the hardware's fingerprint.
-We put every module on a virtual test bench, run the same measurements, and
-check that our numbers land on theirs. The bench is code. It runs on every
-build. If a future change drifts a module away from its fingerprint, the
-build fails.
+In short, the original manufacturers published concrete numbers: distortion
+at a stated level, frequency response within a stated window, attack times,
+knee shapes, and noise floors. Together, those numbers form the hardware's
+fingerprint. We put every module on a virtual test bench, run the same
+measurements, and check that our numbers land on theirs. The bench is code.
+It runs on every build. If a future change drifts a module away from its
+fingerprint, the build fails.
 
 ## Where the reference numbers come from
 
@@ -65,7 +65,7 @@ value produces confidently wrong physics. So every model faces the bench.
 
 ## The bench
 
-The test suite contains 35 automated benches. They compile with the
+The test suite contains 79 automated test suites. They compile with the
 plugins, run in minutes, and every one must pass before any change ships.
 Among the things they measure, with the published number beside each gate:
 
@@ -75,13 +75,14 @@ Among the things they measure, with the published number beside each gate:
 - WD Mu measures -0.50 dB at 20 Hz against the 670's published 1 dB window,
   and its third-harmonic character lands within 1 dB of the paper's
   measured value at the paper's own test point.
-- WDTec's line amps each measure the published "-3 dB at 10 Hz" corner and
-  the 0.15% / second-harmonic-dominant signature. Full-scale 50 Hz lands in
+- WD Tec's line amps each measure the published "-3 dB at 10 Hz" corner and
+  the 0.15% / second-harmonic-dominant profile. Full-scale 50 Hz lands in
   the 1-2% maximum-output class, exactly where the hardware saturates.
 - WD FET holds the 1176's 1 dB window at both band edges, sits at 0.048%
   where the LN promise says under 0.5%, and its push-pull output stage
   measurably cancels even harmonics against the class-A stage. That last
-  one is the rev F circuit story, verified as arithmetic.
+  behavior comes directly from the rev F output-stage topology, verified
+  mathematically.
 - WD Tape's head bump sits centered in the published 40-60 Hz region at
   15 ips, moves up an octave when the speed doubles, and its worst in-band
   aliasing product on hot high-frequency program measures -53 dB, gated at
@@ -95,11 +96,11 @@ hardware classes, noise floors that scale with tape speed, erase ghosts at
 spec depth, VCA transparency at 0.0002%, response curves held to half a
 decibel against published tables.
 
-Under the hood, the measurements use the same discipline a hardware bench
-would. Distortion is measured with windowed Goertzel analysis at stated
-levels and frequencies, never one convenient point: level-by-frequency
-sweeps, because a model can pass a single point and be wrong everywhere
-else. Aliasing is probed with high fundamentals (13-17 kHz), because fold
+The measurements follow the same discipline a physical test bench uses.
+Distortion is measured with windowed Goertzel analysis at stated levels
+and frequencies, never one convenient point: level-by-frequency sweeps,
+because a model can pass a single point and be wrong everywhere else.
+Aliasing is probed with high fundamentals (13-17 kHz), because fold
 products from low test tones land on top of real harmonics and hide.
 Response is measured at two sample rates and must agree, so nothing depends
 on the host's clock.
@@ -117,7 +118,7 @@ in FINGERPRINT_AUDIT.md, including what it found. It found real problems:
 - The Fairchild model was -5.5 dB at 20 Hz against a sheet that says
   within 1 dB. Two filter corners were parked at the spec frequency
   instead of below it. Fixed; the bottom octave is real now.
-- WDTec's tubes were being fed digital sample values as if they were
+- WD Tec's tubes were being fed digital sample values as if they were
   volts, which ran them 19 dB colder than the hardware. The famous Pultec
   pass-through glow was unreachable from the front panel. Fixed by
   declaring the level map: 0 dBFS is 8 volts peak at the module plane.
@@ -127,20 +128,22 @@ in FINGERPRINT_AUDIT.md, including what it found. It found real problems:
 
 We publish the failures on purpose. A test process that never finds
 anything is not a test process. Each of these produced a permanent gate,
-so the same mistake cannot ship twice. The audit also named the recurring
-disease: of eleven modules, seven had a filter corner placed at its spec
+so the same mistake cannot ship twice. The audit also exposed a recurring
+bug: out of eleven modules, seven had a filter corner placed at its spec
 frequency instead of below it. That check now runs against every new
 module at build time.
 
 ## The aliasing census
 
 In August 2026 we measured aliasing across all seventeen instrumented
-modules, because the question kept coming up and the honest answer is a
-table, not a policy. Method: a sine parked just under 12 kHz — chosen
-because at 44.1 kHz every distortion product of that tone folds, making it
-the worst probe there is — at 0 VU nominal level (−18 dBFS), at each
-module's default settings. Numbers are total folded-product power against
-the fundamental; more negative is cleaner. For reference, −80 dBc is far
+modules (15 nominal defaults are listed below; WD Annihilator and WD Brigade
+are documented separately in [ALIASING_CENSUS_2026-08-24.md](ALIASING_CENSUS_2026-08-24.md))
+because the question kept coming up and the honest answer is a table, not
+a policy. Method: a sine parked just under 12 kHz — chosen because at
+44.1 kHz every distortion product of that tone folds, making it the worst
+probe there is — at 0 VU nominal level (−18 dBFS), at each module's
+default settings. Numbers are total folded-product power against the
+fundamental; more negative is cleaner. For reference, −80 dBc is far
 below anything audible in program material.
 
 | module | aliasing at nominal, defaults |
@@ -161,7 +164,7 @@ below anything audible in program material.
 | WD FET | −80 dBc |
 | WD Summer Channel | −86 dBc (was −64 until 2026-09-01) |
 
-Two things the census found, published per the house rule:
+Two findings from the census, documented openly:
 
 - **WD Summer Channel ran without the oversampling wrap** the other
   nonlinear modules carry, and its −64 dBc — while still quiet — was
@@ -169,46 +172,50 @@ Two things the census found, published per the house rule:
   folded-harmonic positions. The wrap was built and measured (−85 dBc),
   but it also costs 1.8× on a module designed to sit on forty tracks at
   once — a budget that is itself a tested contract here. **Decided
-  2026-09-01: the wrap runs on every seat.** The default seat now
-  measures −85.9 dBc (H2′; H3′ −98.3) on the census probe and is gated
-  at the −80 suite bar like every other module. The price is real and
-  published: ~52–58 instances per core instead of ~101 (MSVC Release, the
-  bench box) — about 2% of a core per instance, gated at >40 — so forty
-  tracks of it is roughly 5–10% of a modern 8-core. Latency is still
-  zero (the wrap is IIR both ways).
+  2026-09-01: the oversampling wrapper runs on every instance.** The
+  default settings now measure −85.9 dBc (H2′; H3′ −98.3) on the census
+  probe and are gated at the −80 suite bar like every other module. The
+  price is real and published: ~52–58 instances per core instead of ~101
+  (MSVC Release, measured on the reference test machine) — about 2% of a
+  core per instance, gated at >40 — so forty tracks of it is roughly
+  5–10% of a modern 8-core. Latency is still zero (the wrap is IIR both
+  ways).
 - **WD FET's detector is sample-bound at its fastest attack**: gain
   reduction varies by half a decibel with nothing but the sample-grid
   phase of the input, because a microsecond attack outruns a 23 µs
-  sampling grid. The fix — running the detector at a higher internal
-  rate — is in progress, with these measurements as the before.
+  sampling grid. Running the detector at a higher internal rate addresses
+  this behavior, using these August 2026 measurements as the baseline.
 
-Turn a module's drive to the stop and the numbers get dramatically worse
-on this probe — deliberately. The stops are placed past the musical range
-on purpose, every distortion product of a 12 kHz tone folds by
-construction, and a probe tone is not music. The defaults are the claim;
-the census is how we check it stays true.
+Turn a module's drive to its maximum end stop and the numbers get
+dramatically worse on this probe. Those upper limits intentionally extend
+past the normal musical range, every distortion product of a 12 kHz tone
+folds by construction, and a probe tone is not music. The defaults are the
+claim; the census is how we check it stays true.
 
 ## Honesty rules
 
 Accuracy needs rules for the places where we deviate, because every model
 deviates somewhere. Ours are:
 
-- **Honest by default.** The shipped default settings measure like serviced
-  hardware. Character beyond the hardware is opt-in, never the default.
-- **Three regimes per knob.** At the calibrated detent a control is the
-  honest unit. Mid-travel is believable service drift. The end stop is
-  deliberately past realism, so the mechanism is unmistakable. The stop is
-  allowed to exceed the sheet; the detent is not.
-- **Deviations get written down.** WDTec is honestly a stack of two units,
-  so its numbers read double the single-unit sheet, and the anchors say so.
-  WD Mu's Broadcast mode deliberately runs about 2% where its donor's
-  sheet says 1%, because the sound lives past the sheet; the rear trim at
-  half returns you to the sheet number, and the anchors say so. XQ's line
-  stage is a deliberate abstraction, not a component model, and its
-  documentation says exactly that.
+- **Defaults match serviced hardware.** The shipped default settings measure
+  like serviced hardware. Character beyond the hardware is opt-in, never the
+  default.
+- **Three regimes per knob.** At the calibrated detent, a control matches a
+  well-serviced hardware unit. Mid-travel reflects believable service drift,
+  while the end stop goes beyond normal studio limits so the circuit's
+  behavior is clear. The end stop is allowed to exceed the sheet; the
+  detent is not.
+- **Deviations get written down.** WD Tec combines two stacked units in one
+  plugin, so its distortion and tube stages reflect both sections together,
+  and its anchors document records this. WD Mu's Broadcast mode intentionally
+  runs at about 2% THD where the reference manual specifies 1% to provide
+  extra harmonic character; lowering the rear Iron trim to half restores the
+  1% spec, as noted in the anchors. XQ's line stage is a deliberate
+  abstraction, not a component model, and its documentation says exactly
+  that.
 - **A measured artifact gets bounded, not hidden.** A VCA compressor
   tracking a 50 Hz cycle produces control-voltage ripple. Real ones do
-  too. We measure it, confirm the harmonic signature matches the physics,
+  too. We measure it, confirm the harmonic profile matches the physics,
   and gate it inside a bound rather than smoothing it away.
 
 ## What we do not claim

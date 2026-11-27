@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Werewolf Dynamics — WD Annihilator, Live</title>
+</head>
+<body>
+<script type="module">
+import { mountLiveDemo } from './wd-live-page.js';
+
+const P = { power: 0, cLo: 1, cMi: 2, cHi: 3, dLo: 4, dMi: 5, dHi: 6, xLo: 7, xHi: 8, punish: 9, rail: 10, starve: 11, tone: 12, route: 13, input: 14, mix: 15, output: 16, color: 17, ag: 18, cal: 19, unit: 20, denorm: 21 };
+mountLiveDemo({
+  page: 'annihilator.html',
+  title: 'WD Annihilator',
+  wasm: 'wd-annihilator.wasm',
+  defaultStem: 0,
+  blurb: 'Three-band exact-reconstruction distortion frame compiled to WebAssembly with eight selectable nonlinear circuit topologies per band (Diode, Triode, Tape, Comp, High-Voltage Slew, Quantizer, Negative Iron, and Quantum Rail), Wreck drive, Supply Rail, Starve, Band Routing, and Autogain Match.',
+  defaults: { [P.power]: 1, [P.cLo]: 6, [P.cMi]: 1, [P.cHi]: 4, [P.dLo]: 0.55, [P.dMi]: 0.55, [P.dHi]: 0.45, [P.xLo]: 220, [P.xHi]: 2600, [P.punish]: 0.25, [P.rail]: 0.5, [P.starve]: 0.5, [P.tone]: 0, [P.route]: 0, [P.input]: 0, [P.mix]: 100, [P.output]: 0, [P.color]: 1, [P.ag]: 1, [P.cal]: 1, [P.unit]: 1, [P.denorm]: 1 },
+  modes: { param: P.cMi, labels: ['Diode', 'Triode', 'Tape', 'Comp', 'HV Slew', 'Quant', 'Neg Iron', 'Q-Rail'] },
+  knobs: [
+    { id: P.dLo,    name: 'Lo Drive',  min: 0,   max: 1,   def: 0.55, fmt: v => (v * 100).toFixed(0) + ' %' },
+    { id: P.dMi,    name: 'Mid Drive', min: 0,   max: 1,   def: 0.55, fmt: v => (v * 100).toFixed(0) + ' %' },
+    { id: P.dHi,    name: 'Hi Drive',  min: 0,   max: 1,   def: 0.45, fmt: v => (v * 100).toFixed(0) + ' %' },
+    { id: P.punish, name: 'Wreck',     min: 0,   max: 1,   def: 0.25, fmt: v => (v * 100).toFixed(0) + ' %' },
+    { id: P.rail,   name: 'Rail',      min: 0,   max: 1,   def: 0.5,  fmt: v => (v * 100).toFixed(0) + ' %' },
+    { id: P.starve, name: 'Starve',    min: 0,   max: 1,   def: 0.5,  fmt: v => (v * 100).toFixed(0) + ' %' },
+    { id: P.tone,   name: 'Tone',      min: -6,  max: 6,   def: 0,    fmt: v => (v >= 0 ? '+' : '') + v.toFixed(1) + ' dB' },
+    { id: P.mix,    name: 'Mix',       min: 0,   max: 100, def: 100,  fmt: v => v.toFixed(0) + ' %' },
+  ],
+  switches: [
+    { param: P.ag, labels: ['MATCH: OFF', 'MATCH: ON'] },
+    { param: P.route, labels: ['ROUTE: SERIAL', 'ROUTE: PARALLEL'] },
+    { param: P.color, labels: ['COLOR: OFF', 'COLOR: ON'] },
+    { param: P.power, label: 'POWER', power: true },
+  ],
+  presets: [
+    { label: 'Bass Iron / Mid Triode', vals: { [P.cLo]: 6, [P.cMi]: 1, [P.cHi]: 4, [P.dLo]: 0.75, [P.dMi]: 0.6, [P.dHi]: 0.45, [P.punish]: 0.25 } },
+    { label: 'Parallel Drum Wreck', vals: { [P.route]: 1, [P.cLo]: 2, [P.cMi]: 3, [P.cHi]: 4, [P.dLo]: 0.8, [P.dMi]: 0.7, [P.punish]: 0.6, [P.mix]: 55 } },
+    { label: 'Brownout Voltage Crush', vals: { [P.cLo]: 1, [P.cMi]: 5, [P.cHi]: 0, [P.dLo]: 0.85, [P.dMi]: 0.85, [P.rail]: 0.1, [P.starve]: 0.15, [P.punish]: 0.7 } },
+  ],
+  meter: {
+    ticks: ['-24', '-12', 'AG 0', '+12', '+24 dB'],
+    init: 'AG +0.0 dB · Out -70.0 dB',
+    pct: m => Math.min(100, Math.max(0, (m.ag + 24) / 48 * 100)),
+    text: m => `AG ${m.gr >= 0 ? '+' : ''}${m.gr.toFixed(1)} dB · Out ${m.ag.toFixed(1)} dB`,
+  },
+});
+</script>
+</body>
+</html>

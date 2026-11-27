@@ -111,13 +111,27 @@
 <div class="keys">Space = play/pause &middot; drag &amp; drop your own clip anywhere &middot; real circuit engine compiled to WebAssembly, not a recording</div>
 <nav class="nav" aria-label="Live engines">
   <a href="opto.html" class="on">WD Opto</a>
+  <a href="mu.html">WD Mu</a>
+  <a href="1b.html">WD 1B</a>
+  <a href="tbar.html">WD T-Bar</a>
+  <a href="fet.html">WD FET</a>
+  <a href="vca.html">WD VCA</a>
   <a href="duress.html">WD Duress</a>
   <a href="pre.html">WD Pre</a>
-  <a href="fet.html">WD FET</a>
+  <a href="tec.html">WD Tec</a>
+  <a href="xq.html">WD XQ</a>
   <a href="tape.html">WD Tape</a>
+  <a href="ax.html">WD AX</a>
+  <a href="361.html">WD 361</a>
   <a href="echo.html">WD Echo</a>
   <a href="spring.html">WD Spring</a>
-  <a href="xq.html">WD XQ</a>
+  <a href="brigade.html">WD Brigade</a>
+  <a href="span.html">WD Span</a>
+  <a href="sumch.html">WD Sum Ch</a>
+  <a href="summer.html">WD Summer</a>
+  <a href="annihilator.html">WD Annihilator</a>
+  <a href="damper.html">WD Damper</a>
+  <a href="outboard.html">WD Outboard</a>
   <a href="../demos/">17 A/B Demos</a>
   <a href="../">Home</a>
 </nav>
@@ -125,17 +139,18 @@
 <section class="demo">
   <h2>WD Opto — live</h2>
   <p class="blurb">
-    The full optical tube physics model — T4 cell chemistry with slow
-    program memory, feedback gain-reduction loop, tube and transformer output
-    stage, oversampled like the plugin — running live in WebAssembly.
-    Autogain matches loudness to bypass, so POWER is an honest A/B. Drop in
-    your own clip or load a stem; nothing leaves your machine.
+    Live WebAssembly version of WD Opto, an electro-optical compressor pairing
+    a T4 photocell with slow program memory, a feedback gain-reduction loop,
+    and a 4x oversampled tube (WD-2A) or solid-state (WD-3A) output stage.
+    Auto Gain tracks your settings to keep output loudness matched when
+    toggling POWER. Pick a stem below or drop in your own audio file; all
+    processing runs locally in your browser.
   </p>
 
   <div class="transport">
     <button class="play" id="play" title="Play / pause">&#9654;</button>
     <button class="loop on" id="loop" title="Loop">LOOP</button>
-    <button class="loop" id="pick" title="Load an audio file from your computer">YOUR CLIP&hellip;</button>
+    <button class="loop" id="pick" title="Load a local audio file">YOUR CLIP&hellip;</button>
     <input id="fileIn" type="file" accept="audio/*" hidden>
     <div class="bar" id="bar"><div class="fill"></div><div class="head"></div><div class="time">0:00</div></div>
     <div class="vol"><label for="vol">Vol</label><input id="vol" type="range" min="0" max="100" value="60"></div>
@@ -160,15 +175,15 @@
   </div>
 
   <div class="presets">
-    <button id="honest" class="on" title="Calibrated WD-2A leveling with Match autogain">HONEST</button>
-    <button id="slam" title="THD and iron saturation pushed to the stop">SLAM</button>
+    <button id="honest" class="on" title="Calibrated WD-2A leveling with Auto Gain enabled">HONEST</button>
+    <button id="slam" title="THD and iron saturation at maximum">SLAM</button>
     <button id="solid" title="WD-3A solid-state photocell and driver response">WD-3A SOLID</button>
   </div>
 
   <div class="status" id="status">loading engine&hellip;</div>
 </section>
 
-<footer>same dsp core as the plugin &middot; parity-gated against the native build every release</footer>
+<footer>same DSP core as the plugin &middot; verified against the desktop build every release</footer>
 
 <script>
 const WASM_FILE = 'wd-opto.wasm';
@@ -179,7 +194,7 @@ const P = { pr: 0, gain: 1, thd: 2, iron: 3, mode: 4, tilt: 5, attack: 6,
 
 const DEFAULTS = { [P.pr]: 35, [P.gain]: 0, [P.thd]: 25, [P.iron]: 50,
                    [P.mode]: 0, [P.tilt]: 0, [P.attack]: 1, [P.release]: 1,
-                   [P.tail]: 1, [P.mix]: 100, [P.cal]: 3, [P.autogain]: 2,
+                   [P.tail]: 1, [P.mix]: 100, [P.cal]: 3, [P.autogain]: 1,
                    [P.input]: 0, [P.output]: 0, [P.power]: 1, [P.coloron]: 1,
                    [P.model]: 0, [P.unit]: 1, [P.pair]: 0, [P.denorm]: 1 };
 
@@ -340,11 +355,11 @@ function applyPreset(btnId, vals) {
 }
 
 document.getElementById('honest').onclick = () =>
-  applyPreset('honest', { [P.pr]: 35, [P.gain]: 0, [P.thd]: 25, [P.iron]: 50, [P.mix]: 100, [P.mode]: 0, [P.model]: 0, [P.cal]: 3, [P.autogain]: 2, [P.power]: 1 });
+  applyPreset('honest', { [P.pr]: 35, [P.gain]: 0, [P.thd]: 25, [P.iron]: 50, [P.mix]: 100, [P.mode]: 0, [P.model]: 0, [P.cal]: 3, [P.autogain]: 1, [P.power]: 1 });
 document.getElementById('slam').onclick = () =>
-  applyPreset('slam', { [P.pr]: 55, [P.gain]: 6, [P.thd]: 100, [P.iron]: 100, [P.mix]: 100, [P.mode]: 0, [P.model]: 0, [P.cal]: 3, [P.autogain]: 2, [P.power]: 1 });
+  applyPreset('slam', { [P.pr]: 55, [P.gain]: 6, [P.thd]: 100, [P.iron]: 100, [P.mix]: 100, [P.mode]: 0, [P.model]: 0, [P.cal]: 3, [P.autogain]: 1, [P.power]: 1 });
 document.getElementById('solid').onclick = () =>
-  applyPreset('solid', { [P.pr]: 45, [P.gain]: 2, [P.thd]: 45, [P.iron]: 65, [P.mix]: 100, [P.mode]: 0, [P.model]: 1, [P.cal]: 3, [P.autogain]: 2, [P.power]: 1 });
+  applyPreset('solid', { [P.pr]: 45, [P.gain]: 2, [P.thd]: 45, [P.iron]: 65, [P.mix]: 100, [P.mode]: 0, [P.model]: 1, [P.cal]: 3, [P.autogain]: 1, [P.power]: 1 });
 
 const stemsEl = document.getElementById('stems');
 STEMS.forEach((s, i) => {
@@ -387,6 +402,7 @@ async function ensureAudio() {
       });
     }
     worklet.connect(outGain);
+    let avgGr = 0, grTxtT = performance.now(), grTxtAge = 0.12, shownGrTxt = '0.0';
     worklet.port.onmessage = ({ data: m }) => {
       if (m.t === 'ready') {
         pushAllParams();
@@ -396,8 +412,20 @@ async function ensureAudio() {
       } else if (m.t === 'meters') {
         const gr = Math.max(0, Math.min(20, m.gr));
         document.getElementById('grfill').style.width = `${(gr / 20) * 100}%`;
+        const now = performance.now();
+        const dt = Math.min(0.25, Math.max(0, (now - grTxtT) / 1000));
+        grTxtT = now;
+        const rawGr = Math.max(0, Number(m.gr) || 0);
+        avgGr += (rawGr - avgGr) * (1 - Math.exp(-dt / 0.40));
+        if (avgGr < 0.05 && rawGr < 0.05) avgGr = 0;
+        grTxtAge += dt;
+        const nextGrTxt = avgGr >= 0.05 ? avgGr.toFixed(1) : '0.0';
+        if (grTxtAge >= 0.12 || (nextGrTxt === '0.0' && shownGrTxt !== '0.0')) {
+          grTxtAge = 0;
+          shownGrTxt = nextGrTxt;
+        }
         const agStr = (m.ag >= 0 ? '+' : '') + m.ag.toFixed(1);
-        document.getElementById('readout').textContent = `GR ${m.gr.toFixed(1)} dB · AG ${agStr} dB`;
+        document.getElementById('readout').textContent = `GR ${shownGrTxt} dB · AG ${agStr} dB`;
         smokeStamp();
       }
     };

@@ -1,8 +1,8 @@
 // wd-live — AudioWorkletProcessor hosting a Werewolf Dynamics demo shim
 // (a bare .wasm with the wd_* C ABI; see demo/live/wasm/OptoWasm.cpp).
 //
-// Module-agnostic on purpose: every shim exports the same eight functions,
-// so WD Mu later is the same worklet with different bytes.
+// Module-agnostic by design: every shim exports the same eight functions,
+// so additional modules can reuse this worklet with different WASM bytes.
 //
 // processorOptions:
 //   module : a compiled WebAssembly.Module (preferred — structured-cloneable)
@@ -15,7 +15,7 @@
 //               { t: 'ready', latency }                            once
 //               { t: 'error', message }                            on failure
 
-const QUANTUM = 128;
+const MAX_BLOCK = 2048;
 
 class WdLiveProcessor extends AudioWorkletProcessor {
   constructor(options) {
@@ -36,10 +36,10 @@ class WdLiveProcessor extends AudioWorkletProcessor {
       this.ex = instance.exports;
       // Standalone wasm defers static constructors to _initialize.
       this.ex._initialize?.();
-      this.ex.wd_prepare(sampleRate, QUANTUM);
+      this.ex.wd_prepare(sampleRate, MAX_BLOCK);
       // Fixed memory, no growth: these views stay valid forever.
-      this.ioL = new Float32Array(this.ex.memory.buffer, this.ex.wd_io_l(), QUANTUM);
-      this.ioR = new Float32Array(this.ex.memory.buffer, this.ex.wd_io_r(), QUANTUM);
+      this.ioL = new Float32Array(this.ex.memory.buffer, this.ex.wd_io_l(), MAX_BLOCK);
+      this.ioR = new Float32Array(this.ex.memory.buffer, this.ex.wd_io_r(), MAX_BLOCK);
       this.ready = true;
       this.port.postMessage({ t: 'ready', latency: this.ex.wd_latency() });
     } catch (err) {
@@ -61,22 +61,37 @@ class WdLiveProcessor extends AudioWorkletProcessor {
     const inp = inputs[0], out = outputs[0];
     if (!out || out.length === 0) return true;
     const outL = out[0], outR = out[1] ?? out[0];
-    const n = outL.length; // 128 today; render-quantum changes stay safe below
+    const n = outL.length;
+    const inL = inp?.[0];
+    const inR = inp?.[1] ?? inL;
 
-    if (!this.ready || !inp || inp.length === 0 || n > QUANTUM) {
-      // Wire until the engine exists (or if the quantum ever outgrows us).
-      const inL = inp?.[0], inR = inp?.[1] ?? inp?.[0];
-      outL.set(inL ?? new Float32Array(n));
-      if (outR !== outL) outR.set(inR ?? new Float32Array(n));
+    if (!this.ready) {
+      // Zero-allocation wire fallback until WASM initialization succeeds.
+      const availL = inL ? Math.min(n, inL.length) : 0;
+      if (availL > 0) outL.set(inL.subarray(0, availL), 0);
+      if (availL < n) outL.fill(0, availL, n);
+      if (outR !== outL) {
+        const availR = inR ? Math.min(n, inR.length) : 0;
+        if (availR > 0) outR.set(inR.subarray(0, availR), 0);
+        if (availR < n) outR.fill(0, availR, n);
+      }
       return true;
     }
 
-    const inL = inp[0], inR = inp[1] ?? inp[0];
-    this.ioL.set(inL.subarray(0, n));
-    this.ioR.set(inR.subarray(0, n));
-    this.ex.wd_process(n);
-    outL.set(this.ioL.subarray(0, n));
-    if (outR !== outL) outR.set(this.ioR.subarray(0, n));
+    for (let off = 0; off < n; off += MAX_BLOCK) {
+      const chunk = Math.min(MAX_BLOCK, n - off);
+      const availL = inL ? Math.max(0, Math.min(chunk, inL.length - off)) : 0;
+      if (availL > 0) this.ioL.set(inL.subarray(off, off + availL), 0);
+      if (availL < chunk) this.ioL.fill(0, availL, chunk);
+
+      const availR = inR ? Math.max(0, Math.min(chunk, inR.length - off)) : 0;
+      if (availR > 0) this.ioR.set(inR.subarray(off, off + availR), 0);
+      if (availR < chunk) this.ioR.fill(0, availR, chunk);
+
+      this.ex.wd_process(chunk);
+      outL.set(this.ioL.subarray(0, chunk), off);
+      if (outR !== outL) outR.set(this.ioR.subarray(0, chunk), off);
+    }
 
     this.framesSinceMeter += n;
     if (this.framesSinceMeter >= this.metersEvery) {

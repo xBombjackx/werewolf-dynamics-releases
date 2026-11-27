@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Werewolf Dynamics — WD 1B, Live</title>
+</head>
+<body>
+<script type="module">
+import { mountLiveDemo } from './wd-live-page.js';
+
+const P = { power: 0, thresh: 1, ratio: 2, atk: 3, rel: 4, timing: 5, hpf: 6, gain: 7, input: 8, mix: 9, output: 10, thd: 11, iron: 12, color: 13, chmode: 14, cal: 15, ag: 16, unit: 17, pair: 18, denorm: 19 };
+mountLiveDemo({
+  page: '1b.html',
+  title: 'WD 1B',
+  wasm: 'wd-1b.wasm',
+  defaultStem: 1,
+  blurb: 'All-tube optical leveler compiled to WebAssembly with Threshold, Ratio, variable Attack and Release, Fixed/Manual/Auto timing modes, and a 4x oversampled push-pull tube and transformer output stage.',
+  defaults: { [P.power]: 1, [P.thresh]: -18, [P.ratio]: 4, [P.atk]: 10, [P.rel]: 350, [P.timing]: 1, [P.hpf]: 0, [P.gain]: 0, [P.input]: 0, [P.mix]: 100, [P.output]: 0, [P.thd]: 35, [P.iron]: 40, [P.color]: 1, [P.chmode]: 0, [P.cal]: 1, [P.ag]: 1, [P.unit]: 1, [P.pair]: 0, [P.denorm]: 1 },
+  modes: { param: P.timing, labels: ['Fixed Timing', 'Manual Timing', 'Auto Release'] },
+  knobs: [
+    { id: P.thresh, name: 'Thresh',  min: -40, max: 0,    def: -18, fmt: v => v.toFixed(1) + ' dB' },
+    { id: P.ratio,  name: 'Ratio',   min: 1.5, max: 10,   def: 4,   fmt: v => v.toFixed(1) + ':1' },
+    { id: P.atk,    name: 'Attack',  min: 0.5, max: 50,   def: 10,  fmt: v => v.toFixed(1) + ' ms' },
+    { id: P.rel,    name: 'Release', min: 50,  max: 2000, def: 350, fmt: v => v.toFixed(0) + ' ms' },
+    { id: P.thd,    name: 'Tube',    min: 0,   max: 100,  def: 35,  fmt: v => v.toFixed(0) + ' %' },
+    { id: P.iron,   name: 'Iron',    min: 0,   max: 100,  def: 40,  fmt: v => v.toFixed(0) + ' %' },
+    { id: P.mix,    name: 'Mix',     min: 0,   max: 100,  def: 100, fmt: v => v.toFixed(0) + ' %' },
+    { id: P.output, name: 'Output',  min: -24, max: 12,   def: 0,   fmt: v => (v >= 0 ? '+' : '') + v.toFixed(1) + ' dB' },
+  ],
+  switches: [
+    { param: P.ag, labels: ['MATCH: OFF', 'MATCH: ON'] },
+    { param: P.hpf, values: [0, 1, 2, 3], labels: ['HPF: OFF', 'HPF: 60 HZ', 'HPF: 100 HZ', 'HPF: 200 HZ'] },
+    { param: P.color, labels: ['COLOR: OFF', 'COLOR: ON'] },
+    { param: P.power, label: 'POWER', power: true },
+  ],
+  presets: [
+    { label: 'Warm Vocal', vals: { [P.thresh]: -20, [P.ratio]: 3.5, [P.timing]: 1, [P.atk]: 12, [P.rel]: 420, [P.thd]: 45 } },
+    { label: 'Bass Anchor', vals: { [P.thresh]: -22, [P.ratio]: 5, [P.timing]: 2, [P.hpf]: 1, [P.iron]: 65 } },
+    { label: 'Drum Flatten', vals: { [P.thresh]: -28, [P.ratio]: 8, [P.atk]: 1.5, [P.rel]: 120, [P.thd]: 75 } },
+  ],
+  meter: {
+    ticks: ['GR 0', '-5', '-10', '-15', '-20 dB'],
+    init: 'GR 0.0 dB · AG +0.0 dB',
+    pct: m => (m.gr / 20) * 100,
+    text: m => `GR ${m.gr.toFixed(1)} dB · AG ${m.ag >= 0 ? '+' : ''}${m.ag.toFixed(1)} dB`,
+  },
+});
+</script>
+</body>
+</html>

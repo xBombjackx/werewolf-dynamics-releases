@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Werewolf Dynamics — WD Damper, Live</title>
+</head>
+<body>
+<script type="module">
+import { mountLiveDemo } from './wd-live-page.js';
+
+const P = { power: 0, depth: 1, bias: 2, focus: 3, persist: 4, protect: 5, atk: 6, rel: 7, lo: 8, hi: 9, bands: 10, output: 11, delta: 12, denorm: 13 };
+mountLiveDemo({
+  page: 'damper.html',
+  title: 'WD Damper',
+  wasm: 'wd-damper.wasm',
+  defaultStem: 3,
+  blurb: 'Dynamic resonance suppressor running live in WebAssembly in zero-latency Filter mode. Persistent narrow resonances that poke above the local spectral trend are tracked and carved down with per-sample smoothed minimum-phase notches while preserving natural harmonics and wide tonal balances.',
+  defaults: { [P.power]: 1, [P.depth]: 0.6, [P.bias]: 3.0, [P.focus]: 0.33, [P.persist]: 0.12, [P.protect]: 0.4, [P.atk]: 15, [P.rel]: 220, [P.lo]: 140, [P.hi]: 12000, [P.bands]: 16, [P.output]: 0, [P.delta]: 0, [P.denorm]: 1 },
+  knobs: [
+    { id: P.depth,   name: 'Depth',   min: 0,    max: 1,     def: 0.6,  fmt: v => (v * 100).toFixed(0) + ' %' },
+    { id: P.bias,    name: 'Bias',    min: 0.5,  max: 8,     def: 3.0,  fmt: v => v.toFixed(1) + ' dB' },
+    { id: P.focus,   name: 'Focus',   min: 0.15, max: 0.6,   def: 0.33, fmt: v => v.toFixed(2) + ' oct' },
+    { id: P.protect, name: 'Protect', min: 0,    max: 1,     def: 0.4,  fmt: v => (v * 100).toFixed(0) + ' %' },
+    { id: P.bands,   name: 'Bands',   min: 4,    max: 32,    step: 1, def: 16, fmt: v => String(Math.round(v)) },
+    { id: P.lo,      name: 'Lo Hz',   min: 60,   max: 2000,  def: 140,  fmt: v => v.toFixed(0) + ' Hz' },
+    { id: P.output,  name: 'Output',  min: -12,  max: 12,    def: 0,    fmt: v => (v >= 0 ? '+' : '') + v.toFixed(1) + ' dB' },
+  ],
+  switches: [
+    { param: P.delta, labels: ['DELTA: OFF', 'DELTA: ON'] },
+    { param: P.power, label: 'POWER', power: true },
+  ],
+  presets: [
+    { label: 'Guitar / Vocal Tame', vals: { [P.depth]: 0.6, [P.bias]: 3.0, [P.focus]: 0.33, [P.protect]: 0.4, [P.lo]: 140, [P.delta]: 0 } },
+    { label: 'Aggressive Harshness Cut', vals: { [P.depth]: 0.95, [P.bias]: 1.8, [P.focus]: 0.24, [P.protect]: 0.25, [P.lo]: 900, [P.bands]: 24 } },
+    { label: 'Hear Removed Rings', vals: { [P.depth]: 0.85, [P.bias]: 2.2, [P.delta]: 1 } },
+  ],
+  meter: {
+    ticks: ['CUT 0', '3', '6', '9', '12 dB'],
+    init: 'Mean Cut 0.0 dB · Peak Cut 0.0 dB',
+    pct: m => Math.min(100, (m.ag / 12) * 100),
+    text: m => `Mean Cut ${m.gr.toFixed(1)} dB · Peak Cut ${m.ag.toFixed(1)} dB`,
+  },
+});
+</script>
+</body>
+</html>

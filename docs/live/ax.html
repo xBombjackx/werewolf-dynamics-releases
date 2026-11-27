@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Werewolf Dynamics — WD AX, Live</title>
+</head>
+<body>
+<script type="module">
+import { mountLiveDemo } from './wd-live-page.js';
+
+const P = { power: 0, hftune: 1, harm: 2, axmix: 3, lftune: 4, girth: 5, overhang: 6, input: 7, output: 8, color: 9, ag: 10, cal: 11, unit: 12, denorm: 13 };
+mountLiveDemo({
+  page: 'ax.html',
+  title: 'WD AX',
+  wasm: 'wd-ax.wasm',
+  defaultStem: 1,
+  blurb: 'Envelope-steered harmonic exciter and quadrature low-frequency weight enhancer compiled to WebAssembly. Generate high-frequency transient sheen without turning up hiss, or dial in Girth and Overhang for dense sub-bass sustain.',
+  defaults: { [P.power]: 1, [P.hftune]: 3000, [P.harm]: 35, [P.axmix]: 30, [P.lftune]: 80, [P.girth]: 25, [P.overhang]: 90, [P.input]: 0, [P.output]: 0, [P.color]: 1, [P.ag]: 1, [P.cal]: 1, [P.unit]: 1, [P.denorm]: 1 },
+  knobs: [
+    { id: P.hftune,   name: 'HF Tune',   min: 700, max: 7000, def: 3000, fmt: v => v.toFixed(0) + ' Hz' },
+    { id: P.harm,     name: 'Harmonics', min: 0,   max: 100,  def: 35,   fmt: v => v.toFixed(0) + ' %' },
+    { id: P.axmix,    name: 'AX Mix',    min: 0,   max: 100,  def: 30,   fmt: v => v.toFixed(0) + ' %' },
+    { id: P.lftune,   name: 'LF Tune',   min: 50,  max: 150,  def: 80,   fmt: v => v.toFixed(0) + ' Hz' },
+    { id: P.girth,    name: 'Girth',     min: 0,   max: 100,  def: 25,   fmt: v => v.toFixed(0) + ' %' },
+    { id: P.overhang, name: 'Overhang',  min: 60,  max: 400,  def: 90,   fmt: v => v.toFixed(0) + ' ms' },
+    { id: P.output,   name: 'Output',    min: -24, max: 12,   def: 0,    fmt: v => (v >= 0 ? '+' : '') + v.toFixed(1) + ' dB' },
+  ],
+  switches: [
+    { param: P.ag, labels: ['MATCH: OFF', 'MATCH: ON'] },
+    { param: P.color, labels: ['COLOR: OFF', 'COLOR: ON'] },
+    { param: P.power, label: 'POWER', power: true },
+  ],
+  presets: [
+    { label: 'Vocal Presence', vals: { [P.hftune]: 3800, [P.harm]: 40, [P.axmix]: 32, [P.girth]: 0 } },
+    { label: 'Bass & Kick Weight', vals: { [P.hftune]: 2400, [P.harm]: 25, [P.axmix]: 20, [P.lftune]: 75, [P.girth]: 65, [P.overhang]: 140 } },
+    { label: 'Mix Shimmer', vals: { [P.hftune]: 5200, [P.harm]: 55, [P.axmix]: 40, [P.girth]: 25 } },
+  ],
+  meter: {
+    ticks: ['BLOOM 0%', '25%', '50%', '75%', '100%'],
+    init: 'Bloom 0.00 · Girth GR 0.0 dB · AG +0.0 dB',
+    pct: m => Math.min(100, m.tube * 100),
+    text: m => `Bloom ${m.tube.toFixed(2)} · Girth GR ${m.ag.toFixed(1)} dB · AG ${m.gr >= 0 ? '+' : ''}${m.gr.toFixed(1)} dB`,
+  },
+});
+</script>
+</body>
+</html>

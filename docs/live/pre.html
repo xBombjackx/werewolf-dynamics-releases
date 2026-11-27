@@ -111,13 +111,27 @@
 <div class="keys">Space = play/pause &middot; drag &amp; drop your own clip anywhere &middot; real circuit engine compiled to WebAssembly, not a recording</div>
 <nav class="nav" aria-label="Live engines">
   <a href="opto.html">WD Opto</a>
+  <a href="mu.html">WD Mu</a>
+  <a href="1b.html">WD 1B</a>
+  <a href="tbar.html">WD T-Bar</a>
+  <a href="fet.html">WD FET</a>
+  <a href="vca.html">WD VCA</a>
   <a href="duress.html">WD Duress</a>
   <a href="pre.html" class="on">WD Pre</a>
-  <a href="fet.html">WD FET</a>
+  <a href="tec.html">WD Tec</a>
+  <a href="xq.html">WD XQ</a>
   <a href="tape.html">WD Tape</a>
+  <a href="ax.html">WD AX</a>
+  <a href="361.html">WD 361</a>
   <a href="echo.html">WD Echo</a>
   <a href="spring.html">WD Spring</a>
-  <a href="xq.html">WD XQ</a>
+  <a href="brigade.html">WD Brigade</a>
+  <a href="span.html">WD Span</a>
+  <a href="sumch.html">WD Sum Ch</a>
+  <a href="summer.html">WD Summer</a>
+  <a href="annihilator.html">WD Annihilator</a>
+  <a href="damper.html">WD Damper</a>
+  <a href="outboard.html">WD Outboard</a>
   <a href="../demos/">17 A/B Demos</a>
   <a href="../">Home</a>
 </nav>
@@ -125,17 +139,18 @@
 <section class="demo">
   <h2>WD Pre — live</h2>
   <p class="blurb">
-    Seven preamp circuits behind one stepped gain stage — clean precision,
-    Class A British console iron, American op-amp punch, broadcast tube,
-    4-track cassette desk, inline clean console, and grid-driven valve tone.
-    Push GAIN and TOAST to saturate the input and output stages while MATCH
-    autogain keeps bypass loudness honest.
+    Seven preamp circuit models running live in WebAssembly: clean precision,
+    Class A British console iron, American op-amp stage, broadcast tube,
+    4-track cassette desk, clean console head amp, and grid-driven valve
+    tone. Push GAIN for input and output saturation, raise TOAST to drive the
+    Porta cassette stage, or adjust IRON to scale transformer saturation while
+    Auto Gain keeps bypass loudness matched.
   </p>
 
   <div class="transport">
     <button class="play" id="play" title="Play / pause">&#9654;</button>
     <button class="loop on" id="loop" title="Loop">LOOP</button>
-    <button class="loop" id="pick" title="Load an audio file from your computer">YOUR CLIP&hellip;</button>
+    <button class="loop" id="pick" title="Load a local audio file">YOUR CLIP&hellip;</button>
     <input id="fileIn" type="file" accept="audio/*" hidden>
     <div class="bar" id="bar"><div class="fill"></div><div class="head"></div><div class="time">0:00</div></div>
     <div class="vol"><label for="vol">Vol</label><input id="vol" type="range" min="0" max="100" value="60"></div>
@@ -148,7 +163,7 @@
     <div class="switches">
       <button id="source">LINE</button>
       <button id="pad">PAD 0</button>
-      <button id="autogain" class="on">MATCH ON</button>
+      <button id="autogain" class="on">AUTO ON</button>
       <button id="power" class="power on">POWER</button>
     </div>
   </div>
@@ -169,7 +184,7 @@
   <div class="status" id="status">loading engine&hellip;</div>
 </section>
 
-<footer>same dsp core as the plugin &middot; parity-gated against the native build every release</footer>
+<footer>same DSP core as the plugin &middot; verified against the desktop build every release</footer>
 
 <script>
 const WASM_FILE = 'wd-pre.wasm';
@@ -177,7 +192,7 @@ const P = { power: 0, law: 1, source: 2, z: 3, gain: 4, pad: 5, toast: 6,
             hpf: 7, lpf: 8, phase: 9, autogain: 10, level: 11, cal: 12,
             iron: 13, unit: 14, coloron: 15, delta: 16, denorm: 17 };
 
-const DEFAULTS = { [P.power]: 1, [P.law]: 1, [P.source]: 0, [P.z]: 0, [P.gain]: 30,
+const DEFAULTS = { [P.power]: 1, [P.law]: 1, [P.source]: 1, [P.z]: 0, [P.gain]: 0,
                    [P.pad]: 0, [P.toast]: 45, [P.hpf]: 0, [P.lpf]: 0, [P.phase]: 0,
                    [P.autogain]: 1, [P.level]: 0, [P.cal]: 1, [P.iron]: 1.0,
                    [P.unit]: 1, [P.coloron]: 1, [P.delta]: 0, [P.denorm]: 1 };
@@ -193,7 +208,7 @@ const DEFAULT_STEM = 1;
 const LAWS = ['Precision', 'Class A 73', 'Op-Amp 12', 'Tube 76', 'Porta', 'Clean E', 'Tube Tone'];
 
 const KNOBS = [
-  { id: P.gain,  name: 'Gain',   min: -25, max: 80,  def: 30,  fmt: v => (v >= 0 ? '+' : '') + v.toFixed(0) + ' dB' },
+  { id: P.gain,  name: 'Gain',   min: -25, max: 80,  def: 0,   fmt: v => (v >= 0 ? '+' : '') + v.toFixed(0) + ' dB' },
   { id: P.toast, name: 'Toast',  min: 0,   max: 100, def: 45,  fmt: v => v.toFixed(0) + ' %' },
   { id: P.iron,  name: 'Iron',   min: 0.5, max: 2.0, def: 1.0, fmt: v => v.toFixed(2) + 'x' },
   { id: P.hpf,   name: 'HPF',    min: 0,   max: 400, def: 0,   fmt: v => v < 1 ? 'OFF' : v.toFixed(0) + ' Hz' },
@@ -326,7 +341,7 @@ function syncButtons() {
   padBtn.textContent = pd ? 'PAD -20' : 'PAD 0';
   padBtn.classList.toggle('on', pd);
   const ag = state[P.autogain] > 0.5;
-  agBtn.textContent = ag ? 'MATCH ON' : 'MATCH OFF';
+  agBtn.textContent = ag ? 'AUTO ON' : 'AUTO OFF';
   agBtn.classList.toggle('on', ag);
   powerBtn.classList.toggle('on', state[P.power] > 0.5);
 }
@@ -348,11 +363,11 @@ function applyPreset(btnId, vals) {
 }
 
 document.getElementById('p73').onclick = () =>
-  applyPreset('p73', { [P.law]: 1, [P.source]: 0, [P.pad]: 0, [P.gain]: 30, [P.toast]: 45, [P.iron]: 1.0, [P.hpf]: 0, [P.level]: 0, [P.autogain]: 1, [P.power]: 1 });
+  applyPreset('p73', { [P.law]: 1, [P.source]: 1, [P.pad]: 0, [P.gain]: 6, [P.toast]: 45, [P.iron]: 1.0, [P.hpf]: 0, [P.level]: 0, [P.autogain]: 1, [P.power]: 1 });
 document.getElementById('p76').onclick = () =>
-  applyPreset('p76', { [P.law]: 3, [P.source]: 0, [P.pad]: 0, [P.gain]: 48, [P.toast]: 75, [P.iron]: 1.35, [P.hpf]: 60, [P.level]: 0, [P.autogain]: 1, [P.power]: 1 });
+  applyPreset('p76', { [P.law]: 3, [P.source]: 1, [P.pad]: 0, [P.gain]: 14, [P.toast]: 75, [P.iron]: 1.35, [P.hpf]: 60, [P.level]: 0, [P.autogain]: 1, [P.power]: 1 });
 document.getElementById('porta').onclick = () =>
-  applyPreset('porta', { [P.law]: 4, [P.source]: 1, [P.pad]: 0, [P.gain]: 42, [P.toast]: 85, [P.iron]: 1.4, [P.hpf]: 80, [P.level]: 0, [P.autogain]: 1, [P.power]: 1 });
+  applyPreset('porta', { [P.law]: 4, [P.source]: 1, [P.pad]: 0, [P.gain]: 18, [P.toast]: 85, [P.iron]: 1.4, [P.hpf]: 80, [P.level]: 0, [P.autogain]: 1, [P.power]: 1 });
 
 const stemsEl = document.getElementById('stems');
 STEMS.forEach((s, i) => {

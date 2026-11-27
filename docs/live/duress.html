@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Werewolf Dynamics — WD Duress, Live</title>
 <style>
-  /* M14 flat language, same tokens as demo/player and index.html. */
+  /* Flat dark palette tokens matching demo/player and index.html. */
   :root {
     --room: #0B0C0E; --panel: #17181B; --chassis: #121316; --well: #101114;
     --ink: #E8E6E1; --ink-dim: #8B8D93; --ink-faint: #55575D;
@@ -114,16 +114,30 @@
   <div class="mark">WEREWOLF <span>DYNAMICS</span></div>
   <div class="sub">wd duress &middot; running live in your browser</div>
 </header>
-<div class="keys">Space = play/pause &middot; drag &amp; drop your own clip anywhere &middot; this is the real engine compiled to WebAssembly, not a recording</div>
+<div class="keys">Space = play/pause &middot; drag &amp; drop your own clip anywhere &middot; real circuit engine compiled to WebAssembly, not a recording</div>
 <nav class="nav" aria-label="Live engines">
   <a href="opto.html">WD Opto</a>
+  <a href="mu.html">WD Mu</a>
+  <a href="1b.html">WD 1B</a>
+  <a href="tbar.html">WD T-Bar</a>
+  <a href="fet.html">WD FET</a>
+  <a href="vca.html">WD VCA</a>
   <a href="duress.html" class="on">WD Duress</a>
   <a href="pre.html">WD Pre</a>
-  <a href="fet.html">WD FET</a>
+  <a href="tec.html">WD Tec</a>
+  <a href="xq.html">WD XQ</a>
   <a href="tape.html">WD Tape</a>
+  <a href="ax.html">WD AX</a>
+  <a href="361.html">WD 361</a>
   <a href="echo.html">WD Echo</a>
   <a href="spring.html">WD Spring</a>
-  <a href="xq.html">WD XQ</a>
+  <a href="brigade.html">WD Brigade</a>
+  <a href="span.html">WD Span</a>
+  <a href="sumch.html">WD Sum Ch</a>
+  <a href="summer.html">WD Summer</a>
+  <a href="annihilator.html">WD Annihilator</a>
+  <a href="damper.html">WD Damper</a>
+  <a href="outboard.html">WD Outboard</a>
   <a href="../demos/">17 A/B Demos</a>
   <a href="../">Home</a>
 </nav>
@@ -131,15 +145,13 @@
 <section class="demo">
   <h2>WD Duress — live</h2>
   <p class="blurb">
-    The curve-family compressor — eight engineered curves, British Mode, the
-    summing link, residual color generators, oversampled like the plugin —
-    compiled to WebAssembly and processing the stem while you listen.
-    Autogain matches loudness to bypass, so POWER is an honest A/B (it
-    listens for 3 seconds, then holds; turning a knob re-matches it within
-    about a second). INPUT is
-    the compression control: it drives program into each curve's fixed
-    threshold. Start at 6:1 like the manual says, then hit Nuke — or drop in
-    your own vocal; it stays on your machine, nothing is uploaded.
+    Eight-curve feed-forward VCA compressor running live in WebAssembly, with
+    British Mode, Clean / Dist 2 / Dist 3 harmonic saturation, and sidechain
+    detector shaping (Flat, HP, Band, HP+Band). Turn INPUT up to drive your
+    signal into each ratio curve's fixed threshold, from 1:1 color and 6:1
+    punch through Nuke limiting, while Auto Gain keeps loudness matched across
+    POWER bypass. Pick a stem or drop in your own audio file; all processing
+    runs locally in your browser.
   </p>
 
   <div class="transport">
@@ -171,15 +183,15 @@
   </div>
 
   <div class="presets">
-    <button id="p11" title="The published duress_11 staging: the circuit doing nothing">1:1</button>
-    <button id="p61" class="on" title="The published duress_61 staging: where the manual says to start">6:1</button>
-    <button id="pnuke" title="The published duress_nuke staging: the last detent">NUKE</button>
+    <button id="p11" title="Unity 1:1 curve (no compression, circuit color only) with 0 dB input drive">1:1</button>
+    <button id="p61" class="on" title="6:1 ratio curve with +8 dB input drive">6:1</button>
+    <button id="pnuke" title="Maximum Nuke limiting curve with +15 dB input drive">NUKE</button>
   </div>
 
   <div class="status" id="status">loading engine&hellip;</div>
 </section>
 
-<footer>same dsp core as the plugin &middot; parity-gated against the native build every release</footer>
+<footer>same DSP core as the plugin &middot; verified against the desktop build every release</footer>
 
 <script>
 // ===========================================================================
@@ -192,10 +204,10 @@ const P = { input: 0, output: 1, ratio: 2, brit: 3, attack: 4, release: 5,
             autogain: 16, power: 17, unit: 18, pair: 19, denorm: 20 };
 
 // Recipe staging (demo/tools/renderdemos.ps1, duress_61): ratio 6:1,
-// input +8, Match Bypass, output -6 (high-crest OH kit headroom).
+// input +8, Auto Gain, output -6 (high-crest OH kit headroom).
 const DEFAULTS = { [P.input]: 8, [P.output]: 0, [P.ratio]: 4,
                    [P.attack]: 5, [P.release]: 5,
-                   [P.autogain]: 2, [P.power]: 1 };
+                   [P.autogain]: 1, [P.power]: 1 };
 
 const STEMS = [
   { label: 'Drums',    file: '../audio/duress_11.wav' },
@@ -321,7 +333,7 @@ async function ensureEngine () {
     ctx = new (window.AudioContext || window.webkitAudioContext)();
     status('fetching engine…');
     const resp = await fetch('wd-duress.wasm');
-    if (!resp.ok) throw new Error(`wd-duress.wasm: HTTP ${resp.status} — run demo/tools/buildwasm.ps1`);
+    if (!resp.ok) throw new Error(`Could not load wd-duress.wasm (HTTP ${resp.status})`);
     wasmBytes = await resp.arrayBuffer();
     status('compiling…');
     wasmModule = await WebAssembly.compile(wasmBytes);
@@ -382,11 +394,23 @@ function setParam (id, v) {
 // for Duress that is 0=GR, 1=AG, 2=cell, 3=dist (THD), 4=det.
 const grfill = document.getElementById('grfill');
 const readout = document.getElementById('readout');
+let avgGr = 0, grTxtT = performance.now(), grTxtAge = 0.12, shownGrTxt = '0.0';
 function onMeters (m) {
   const gr = Math.max(0, m.gr ?? 0);
   grfill.style.width = Math.min(100, gr / 20 * 100) + '%';
+  const now = performance.now();
+  const dt = Math.min(0.25, Math.max(0, (now - grTxtT) / 1000));
+  grTxtT = now;
+  avgGr += (gr - avgGr) * (1 - Math.exp(-dt / 0.40));
+  if (avgGr < 0.05 && gr < 0.05) avgGr = 0;
+  grTxtAge += dt;
+  const nextGrTxt = avgGr >= 0.05 ? avgGr.toFixed(1) : '0.0';
+  if (grTxtAge >= 0.12 || (nextGrTxt === '0.0' && shownGrTxt !== '0.0')) {
+    grTxtAge = 0;
+    shownGrTxt = nextGrTxt;
+  }
   const ag = m.ag ?? 0;
-  readout.innerHTML = `GR ${gr.toFixed(1)} dB &middot; AG ${ag >= 0 ? '+' : ''}${ag.toFixed(1)} dB`;
+  readout.innerHTML = `GR ${shownGrTxt} dB &middot; AG ${ag >= 0 ? '+' : ''}${ag.toFixed(1)} dB`;
   smokeStamp();
 }
 
@@ -406,7 +430,7 @@ async function loadStem (i) {
   if (stem.buffer) return (buffers[i] = stem.buffer);
   status('loading stem…');
   const r = await fetch(stem.file);
-  if (!r.ok) throw new Error(`${stem.file}: HTTP ${r.status} — the demo stems are local-only (demo/src is not in git)`);
+  if (!r.ok) throw new Error(`Could not load ${stem.label} stem (HTTP ${r.status})`);
   buffers[i] = await ctx.decodeAudioData(await r.arrayBuffer());
   status('');
   return buffers[i];
@@ -536,7 +560,7 @@ fileInput.addEventListener('change', () => {
 });
 const fileBtn = document.createElement('button');
 fileBtn.innerHTML = 'YOUR CLIP&hellip;';
-fileBtn.title = 'Load your own audio — decoded and processed locally, never uploaded';
+fileBtn.title = 'Load a local audio file; decoded and processed in the browser';
 fileBtn.addEventListener('click', () => fileInput.click());
 stemsEl.append(fileBtn, fileInput);
 

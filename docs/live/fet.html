@@ -111,13 +111,27 @@
 <div class="keys">Space = play/pause &middot; drag &amp; drop your own clip anywhere &middot; real circuit engine compiled to WebAssembly, not a recording</div>
 <nav class="nav" aria-label="Live engines">
   <a href="opto.html">WD Opto</a>
+  <a href="mu.html">WD Mu</a>
+  <a href="1b.html">WD 1B</a>
+  <a href="tbar.html">WD T-Bar</a>
+  <a href="fet.html" class="on">WD FET</a>
+  <a href="vca.html">WD VCA</a>
   <a href="duress.html">WD Duress</a>
   <a href="pre.html">WD Pre</a>
-  <a href="fet.html" class="on">WD FET</a>
+  <a href="tec.html">WD Tec</a>
+  <a href="xq.html">WD XQ</a>
   <a href="tape.html">WD Tape</a>
+  <a href="ax.html">WD AX</a>
+  <a href="361.html">WD 361</a>
   <a href="echo.html">WD Echo</a>
   <a href="spring.html">WD Spring</a>
-  <a href="xq.html">WD XQ</a>
+  <a href="brigade.html">WD Brigade</a>
+  <a href="span.html">WD Span</a>
+  <a href="sumch.html">WD Sum Ch</a>
+  <a href="summer.html">WD Summer</a>
+  <a href="annihilator.html">WD Annihilator</a>
+  <a href="damper.html">WD Damper</a>
+  <a href="outboard.html">WD Outboard</a>
   <a href="../demos/">17 A/B Demos</a>
   <a href="../">Home</a>
 </nav>
@@ -125,16 +139,18 @@
 <section class="demo">
   <h2>WD FET — live</h2>
   <p class="blurb">
-    JFET limiting amplifier with four circuit laws, selectable Class A,
-    push-pull, or triode output stages, microsecond attack, and the coupled
-    four-button ratio divider network (including All-Buttons mode). Autogain
-    lets you A/B the punch without loudness bias.
+    Four-circuit FET and precision compressor running live in WebAssembly,
+    with selectable Class A, Push-Pull, or Triode output stages, attack down
+    to 20 µs (20 µs–30 ms), and a coupled four-button ratio network including
+    All-Buttons mode. Auto Gain tracks your settings to keep output loudness
+    matched when toggling POWER. Pick a stem or drop in your own audio file;
+    all processing runs locally in your browser.
   </p>
 
   <div class="transport">
     <button class="play" id="play" title="Play / pause">&#9654;</button>
     <button class="loop on" id="loop" title="Loop">LOOP</button>
-    <button class="loop" id="pick" title="Load an audio file from your computer">YOUR CLIP&hellip;</button>
+    <button class="loop" id="pick" title="Load a local audio file">YOUR CLIP&hellip;</button>
     <input id="fileIn" type="file" accept="audio/*" hidden>
     <div class="bar" id="bar"><div class="fill"></div><div class="head"></div><div class="time">0:00</div></div>
     <div class="vol"><label for="vol">Vol</label><input id="vol" type="range" min="0" max="100" value="60"></div>
@@ -148,7 +164,7 @@
     <div class="switches">
       <button id="stage">CLASS A</button>
       <button id="rev">BLACKFACE</button>
-      <button id="autogain" class="on">AG: MATCH</button>
+      <button id="autogain" class="on">AG: AUTO</button>
       <button id="power" class="power on">POWER</button>
     </div>
   </div>
@@ -169,7 +185,7 @@
   <div class="status" id="status">loading engine&hellip;</div>
 </section>
 
-<footer>same dsp core as the plugin &middot; parity-gated against the native build every release</footer>
+<footer>same DSP core as the plugin &middot; verified against the desktop build every release</footer>
 
 <script>
 const WASM_FILE = 'wd-fet.wasm';
@@ -182,7 +198,7 @@ const DEFAULTS = { [P.power]: 1, [P.model]: 0, [P.stage]: 0, [P.rev]: 0,
                    [P.r4]: 1, [P.r8]: 0, [P.r12]: 0, [P.r20]: 0, [P.ratio]: 4,
                    [P.thresh]: -24, [P.attack]: 0.8, [P.release]: 120,
                    [P.input]: 10, [P.output]: 0, [P.mix]: 100, [P.schpf]: 0,
-                   [P.link]: 100, [P.autogain]: 2, [P.cal]: 1, [P.unit]: 1,
+                   [P.link]: 100, [P.autogain]: 1, [P.cal]: 1, [P.unit]: 1,
                    [P.coloron]: 1, [P.atkoff]: 0, [P.denorm]: 1 };
 
 const STEMS = [
@@ -203,7 +219,7 @@ const RATIOS = [
   { label: 'All Buttons', vals: { [P.r4]: 1, [P.r8]: 1, [P.r12]: 1, [P.r20]: 1, [P.ratio]: 20 } },
 ];
 const STAGES = ['CLASS A', 'PUSH-PULL', 'TRIODE'];
-const AGS = ['AG: OFF', 'AG: GR', 'AG: MATCH'];
+const AGS = ['AG: OFF', 'AG: AUTO'];
 
 const KNOBS = [
   { id: P.input,   name: 'Input',   min: -24,  max: 24,   def: 10,  fmt: v => (v >= 0 ? '+' : '') + v.toFixed(1) + ' dB' },
@@ -354,15 +370,15 @@ function syncButtons() {
   const rv = state[P.rev] > 0.5;
   revBtn.textContent = rv ? 'BLUE STRIPE' : 'BLACKFACE';
   revBtn.classList.toggle('on', rv);
-  const ag = Math.round(state[P.autogain]);
-  agBtn.textContent = AGS[ag] || AGS[0];
+  const ag = state[P.autogain] > 0.5 ? 1 : 0;
+  agBtn.textContent = AGS[ag];
   agBtn.classList.toggle('on', ag > 0);
   powerBtn.classList.toggle('on', state[P.power] > 0.5);
 }
 
 stageBtn.onclick = () => { setParam(P.stage, (Math.round(state[P.stage]) + 1) % 3); syncButtons(); };
 revBtn.onclick = () => { setParam(P.rev, state[P.rev] > 0.5 ? 0 : 1); syncButtons(); };
-agBtn.onclick = () => { setParam(P.autogain, (Math.round(state[P.autogain]) + 1) % 3); syncButtons(); };
+agBtn.onclick = () => { setParam(P.autogain, state[P.autogain] > 0.5 ? 0 : 1); syncButtons(); };
 powerBtn.onclick = () => { setParam(P.power, state[P.power] > 0.5 ? 0 : 1); syncButtons(); };
 syncButtons();
 
@@ -377,11 +393,11 @@ function applyPreset(btnId, vals) {
 }
 
 document.getElementById('smack').onclick = () =>
-  applyPreset('smack', { ...RATIOS[0].vals, [P.model]: 0, [P.stage]: 0, [P.rev]: 0, [P.input]: 10, [P.attack]: 0.8, [P.release]: 120, [P.mix]: 100, [P.output]: 0, [P.autogain]: 2, [P.power]: 1 });
+  applyPreset('smack', { ...RATIOS[0].vals, [P.model]: 0, [P.stage]: 0, [P.rev]: 0, [P.input]: 10, [P.attack]: 0.8, [P.release]: 120, [P.mix]: 100, [P.output]: 0, [P.autogain]: 1, [P.power]: 1 });
 document.getElementById('allbtn').onclick = () =>
-  applyPreset('allbtn', { ...RATIOS[4].vals, [P.model]: 0, [P.stage]: 1, [P.rev]: 1, [P.input]: 14, [P.attack]: 0.1, [P.release]: 80, [P.mix]: 75, [P.output]: 0, [P.autogain]: 2, [P.power]: 1 });
+  applyPreset('allbtn', { ...RATIOS[4].vals, [P.model]: 0, [P.stage]: 1, [P.rev]: 1, [P.input]: 14, [P.attack]: 0.1, [P.release]: 80, [P.mix]: 75, [P.output]: 0, [P.autogain]: 1, [P.power]: 1 });
 document.getElementById('germ').onclick = () =>
-  applyPreset('germ', { ...RATIOS[1].vals, [P.model]: 2, [P.stage]: 2, [P.rev]: 0, [P.input]: 9, [P.attack]: 2.5, [P.release]: 300, [P.mix]: 100, [P.output]: 0, [P.autogain]: 2, [P.power]: 1 });
+  applyPreset('germ', { ...RATIOS[1].vals, [P.model]: 2, [P.stage]: 2, [P.rev]: 0, [P.input]: 9, [P.attack]: 2.5, [P.release]: 300, [P.mix]: 100, [P.output]: 0, [P.autogain]: 1, [P.power]: 1 });
 
 const stemsEl = document.getElementById('stems');
 STEMS.forEach((s, i) => {
@@ -424,6 +440,7 @@ async function ensureAudio() {
       });
     }
     worklet.connect(outGain);
+    let avgGr = 0, grTxtT = performance.now(), grTxtAge = 0.12, shownGrTxt = '0.0';
     worklet.port.onmessage = ({ data: m }) => {
       if (m.t === 'ready') {
         pushAllParams();
@@ -433,8 +450,20 @@ async function ensureAudio() {
       } else if (m.t === 'meters') {
         const gr = Math.max(0, Math.min(20, m.gr));
         document.getElementById('grfill').style.width = `${(gr / 20) * 100}%`;
+        const now = performance.now();
+        const dt = Math.min(0.25, Math.max(0, (now - grTxtT) / 1000));
+        grTxtT = now;
+        const rawGr = Math.max(0, Number(m.gr) || 0);
+        avgGr += (rawGr - avgGr) * (1 - Math.exp(-dt / 0.40));
+        if (avgGr < 0.05 && rawGr < 0.05) avgGr = 0;
+        grTxtAge += dt;
+        const nextGrTxt = avgGr >= 0.05 ? avgGr.toFixed(1) : '0.0';
+        if (grTxtAge >= 0.12 || (nextGrTxt === '0.0' && shownGrTxt !== '0.0')) {
+          grTxtAge = 0;
+          shownGrTxt = nextGrTxt;
+        }
         const agStr = (m.ag >= 0 ? '+' : '') + m.ag.toFixed(1);
-        document.getElementById('readout').textContent = `GR ${m.gr.toFixed(1)} dB · AG ${agStr} dB`;
+        document.getElementById('readout').textContent = `GR ${shownGrTxt} dB · AG ${agStr} dB`;
         smokeStamp();
       }
     };
