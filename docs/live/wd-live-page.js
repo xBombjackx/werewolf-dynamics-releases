@@ -29,11 +29,11 @@ export const LIVE_NAV = [
 ];
 
 const STEMS = [
-  { label: 'Drums',    file: '../audio/duress_11.wav' },
-  { label: 'Male Vox', file: '../audio/malevox_wire.wav' },
-  { label: 'Bass',     file: '../audio/ax_parked.wav' },
-  { label: 'E-Guitar', file: '../audio/eguitar_wire.wav' },
-  { label: 'Mix Bus',  file: '../audio/sumch_honest.wav' },
+  { label: 'Drums',      file: '../audio/duress_11.wav' },
+  { label: 'Male Vox',   file: '../audio/malevox_wire.wav' },
+  { label: 'Female Vox', file: '../audio/ax_parked.wav' },
+  { label: 'E-Guitar',   file: '../audio/eguitar_wire.wav' },
+  { label: 'Keys',       file: '../audio/sumch_honest.wav' },
 ];
 
 const CSS = `
