@@ -435,7 +435,7 @@ At a fixed `4801`-sample latency across all sample rates up to `192 kHz`, `WD Ta
 - **8 Active Per-Band `Circuit` Laws (`Low` / `Mid` / `High`):**
   1. **`TRIODE`:** Twin-triode stage with grid blocking (`Supply Voltage` scales plate headroom; `Current Feed` shifts cold-to-hot quiescent bias).
   2. **`IRON`:** Jiles-Atherton hysteresis inside a magnetizing-shunt transformer loop (`Supply Voltage` scales flux headroom; `Current Feed` controls core source stiffness).
-  3. **`TAPE`:** Record-path magnetic hysteresis (`Supply Voltage` scales record-amp headroom; `Current Feed` sweeps record bias from bright `0.607x` underbias `+2.50 dB` HF lift to dark `1.647x` overbias `-5.53 dB` rolloff).
+  3. **`TAPE`:** Record-path magnetic hysteresis (`Supply Voltage` scales record-amp headroom; `Current Feed` sweeps record bias from bright `0.607x` underbias `+2.50 dB` HF lift to dark `1.647x` overbias `-5.53 dB` rolloff; cubic octave `Drive` taper spans a clean `0.25x` (`<0.06%` THD) floor at `0%` through warm `+2.4 dB` push at noon up to `+24 dB` saturation at `100%`).
   4. **`CLASS A`:** Single-ended `tanh` saturation with even-order residual (`Supply Voltage` scales headroom; `Current Feed` shifts DC-blocked asymmetry).
   5. **`OP-AMP`:** High-slew discrete feedback op-amp stage with hard rail clipping (low `Current Feed` starves HF slew rate; high `Current Feed` introduces thermal gain droop).
   6. **`DIODE`:** Anti-parallel diode clipper (`ADAA` + `2x` residual oversampling below `96 kHz`; `Supply Voltage` scales driver headroom; `Current Feed` tilts branch current and polarity asymmetry).

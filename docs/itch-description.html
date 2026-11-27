@@ -1,9 +1,9 @@
 <!-- itch.io page description for the Werewolf Dynamics analog suite.
      Paste the body below into the itch.io "Description" editor (HTML mode).
-     Images are jsDelivr CDN links pinned to releases-repo commit 52cd802 —
+     Images are jsDelivr CDN links pinned to releases-repo commit d3588de —
      after a capture refresh, republish assets and update the pin. -->
 
-<p><strong>Analog gear, simulated from the circuit up. Twenty-six plugins, free.</strong></p>
+<p><strong>Analog gear, simulated from the circuit up. Thirty plugins, free.</strong></p>
 
 <p>Most "analog modeled" plugins are a snapshot: measure the hardware, fit some
 curves, ship the curves. These solve the actual circuit while your audio runs
@@ -19,21 +19,35 @@ factory and it behaves like a well-kept unit. Or don't.</p>
 
 <p>VST3 and CLAP on Windows and Linux (beta), Universal VST3 and AU on macOS.
 No DRM, no account, no nag screens — grab the
-<a href="https://github.com/xBombjackx/werewolf-dynamics-releases/releases/download/v0.9.0/WerewolfDynamics-v0.9.0-Windows-Installer.exe">Windows installer</a>
+<a href="https://github.com/xBombjackx/werewolf-dynamics-releases/releases/download/v0.9.1/WerewolfDynamics-v0.9.1-Windows-Installer.exe">Windows installer</a>
 or the zip archives below.</p>
 
 <h2>Hear it first</h2>
 
-<p>Eight of the plugins run live in your browser (the real C++ DSP compiled to
+<p>Twenty-two of the plugins run live in your browser (the real C++ DSP compiled to
 WebAssembly — play the built-in stems or drop in your own WAV file):
 <a href="https://xbombjackx.github.io/werewolf-dynamics-releases/live/opto.html">WD Opto</a> ·
-<a href="https://xbombjackx.github.io/werewolf-dynamics-releases/live/duress.html">WD Duress</a> ·
-<a href="https://xbombjackx.github.io/werewolf-dynamics-releases/live/pre.html">WD Pre</a> ·
+<a href="https://xbombjackx.github.io/werewolf-dynamics-releases/live/mu.html">WD Mu</a> ·
+<a href="https://xbombjackx.github.io/werewolf-dynamics-releases/live/1b.html">WD 1B</a> ·
+<a href="https://xbombjackx.github.io/werewolf-dynamics-releases/live/tbar.html">WD T-Bar</a> ·
 <a href="https://xbombjackx.github.io/werewolf-dynamics-releases/live/fet.html">WD FET</a> ·
+<a href="https://xbombjackx.github.io/werewolf-dynamics-releases/live/vca.html">WD VCA</a> ·
+<a href="https://xbombjackx.github.io/werewolf-dynamics-releases/live/duress.html">WD Duress</a> ·
+<a href="https://xbombjackx.github.io/werewolf-dynamics-releases/live/tec.html">WD Tec</a> ·
+<a href="https://xbombjackx.github.io/werewolf-dynamics-releases/live/xq.html">WD XQ</a> ·
+<a href="https://xbombjackx.github.io/werewolf-dynamics-releases/live/pre.html">WD Pre</a> ·
 <a href="https://xbombjackx.github.io/werewolf-dynamics-releases/live/tape.html">WD Tape</a> ·
 <a href="https://xbombjackx.github.io/werewolf-dynamics-releases/live/echo.html">WD Echo</a> ·
+<a href="https://xbombjackx.github.io/werewolf-dynamics-releases/live/brigade.html">WD Brigade</a> ·
 <a href="https://xbombjackx.github.io/werewolf-dynamics-releases/live/spring.html">WD Spring</a> ·
-<a href="https://xbombjackx.github.io/werewolf-dynamics-releases/live/xq.html">WD XQ</a>.</p>
+<a href="https://xbombjackx.github.io/werewolf-dynamics-releases/live/ax.html">WD AX</a> ·
+<a href="https://xbombjackx.github.io/werewolf-dynamics-releases/live/361.html">WD 361</a> ·
+<a href="https://xbombjackx.github.io/werewolf-dynamics-releases/live/span.html">WD Span</a> ·
+<a href="https://xbombjackx.github.io/werewolf-dynamics-releases/live/sumch.html">WD Summer Channel</a> ·
+<a href="https://xbombjackx.github.io/werewolf-dynamics-releases/live/summer.html">WD Summer</a> ·
+<a href="https://xbombjackx.github.io/werewolf-dynamics-releases/live/annihilator.html">WD Annihilator</a> ·
+<a href="https://xbombjackx.github.io/werewolf-dynamics-releases/live/damper.html">WD Damper</a> ·
+<a href="https://xbombjackx.github.io/werewolf-dynamics-releases/live/outboard.html">WD Outboard</a>.</p>
 
 <p>Or listen through the
 <a href="https://xbombjackx.github.io/werewolf-dynamics-releases/demos/">17 A/B audio demos</a>
@@ -43,21 +57,36 @@ Every variant of an A/B demo is the same performance, sample-locked — switchin
 circuits mid-playback is a 12&nbsp;ms crossfade, so what changes is only the
 circuit. Loudness-matched, no mastering, no cheating.</p>
 
-<h2>New in v0.9.0</h2>
+<h2>New in v0.9.1</h2>
 
-<p>Mostly a huge cleanup under the hood: 65 bug fixes covering sample-rate
-changes, state recall, latency alignment, REAPER and macOS Catalina quirks,
-and UI redraw bugs. Saved DAW projects from earlier versions load without
-changes (<a href="https://github.com/xBombjackx/werewolf-dynamics-releases/releases/tag/v0.9.0">full v0.9.0 release notes</a>).</p>
+<p><strong>Four new Preview Mode plugins</strong> expand the suite from 26 to 30:
+<strong>WD&nbsp;1B</strong> (all-tube optical compressor), <strong>WD&nbsp;T-Bar</strong>
+(mastering variable-mu compressor with 1&nbsp;ms lookahead), <strong>WD&nbsp;Berth</strong>
+(zero-latency, FFT-free 24-band dynamic spectral spacer), and
+<strong>WD&nbsp;Outboard</strong> (mastering converter simulator and lock-free
+Beacon sidechain broadcaster).</p>
 
-<p>On the surface: four newer modules (<strong>WD Horse Girl</strong>,
-<strong>WD Damper</strong>, <strong>WD Annihilator</strong>, and
-<strong>WD VU</strong>) are now bundled in Preview Mode; <strong>WD Rack</strong>
-and <strong>WD Summer</strong> gained master power and delta switches that flip
-every linked plugin in a group at once; <strong>WD XQ</strong> can match its
-curve to a reference track; <strong>WD Echo</strong> and
-<strong>WD Brigade</strong> sync to host tempo; and you can double-click any
-number readout on any panel to type an exact value.</p>
+<p>Settings-based <strong>Auto</strong> autogain (defaulted ON) across all nine
+compressors and <strong>WD Pre</strong> evaluates each circuit at fixed
+reference levels when you move a control — no pumping on sustained notes, no
+swelling across silence, and manual master <strong>Output</strong> faders
+stay audible for fine-tuning. All compressor numeric GR readouts also now
+smooth across a short window so numbers stay legible while VU needles and peak
+holds still catch every transient
+(<a href="https://github.com/xBombjackx/werewolf-dynamics-releases/releases/tag/v0.9.1">full v0.9.1 release notes</a>).</p>
+
+<p>Also new in this update: external DAW sidechain inputs plus
+<strong>Host Bus / WD Beacon</strong> key routing and <strong>D/A Iron</strong>
+key conditioning on <strong>WD VCA</strong> and <strong>WD Duress</strong>
+(with <strong>Key Trim</strong> on Duress); per-slot <code>-10/-20&nbsp;dB</code>
+input pads and full-chain <code>&plusmn;48&nbsp;dB</code> Auto staging on
+<strong>WD Clamp</strong>; new <strong>WD-1B</strong>, <strong>T-Bar Master</strong>,
+and <strong>Thrust Bus</strong> slot models on <strong>WD Clamp</strong> and
+<strong>WD Strip</strong>; <strong>WD FET</strong> restored to the flat suite
+faceplate with balanced knob proportions and the bottom autogain grid; Light and
+Dark faceplate modes across all 30 plugins; hold-for-fine-tuning and single-click numeric value entry on knobs; and cross-ISA
+<code>SSE2</code> / <code>AVX2</code> / Apple Silicon <code>NEON</code> /
+<code>WebAssembly SIMD128</code> acceleration.</p>
 
 <h2>The lineup</h2>
 
@@ -66,27 +95,27 @@ is the real thing: two time constants, program-dependent memory, that slow
 settling tail. Two voicings (tube WD-2A, solid-state WD-3A) plus drive and
 iron controls the original hardware never gave you.</p>
 
-<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@52cd802/assets/wd-opto-front.png" width="300" height="605" alt="WD Opto faceplate"></p>
+<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@d3588de/assets/wd-opto-front.png" width="300" height="605" alt="WD Opto faceplate"></p>
 
-<p><strong>WD Mu</strong> — variable-mu compressor built around a simulated 6386 push-pull
+<p><strong>WD Mu</strong> — variable-mu compressor built around a simulated remote-cutoff dual-triode push-pull
 stage and the classic six-position time-constant bank. No threshold knob,
 because the circuit doesn't have one; you drive it and it leans back. Bias
 knob on the front, mismatched tube pairs on the back.</p>
 
-<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@52cd802/assets/wd-mu-front.png" width="300" height="536" alt="WD Mu faceplate"></p>
+<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@d3588de/assets/wd-mu-front.png" width="300" height="536" alt="WD Mu faceplate"></p>
 
 <p><strong>WD Tec</strong> — passive tube EQ, program and midrange sections in one wide
 module. The boost you can't get wrong, with a twist: the filter inductors
 have live magnetic cores, and a Core knob sets how hard you push them.</p>
 
-<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@52cd802/assets/wd-tec-front.png" width="600" height="391" alt="WD Tec faceplate"></p>
+<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@d3588de/assets/wd-tec-front.png" width="600" height="391" alt="WD Tec faceplate"></p>
 
 <p><strong>WD Tape</strong> — a full tape machine. Record head, bias oscillator, reproduce
 head, all of it, aligned by the same procedure a tech would use on the
-hardware. Four speeds from 30 down to 3.75&nbsp;ips, two stock formulations,
+hardware. Four speeds from 30 down to 3.75&nbsp;ips, three stock formulations,
 and every unit number ships with its own transport quirks.</p>
 
-<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@52cd802/assets/wd-tape-front.png" width="600" height="511" alt="WD Tape faceplate"></p>
+<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@d3588de/assets/wd-tape-front.png" width="600" height="511" alt="WD Tape faceplate"></p>
 
 <p><strong>WD XQ</strong> — one parametric EQ, five circuits. Precision digital, two console
 flavors, a stepped American classic, and an inductor design from 1973. The
@@ -94,32 +123,33 @@ knobs stay put while the circuit underneath changes what they're allowed to
 do. Dynamic bands on all five, plus a Match tool that learns the tonal balance
 of a reference track.</p>
 
-<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@52cd802/assets/wd-xq-front.png" width="600" height="510" alt="WD XQ faceplate"></p>
+<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@d3588de/assets/wd-xq-front.png" width="600" height="510" alt="WD XQ faceplate"></p>
 
-<p><strong>WD FET</strong> — FET compressor with four circuit laws in one box: the 76
-everyone reaches for, a crushed 760 sibling, a germanium path, and a clean
+<p><strong>WD FET</strong> — FET compressor with four circuit laws in one box: the classic
+76 shunt-FET limiter, a stepped limiter-gate sibling, a germanium path, and a clean
 precision law. The ratio network is solved from the schematic, so all-buttons
 works because the circuit does it, not because we faked the curve. Attack is
 measured in microseconds.</p>
 
-<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@52cd802/assets/wd-fet-front.png" width="600" height="510" alt="WD FET faceplate"></p>
+<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@d3588de/assets/wd-fet-front.png" width="600" height="510" alt="WD FET faceplate"></p>
 
 <p><strong>WD VCA</strong> — stereo bus compressor built around one current-controlled
-VCA gain cell. Two detector brains: Console Bus leans the whole mix back the
-way the famous British desk compressor does, RMS Punch is for the drum bus.
-Auto release, over-easy knee, and the RMS detector's attack table falls out of
-one capacitor, same as the hardware.</p>
+VCA gain cell. Three detector brains: Console Bus leans the whole mix back the
+way a classic British desk compressor does, RMS Punch targets the drum bus, and
+Thrust Bus adds tilted sidechain weighting with switchable feed-forward or
+feedback sensing. Auto release, soft knee, and the RMS detector's attack table
+falls out of one capacitor, same as the hardware.</p>
 
-<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@52cd802/assets/wd-vca-front.png" width="600" height="510" alt="WD VCA faceplate"></p>
+<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@d3588de/assets/wd-vca-front.png" width="600" height="510" alt="WD VCA faceplate"></p>
 
 <p><strong>WD Duress</strong> — an eight-curve compressor built for abuse. Every
-ratio position is its own engineered curve: 1:1 is warm-up distortion with
+ratio position is its own distinct circuit curve: 1:1 is warm-up distortion with
 no compression at all, 10:1 borrows an opto release with a twenty-second
 tail, and Nuke is a log-release brickwall. Three distortion modes, two
 stereo link laws taken from the block diagram, and a British Mode switch
 that overrides the envelope the way all-buttons abuse does.</p>
 
-<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@52cd802/assets/wd-duress-front.png" width="600" height="468" alt="WD Duress faceplate"></p>
+<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@d3588de/assets/wd-duress-front.png" width="600" height="468" alt="WD Duress faceplate"></p>
 
 <p><strong>WD Clamp</strong> — three compressors, one power supply. Load an Opto, Mu, FET,
 or VCA engine into each of three slots, chain them in any order, and let
@@ -128,7 +158,7 @@ its neighbors feel it. Switchable -10/-20&nbsp;dB pad at the input for hot
 buses, and the transfer screens are measured curves, not drawings, with a dot
 riding each one at the slot's live input level.</p>
 
-<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@52cd802/assets/wd-clamp-front.png" width="600" height="401" alt="WD Clamp faceplate"></p>
+<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@d3588de/assets/wd-clamp-front.png" width="600" height="401" alt="WD Clamp faceplate"></p>
 
 <p><strong>WD Pre</strong> — seven preamps behind one gain knob: precision digital wire, a
 Class A British console with its iron, an American op-amp console, a German
@@ -137,7 +167,7 @@ and a warm triode stage. Gain redistributes the circuit — and keeps pushing
 into stem overdrive at the top of the dial — while output is only a fader
 after the iron.</p>
 
-<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@52cd802/assets/wd-pre-front.png" width="300" height="511" alt="WD Pre faceplate"></p>
+<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@d3588de/assets/wd-pre-front.png" width="300" height="511" alt="WD Pre faceplate"></p>
 
 <p><strong>WD Echo</strong> — tape loop echo where the loop is real enough to have a splice.
 Motor-driven transport, three repro heads, spring tank, optional BPM sync.
@@ -145,14 +175,14 @@ Repeat rate is a motor, not a delay dial: turn it and everything already on
 the loop bends with the transport. The time arrow reads the tape forward,
 palindrome, or straight-up backward.</p>
 
-<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@52cd802/assets/wd-echo-front.png" width="600" height="510" alt="WD Echo faceplate"></p>
+<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@d3588de/assets/wd-echo-front.png" width="600" height="510" alt="WD Echo faceplate"></p>
 
 <p><strong>WD AX</strong> — the exciter, built from the patents instead of around them. It
 adds a generated sideband rather than boosting EQ, so the fundamental never
-moves. The Big Bottom section lifts the decay of a note instead of its hit:
+moves. The dynamic low-band (Girth) section lifts the decay of a note instead of its hit:
 sustain without the overload penalty.</p>
 
-<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@52cd802/assets/wd-ax-front.png" width="300" height="511" alt="WD AX faceplate"></p>
+<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@d3588de/assets/wd-ax-front.png" width="300" height="511" alt="WD AX faceplate"></p>
 
 <p><strong>WD Rack</strong> — the chassis. Put it on your master bus, give your modules the
 same frame number, and suddenly they're screwed into the same box: shared
@@ -161,7 +191,7 @@ slot map you can reorder, and master power and delta switches that flip the
 whole rack at once. Crank the crosstalk and the rack becomes an effect of its
 own. Skip it entirely and every module runs clean standalone.</p>
 
-<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@52cd802/assets/wd-rack-front.png" width="300" height="686" alt="WD Rack faceplate"></p>
+<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@d3588de/assets/wd-rack-front.png" width="300" height="686" alt="WD Rack faceplate"></p>
 
 <p><strong>WD Strip</strong> — a console channel in one window: preamp into EQ into
 compressor, a model selector on each stage. Any of the seven Pre laws, either
@@ -170,7 +200,7 @@ inside the same process, so the compressor's knee moves when the preamp
 leans on the supply. The response curve and compressor transfer on the face
 are measured live from the running engines, not drawn. No rack required.</p>
 
-<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@52cd802/assets/wd-strip-front.png" width="600" height="433" alt="WD Strip channel strip"></p>
+<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@d3588de/assets/wd-strip-front.png" width="600" height="433" alt="WD Strip channel strip"></p>
 
 <p><strong>WD Summer Channel</strong> — the desk channel, one per track. Five consoles on
 one selector: the British desk with its transformer lows, the big clean inline
@@ -180,7 +210,7 @@ you lean on it. Every instance drifts slightly from every other one, keyed to
 the track name, the way forty channel strips built in 1972 drift from each
 other.</p>
 
-<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@52cd802/assets/wd-sumch-front.png" width="300" height="511" alt="WD Summer Channel faceplate"></p>
+<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@d3588de/assets/wd-sumch-front.png" width="300" height="511" alt="WD Summer Channel faceplate"></p>
 
 <p><strong>WD Summer</strong> — the bus those channels sum into, and it behaves like one.
 The more channels you load onto a group, the more the shared supply sags, so a
@@ -190,7 +220,7 @@ five desks as the channel, bus-sized — with group-wide bypass and delta
 switches, and loudness-neutralized drive when you push hot stems into the
 rails.</p>
 
-<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@52cd802/assets/wd-summer-front.png" width="600" height="511" alt="WD Summer faceplate"></p>
+<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@d3588de/assets/wd-summer-front.png" width="600" height="511" alt="WD Summer faceplate"></p>
 
 <p><strong>WD Span</strong> — a stereo widener that works with a transformer instead of
 phase. Everything happens to the difference signal, so a mono fold stays exact
@@ -199,7 +229,7 @@ claim, because they buy width by spending mono compatibility. Push the iron and
 the bottom pulls toward the center on its own, because a core saturates on the
 lows first. No crossover anywhere in it.</p>
 
-<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@52cd802/assets/wd-span-front.png" width="300" height="511" alt="WD Span faceplate"></p>
+<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@d3588de/assets/wd-span-front.png" width="300" height="511" alt="WD Span faceplate"></p>
 
 <p><strong>WD Spring</strong> — a real spring tank, not a spring-flavored algorithm. A
 steel spring carries high frequencies faster than low ones, so every reflection
@@ -208,7 +238,7 @@ mechanism rather than a filter, which is why plate algorithms cannot fake it.
 Three tanks: the short bright pan out of a guitar amp, the studio rack unit, and
 the long dark console tank.</p>
 
-<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@52cd802/assets/wd-spring-front.png" width="300" height="511" alt="WD Spring faceplate"></p>
+<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@d3588de/assets/wd-spring-front.png" width="300" height="511" alt="WD Spring faceplate"></p>
 
 <p><strong>WD 361</strong> — the tape-side half of a noise reduction unit, used the way
 engineers misused it. Run the encoder and never decode: quiet material comes
@@ -219,7 +249,7 @@ families are genuinely different machines. It does not claim to be noise
 reduction, because the four-band round trip on real program never nulled on
 the hardware either.</p>
 
-<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@52cd802/assets/wd-361-front.png" width="300" height="511" alt="WD 361 faceplate"></p>
+<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@d3588de/assets/wd-361-front.png" width="300" height="511" alt="WD 361 faceplate"></p>
 
 <p><strong>WD Brigade</strong> — a bucket-brigade delay, dark for the same reason the
 originals were. The delay time IS the clock, and a slower clock forces the
@@ -230,7 +260,7 @@ grab TIME, the compander hiding the chain's hiss, plus optional BPM sync when
 you want repeats on the grid. Want the self-oscillation howl? There is a
 switch on the rear panel, and it ships off.</p>
 
-<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@52cd802/assets/wd-brigade-front.png" width="300" height="511" alt="WD Brigade faceplate"></p>
+<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@d3588de/assets/wd-brigade-front.png" width="300" height="511" alt="WD Brigade faceplate"></p>
 
 <p><strong>WD Delta Send</strong> &amp; <strong>WD Delta Return</strong> — a send/return pair that
 lets you hear what your whole chain is doing: any plugins, anyone's.
@@ -241,14 +271,18 @@ louder never reads as better. DRY gives you instant whole-chain bypass with no
 latency jump, WET MATCHED plays the chain at its input's loudness, and LOOK
 adds lookahead so gain matching stays steady on sudden hits.</p>
 
-<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@52cd802/assets/wd-delta-send-front.png" width="242" height="186" alt="WD Delta Send faceplate">
-<img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@52cd802/assets/wd-delta-return-front.png" width="250" height="429" alt="WD Delta Return faceplate"></p>
+<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@d3588de/assets/wd-delta-send-front.png" width="242" height="186" alt="WD Delta Send faceplate">
+<img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@d3588de/assets/wd-delta-return-front.png" width="250" height="429" alt="WD Delta Return faceplate"></p>
 
-<h2>Preview Mode (new in v0.9.0)</h2>
+<h2>Preview Mode (8 plugins)</h2>
 
-<p>These four ship in the main installer and zips and are ready to mix with;
-they are marked Preview while we keep dialing in their displays and edge cases
-toward 1.0.</p>
+<p>All eight ship in the main installer and zips and are ready to mix with —
+four introduced in v0.9.0 (<strong>WD&nbsp;Horse Girl</strong>,
+<strong>WD&nbsp;Damper</strong>, <strong>WD&nbsp;Annihilator</strong>, and
+<strong>WD&nbsp;VU</strong>) and four added in v0.9.1 (<strong>WD&nbsp;1B</strong>,
+<strong>WD&nbsp;T-Bar</strong>, <strong>WD&nbsp;Berth</strong>, and
+<strong>WD&nbsp;Outboard</strong>). They are marked Preview while we keep
+dialing in their displays and edge cases toward 1.0.</p>
 
 <p><strong>WD Horse Girl</strong> — two-track collision control. Drop one on the bass
 and one on the kick (or run Mid/Side or Left/Right on one bus), link them on a
@@ -257,7 +291,7 @@ across four frequency zones around a movable pivot. Four listener meters above
 the graph show where the two signals are actually fighting and what the EQ and
 saturation curves are doing in response.</p>
 
-<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@52cd802/assets/wd-horsegirl-front.png" width="600" height="410" alt="WD Horse Girl faceplate"></p>
+<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@d3588de/assets/wd-horsegirl-front.png" width="600" height="410" alt="WD Horse Girl faceplate"></p>
 
 <p><strong>WD Damper</strong> — a resonance suppressor that tells a narrow whistle apart
 from a wide body boost. Most dynamic notchers eat anything that pokes up; this
@@ -265,20 +299,60 @@ one measures peak width first so harsh ringing gets pulled down while
 intentional tone stays put. Runs as smooth time-domain filters or spectral
 processing.</p>
 
-<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@52cd802/assets/wd-damper-front.png" width="600" height="410" alt="WD Damper faceplate"></p>
+<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@d3588de/assets/wd-damper-front.png" width="600" height="410" alt="WD Damper faceplate"></p>
 
 <p><strong>WD Annihilator</strong> — three-band distortion box where Low, Mid, and High
 each get their own circuit (starved or overfed triodes, sagged diode clippers,
-negative-feedback iron, tape, or full wreck). All three bands pull from one
+negative-feedback iron, calibrated tape hysteresis from clean 0% headroom up to +24&nbsp;dB ruin, class A, op-amp, or quantum rail) plus <strong>Match Bypass</strong> autogain. All three bands pull from one
 shared power supply, so a heavy low end sags the rails for the mids and highs
 too.</p>
 
-<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@52cd802/assets/wd-annihilator-front.png" width="600" height="525" alt="WD Annihilator faceplate"></p>
+<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@d3588de/assets/wd-annihilator-front.png" width="600" height="525" alt="WD Annihilator faceplate"></p>
 
 <p><strong>WD VU</strong> — ballistic stereo VU and peak meter bridge. Real needle rise
 and fall times, selectable studio reference levels, and peak hold.</p>
 
-<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@52cd802/assets/wd-vu-front.png" width="300" height="511" alt="WD VU faceplate"></p>
+<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@d3588de/assets/wd-vu-front.png" width="300" height="511" alt="WD VU faceplate"></p>
+
+<p><strong>WD 1B</strong> — all-tube optical compressor built around a smooth
+12&nbsp;dB soft-knee LED/LDR divider, a push-pull twin-triode gain stage, and
+a wideband transformer. More open and controllable than fixed-knob opto boxes,
+with switchable Fixed, Fix/Man, and Manual attack/release timing, continuous
+2:1 to 10:1 ratio, sidechain HPF, THD and Iron trims, and WD&nbsp;Rack chassis
+coupling.</p>
+
+<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@d3588de/assets/wd-1b-front.png" width="600" height="511" alt="WD 1B faceplate"></p>
+
+<p><strong>WD T-Bar</strong> — mastering variable-mu compressor using matched
+local-negative-feedback dual-triode stages and wideband iron for low distortion
+(~0.035% THD) and steady stereo glue. Offers stepped 1.5:1 to 10:1 ratio knees,
+continuous attack and release (plus dual-stage Auto release), 0–1&nbsp;ms
+lookahead inside a fixed 192-sample window, swept sidechain HPF and Tilt,
+Mid-Side routing, and WD&nbsp;Rack coupling.</p>
+
+<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@d3588de/assets/wd-tbar-front.png" width="600" height="511" alt="WD T-Bar faceplate"></p>
+
+<p><strong>WD Berth</strong> — zero-latency, FFT-free 24-band dynamic spectral
+spacer that carves room for a lead vocal, kick, or solo instrument inside a
+competing bed without FFT pre-ringing. Runs as a <strong>Carve</strong>
+receiver or bit-exact <strong>Send Key</strong> broadcaster over DAW external
+sidechain, eight internal shared buses (Bus&nbsp;A–H), or
+<strong>WD&nbsp;Outboard</strong>'s Beacon feed, with Stereo/Mid/Side
+targeting, Q selectivity, boundary curtains, and <strong>SC&nbsp;Iron</strong>
+key conditioning.</p>
+
+<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@d3588de/assets/wd-berth-front.png" width="600" height="511" alt="WD Berth faceplate"></p>
+
+<p><strong>WD Outboard</strong> — zero-latency mastering converter and analog
+line-stage simulator paired with a lock-free shared-memory Beacon key
+broadcaster feeding <strong>WD&nbsp;VCA</strong>, <strong>WD&nbsp;Duress</strong>,
+and <strong>WD&nbsp;Berth</strong>. Four flavors — <strong>Reference Clean</strong>
+(bit-exact digital passthrough at unity), <strong>Nickel / Iron</strong>
+(coupled hysteresis and headroom knee), <strong>90s R-2R</strong> (ladder
+nonlinearity and op-amp clipping), and <strong>Soft-Clip AD</strong> — plus
+Pre-FX or Post-AD Beacon key tapping and WD&nbsp;Rack coupling.</p>
+
+<p><img src="https://cdn.jsdelivr.net/gh/xBombjackx/werewolf-dynamics-releases@d3588de/assets/wd-outboard-front.png" width="600" height="511" alt="WD Outboard faceplate"></p>
 
 <h2>Requirements</h2>
 
@@ -289,15 +363,15 @@ beta; requires <code>libwebkit2gtk-4.1-0</code> for the UI).</p>
 <h2>Install</h2>
 
 <p><strong>Windows:</strong> run
-<a href="https://github.com/xBombjackx/werewolf-dynamics-releases/releases/download/v0.9.0/WerewolfDynamics-v0.9.0-Windows-Installer.exe">WerewolfDynamics-v0.9.0-Windows-Installer.exe</a>,
-or unzip <code>WerewolfDynamics-v0.9.0-Windows-VST3-CLAP.zip</code> below and copy the
+<a href="https://github.com/xBombjackx/werewolf-dynamics-releases/releases/download/v0.9.1/WerewolfDynamics-v0.9.1-Windows-Installer.exe">WerewolfDynamics-v0.9.1-Windows-Installer.exe</a>,
+or unzip <code>WerewolfDynamics-v0.9.1-Windows-VST3-CLAP.zip</code> below and copy the
 <code>.vst3</code> folders into <code>C:\Program Files\Common Files\VST3</code> or the
 <code>.clap</code> files into <code>C:\Program Files\Common Files\CLAP</code> (per-user
 alternative: <code>%LOCALAPPDATA%\Programs\Common\CLAP</code>). Pick one format per
 plugin, then rescan in your DAW — everything shows up under Werewolf Dynamics.</p>
 
-<p><strong>macOS:</strong> unzip <code>WerewolfDynamics-v0.9.0-macOS-VST3-AU.zip</code> below
-(or from <a href="https://github.com/xBombjackx/werewolf-dynamics-releases/releases/tag/v0.9.0">GitHub Releases</a>)
+<p><strong>macOS:</strong> unzip <code>WerewolfDynamics-v0.9.1-macOS-VST3-AU.zip</code> below
+(or from <a href="https://github.com/xBombjackx/werewolf-dynamics-releases/releases/tag/v0.9.1">GitHub Releases</a>)
 and copy the <code>.vst3</code> bundles into <code>/Library/Audio/Plug-Ins/VST3</code> or
 the <code>.component</code> bundles into <code>/Library/Audio/Plug-Ins/Components</code>.
 The builds are not notarized by Apple yet, so macOS will quarantine them on
@@ -310,7 +384,7 @@ and extract into <code>~/.vst3</code> or <code>~/.clap</code>.</p>
 
 <p>Windows and macOS builds are not code-signed yet, so SmartScreen or
 Gatekeeper may grumble on first run. Rescan once after updating so your DAW
-finds the four new Preview plugins.</p>
+picks up the updated sidechain routing and parameters.</p>
 
 <h2>Accuracy</h2>
 

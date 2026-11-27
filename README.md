@@ -30,7 +30,7 @@ Run real C++ plugin engines directly inside your browser using WebAssembly (no u
 - **[WD Span — Live](https://xbombjackx.github.io/werewolf-dynamics-releases/live/span.html)** — transformer difference-channel stereo widener with bit-exact mono fold
 - **[WD Summer Channel — Live](https://xbombjackx.github.io/werewolf-dynamics-releases/live/sumch.html)** — zero-latency five-console channel strip with deterministic drift
 - **[WD Summer — Live](https://xbombjackx.github.io/werewolf-dynamics-releases/live/summer.html)** — summing bus amp modeling shared desk density & transformer saturation
-- **[WD Annihilator — Live](https://xbombjackx.github.io/werewolf-dynamics-releases/live/annihilator.html)** — three-band saturation lab (`Triode`, `Diode`, `Negative Iron`, `Tape`, `Wreck`, `Quantum Rail`) with `Auto` autogain
+- **[WD Annihilator — Live](https://xbombjackx.github.io/werewolf-dynamics-releases/live/annihilator.html)** — three-band saturation lab (`Triode`, `Diode`, `Negative Iron`, `Tape`, `Wreck`, `Quantum Rail`) with `Match Bypass` autogain & calibrated `TAPE` drive
 - **[WD Damper — Live](https://xbombjackx.github.io/werewolf-dynamics-releases/live/damper.html)** — prominence-aware dynamic resonance suppressor
 - **[WD Outboard — Live](https://xbombjackx.github.io/werewolf-dynamics-releases/live/outboard.html)** — mastering converter simulator (`Reference Clean`, `Nickel/Iron`, `90s R-2R`, `Soft-Clip AD`)
 - **[17 Sample-Locked A/B Audio Demos](https://xbombjackx.github.io/werewolf-dynamics-releases/demos/)** ([full website tour](https://xbombjackx.github.io/werewolf-dynamics-releases/)) — switch circuits mid-phrase with a 12 ms crossfade, loudness-matched.
