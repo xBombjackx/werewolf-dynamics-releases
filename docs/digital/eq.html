@@ -1,0 +1,4844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Werewolf Digital EQ</title>
+<link rel="stylesheet" href="./wd/tokens.css">
+<style>
+  :root {
+    --bg:      #0b0d12;
+    --panel:   #151922;
+    --panel-hi:#1d2330;
+    --track:   #0d0f15;
+    --line:    rgba(255, 255, 255, 0.08);
+    --line-hi: rgba(255, 255, 255, 0.16);
+    --hover-bg:rgba(255, 255, 255, 0.06);
+    --text:    #f2f5fa;
+    --label:   #8b96a8;
+    --muted:   #586274;
+    --well:    #06070a;
+    --cream:   #f2f5fa;
+
+    --accent:     #5b7fc7;
+    --accent-lit: #8fb0ec;
+    --accent-deep:#2d4c85;
+
+    --sage:      #34d399;
+    --sage-tint: rgba(52, 211, 153, 0.14);
+    --sage-deep: #6ee7b7;
+    --warn:      #f59e0b;
+    --danger:    #f43f5e;
+
+    --r-panel: 8px;
+    --r-pill: 5px;
+    --font: "Figtree", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    --font-display: "Caprasimo", "Segoe UI Variable Display", "Segoe UI Semibold", system-ui, sans-serif;
+  }
+  :root[data-theme="japandi-dark"] {
+    --bg:      #121316;
+    --panel:   #1b1d21;
+    --panel-hi:#24272d;
+    --track:   #0d0e10;
+    --line:    rgba(242, 237, 228, 0.08);
+    --line-hi: rgba(242, 237, 228, 0.16);
+    --hover-bg:rgba(242, 237, 228, 0.06);
+    --text:    #f2ede4;
+    --label:   #9e978c;
+    --muted:   #666057;
+    --well:    #090a0c;
+    --cream:   #f2ede4;
+    --accent-deep:#3b5d99;
+    --sage:      #7a9171;
+    --sage-tint: rgba(122, 145, 113, 0.18);
+    --sage-deep: #b8cfb0;
+  }
+  :root[data-theme="japandi-light"] {
+    --bg:      #e6e1d8;
+    --panel:   #dbd5c9;
+    --panel-hi:#e4dfd5;
+    --track:   #ccc5b8;
+    --line:    rgba(24, 25, 28, 0.11);
+    --line-hi: rgba(24, 25, 28, 0.22);
+    --hover-bg:rgba(24, 25, 28, 0.06);
+    --text:    #18191c;
+    --label:   #635f58;
+    --muted:   #8c867c;
+    --well:    #141518;
+    --cream:   #f2ede4;
+    --accent-deep:#2d4c85;
+    --sage:      #4d6b47;
+    --sage-tint: rgba(77, 107, 71, 0.16);
+    --sage-deep: #2d4229;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font: 400 12px/1.35 var(--font);
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  :focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ── Tier 1: Compact 44px Header ───────────────────────────────────────── */
+  header {
+    flex: 0 0 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent), var(--panel);
+    border-bottom: 1px solid var(--line-hi);
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .brand { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+  .brand svg { display: block; filter: drop-shadow(0 0 5px var(--accent)); }
+  .brand .stack { display: flex; flex-direction: column; gap: 1px; }
+  .brand .line { font: 700 8px/1 var(--font); letter-spacing: 0.18em; text-transform: uppercase; color: var(--label); }
+  .brand .name { font-family: var(--font-display); font-size: 16px; line-height: 1; font-weight: 700; letter-spacing: -0.01em; }
+  .headsep { width: 1px; height: 22px; background: var(--line); flex: 0 0 auto; }
+  .spacer { flex: 1; min-width: 4px; }
+
+  /* Ext Link Picker in Header */
+  .link-picker {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 6px 0 8px;
+    border-radius: var(--r-pill);
+    background: var(--track);
+    border: 1px solid var(--line-hi);
+    flex: 0 0 auto;
+  }
+  .link-led {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--muted);
+    transition: background-color 0.15s, box-shadow 0.15s;
+  }
+  .link-picker.receiving .link-led { background: var(--sage); box-shadow: 0 0 7px var(--sage); }
+  .link-picker.waiting .link-led { background: var(--warn); box-shadow: 0 0 6px var(--warn); }
+  .link-picker.mismatch { border-color: var(--warn); }
+  .link-picker.mismatch .link-led { background: #f59e0b; box-shadow: 0 0 7px #f59e0b; }
+  .link-lbl {
+    font: 700 9px/1 var(--font);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--label);
+    white-space: nowrap;
+  }
+  .link-select {
+    height: 22px;
+    width: 148px;
+    min-width: 148px;
+    max-width: 148px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font: 600 11px/1 var(--font);
+    cursor: pointer;
+    outline: none;
+  }
+  .link-select option { background: var(--panel); color: var(--text); }
+  .link-select:disabled { opacity: 0.55; cursor: default; }
+
+  .stat { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex: 0 0 auto; min-width: 54px; }
+  .stat .k { font: 600 8px/1 var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  .stat .stat-val { font: 700 11px/1 var(--font); font-variant-numeric: tabular-nums; }
+  #buildTag { font: 500 9.5px/1.15 var(--font); color: var(--muted); max-width: 126px; text-align: right; opacity: 0.78; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .theme-strip {
+    display: inline-flex;
+    background: var(--track);
+    border: 1px solid var(--line);
+    border-radius: var(--r-pill);
+    padding: 2px;
+    gap: 2px;
+    flex: 0 0 auto;
+  }
+  .theme-btn {
+    height: 22px;
+    padding: 0 8px;
+    border: 0;
+    border-radius: calc(var(--r-pill) - 1px);
+    background: transparent;
+    color: var(--label);
+    font: 600 10px/1 var(--font);
+    cursor: pointer;
+  }
+  .theme-btn:hover:not(.on) { color: var(--text); background: var(--hover-bg); }
+  .theme-btn.on { background: var(--panel-hi); color: var(--text); }
+
+  /* ── Shared Pills & Switchers ──────────────────────────────────────────── */
+  .pill {
+    height: 28px;
+    padding: 0 10px;
+    border-radius: var(--r-pill);
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.025);
+    font: 600 11px/1 var(--font);
+    color: var(--label);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    white-space: nowrap;
+    transition: background-color 0.12s, color 0.12s, border-color 0.12s;
+  }
+  .pill:hover { background: var(--hover-bg); color: var(--text); }
+  .pill.on { background: var(--accent); border-color: transparent; color: #ffffff; }
+  .pill.sm { height: 22px; padding: 0 8px; font-size: 10.5px; }
+  .pill.xs { height: 20px; padding: 0 7px; font-size: 10px; }
+  .pill.warn.on { background: var(--warn); color: #090a0c; border-color: transparent; }
+  .pill.clash-act { border-color: rgba(244, 63, 94, 0.45); color: #fda4af; background: rgba(244, 63, 94, 0.12); }
+  .pill.clash-act:hover { background: rgba(244, 63, 94, 0.24); color: #ffffff; border-color: #fb7185; }
+  .pill.clash-act.dim { opacity: 0.48; }
+  .pill.power { background: var(--well); border-color: rgba(255, 255, 255, 0.14); color: var(--cream); font-weight: 700; }
+  #param_power { min-width: 96px; justify-content: flex-start; }
+  #powerText { display: inline-block; width: 56px; text-align: left; }
+  .pill.power .led {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--muted); transition: background-color 0.12s, box-shadow 0.12s;
+  }
+  .pill.power.on .led { background: var(--sage); box-shadow: 0 0 8px var(--sage); }
+
+  .pillbed {
+    display: inline-flex;
+    background: var(--track);
+    border: 1px solid var(--line);
+    border-radius: var(--r-pill);
+    padding: 2px;
+    gap: 2px;
+  }
+  .pillbed button {
+    height: 20px;
+    padding: 0 7px;
+    border: 0;
+    border-radius: calc(var(--r-pill) - 1px);
+    background: transparent;
+    color: var(--label);
+    font: 600 10px/1 var(--font);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .pillbed button:hover:not(.on) { color: var(--text); background: var(--hover-bg); }
+  .pillbed button.on { background: var(--panel-hi); color: var(--text); box-shadow: inset 0 1px 0 rgba(255,255,255,0.06); }
+  .pillbed.accent button.on { background: var(--accent-deep); color: #ffffff; }
+
+  .charset { display: flex; flex-wrap: wrap; gap: 3px; }
+  .fieldlabel {
+    font: 700 9px/1 var(--font);
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--label);
+    white-space: nowrap;
+  }
+
+  /* ── Main Stage Container ──────────────────────────────────────────────── */
+  .main {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 6px 10px 8px;
+  }
+
+  /* ── Tier 2: Enlarged Monitor + Right Meter Bridge ─────────────────────── */
+  .monitor-row {
+    flex: 1 1 0;
+    min-height: 210px;
+    display: flex;
+    gap: 6px;
+    min-width: 0;
+  }
+  .monitor-well {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--r-panel);
+    padding: 6px 8px 8px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+  .well-head {
+    flex: 0 0 auto;
+    height: 24px;
+    min-height: 24px;
+    max-height: 24px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+    overflow: hidden;
+    padding: 0 2px;
+  }
+  .well-title { font: 700 9.5px/1 var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--label); white-space: nowrap; }
+  .well-hint { font: 600 10.5px/1 var(--font); color: var(--muted); font-variant-numeric: tabular-nums; }
+  #blCount { min-width: 44px; }
+  .well-readout {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    width: 316px;
+    flex: 0 1 316px;
+    min-width: 160px;
+    height: 22px;
+    overflow: hidden;
+    white-space: nowrap;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: var(--track);
+    border: 1px solid var(--line);
+    font-variant-numeric: tabular-nums;
+  }
+  .well-readout .k {
+    font: 600 10px/1 var(--font);
+    color: var(--label);
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .well-readout .readout-val {
+    font: 700 11px/1 var(--font);
+    color: var(--text);
+    flex: 0 0 auto;
+    white-space: nowrap;
+    text-align: right;
+    min-width: 0;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .well {
+    flex: 1 1 auto;
+    min-height: 120px;
+    position: relative;
+    border-radius: 6px;
+    background: var(--well);
+    border: 1px solid var(--line-hi);
+    box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.72);
+    overflow: hidden;
+  }
+  #graph { position: absolute; inset: 0; width: 100%; height: 100%; display: block; outline: none; }
+  #specScrubMount { flex: 0 0 auto; }
+  #toast {
+    position: absolute;
+    left: 50%;
+    top: 12px;
+    transform: translateX(-50%);
+    padding: 4px 10px;
+    border-radius: 99px;
+    background: rgba(21, 25, 34, 0.92);
+    border: 1px solid var(--accent);
+    color: var(--text);
+    font: 600 11px/1.2 var(--font);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s;
+  }
+
+  /* Slim Vertical Meter Bridge */
+  .meter-bridge {
+    flex: 0 0 64px;
+    width: 64px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--r-panel);
+    padding: 7px 5px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+  .meter-bridge .m-lbl { font: 700 8.5px/1 var(--font); letter-spacing: 0.12em; text-transform: uppercase; color: var(--label); }
+  .vmeter-pair {
+    flex: 1 1 auto;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    min-height: 40px;
+    padding: 2px 0;
+  }
+  .vmeter {
+    position: relative;
+    width: 11px;
+    height: 100%;
+    background: var(--well);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .vmeter i {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: var(--fill, 0%);
+    background: linear-gradient(0deg, var(--accent-deep), var(--accent-lit));
+    border-radius: 3px;
+  }
+  .vmeter.out i { background: linear-gradient(0deg, var(--sage), var(--accent-lit)); }
+  .meter-vals {
+    flex: 0 0 26px;
+    height: 26px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 2px;
+    width: 100%;
+    font: 700 10px/1.1 var(--font);
+    font-variant-numeric: tabular-nums;
+  }
+  .meter-vals .meter-val { display: flex; justify-content: space-between; align-items: baseline; gap: 3px; width: 100%; padding: 0 2px; white-space: nowrap; }
+  .meter-vals .tag { color: var(--muted); font-size: 8.5px; }
+  #inDb, #outDb { min-width: 32px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+  /* ── Tier 3: Full-Width Dense Sorted Bands Matrix ──────────────────────── */
+  .bands-deck {
+    flex: 0 0 auto;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--r-panel);
+    padding: 6px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+  .bl-rows {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(174px, 1fr));
+    gap: 4px;
+    height: 76px;
+    min-height: 76px;
+    max-height: 76px;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    align-content: start;
+    padding-right: 2px;
+  }
+  .bl-empty {
+    grid-column: 1 / -1;
+    font: 500 11px/34px var(--font);
+    color: var(--muted);
+    padding-left: 4px;
+  }
+  .brow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    overflow: hidden;
+    padding: 4px 7px;
+    border-radius: 5px;
+    border: 1px solid var(--line);
+    background: var(--track);
+    color: var(--text);
+    cursor: pointer;
+    text-align: left;
+    min-width: 0;
+    transition: background-color 0.1s, border-color 0.1s;
+  }
+  .brow:hover { background: var(--panel-hi); border-color: var(--line-hi); }
+  .brow.sel { background: rgba(91, 127, 199, 0.2); border-color: var(--accent); }
+  .brow .idx {
+    flex: 0 0 19px;
+    height: 19px;
+    border-radius: 99px;
+    background: var(--panel-hi);
+    border: 1px solid var(--line-hi);
+    font: 700 10px/17px var(--font);
+    text-align: center;
+    color: var(--text);
+  }
+  .brow.sel .idx { background: var(--accent); border-color: transparent; color: #ffffff; }
+  .brow .meta { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .brow .bf { display: flex; align-items: baseline; gap: 5px; min-width: 0; }
+  .brow .hz { font: 700 11px/1.1 var(--font); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .brow .shape { font: 500 9.5px/1.1 var(--font); color: var(--label); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .brow .bs { display: flex; align-items: center; gap: 4px; font: 600 9px/1.1 var(--font); color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .brow .bs .dyn { color: var(--sage); font-weight: 700; }
+  .brow .bs .ext { color: var(--warn); font-weight: 700; }
+  .brow .bg { flex: 0 0 42px; width: 42px; display: flex; flex-direction: column; align-items: flex-end; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .brow .bg .n { font: 700 11px/1.05 var(--font); color: var(--accent-lit); }
+  .brow .bg .u { font: 600 8px/1 var(--font); color: var(--muted); min-height: 8px; }
+
+  /* ── Tier 4: State-Independent Single-Tier Bottom Deck ─────────────────── */
+  .deck {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 6px;
+    align-items: stretch;
+    min-width: 0;
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--r-panel);
+    padding: 8px 10px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+  .panel.rail {
+    flex: 1.55 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .rail-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+    height: 24px;
+    min-height: 24px;
+    max-height: 24px;
+    overflow: hidden;
+  }
+  .rail-range { font: 700 11.5px/1 var(--font); color: var(--text); white-space: nowrap; min-width: 118px; max-width: 190px; overflow: hidden; text-overflow: ellipsis; }
+  .bandacts { gap: 4px; }
+
+  #bandPanes {
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    gap: 6px;
+    align-content: start;
+  }
+  .pane {
+    grid-row: 1; grid-column: 1;
+    display: flex; align-items: center; gap: 10px;
+    min-width: 0;
+    visibility: hidden;
+  }
+  .pane.active { visibility: visible; }
+  .vsep { width: 1px; align-self: stretch; min-height: 36px; background: var(--line); flex: 0 0 auto; }
+  .knobs { display: flex; gap: 8px; align-items: center; flex: 0 0 auto; }
+  .charcol { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  #shape-group { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 3px; }
+
+  .nohint {
+    grid-row: 1 / 3; grid-column: 1;
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    padding: 12px 16px;
+    visibility: hidden;
+    font: 600 11.5px/1.45 var(--font);
+    color: var(--label);
+    background: var(--track);
+    border-radius: 6px;
+    border: 1px solid var(--line);
+  }
+  .nohint.active { visibility: visible; }
+
+  .dynrow {
+    grid-row: 2; grid-column: 1;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 5px 8px;
+    padding: 6px 8px;
+    background: var(--track);
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    visibility: hidden;
+  }
+  .dynrow.active { visibility: visible; }
+  .dynrow .knob.sm { width: 96px; min-width: 96px; max-width: 96px; flex: 0 0 96px; height: 38px; }
+
+  .dynmeter { position: relative; width: 102px; height: 26px; background: var(--well); border: 1px solid var(--line); border-radius: 5px; overflow: hidden; flex: none; }
+  .dynmeter div { position: absolute; top: 0; bottom: 0; }
+  .dynmeter .det { bottom: 50%; left: 0; background: rgba(242, 245, 250, 0.22); }
+  .dynmeter .thr { bottom: 50%; width: 2px; background: var(--cream); }
+  .dynmeter .ride { top: 50%; background: var(--accent); }
+  .dynmeter span {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font: 700 10px/1 var(--font); color: var(--cream); pointer-events: none;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Global / Output Bay */
+  .panel.mod {
+    flex: 0 0 436px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .mod-knobs { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .mod-choices {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 10px;
+  }
+  .gstack { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+
+  /* ── Knobs ─────────────────────────────────────────────────────────────── */
+  .knob {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    min-width: 58px;
+    cursor: ns-resize;
+    position: relative;
+  }
+  #bandPane .knobs .knob, .mod-knobs .knob {
+    width: 68px;
+    min-width: 68px;
+    max-width: 68px;
+    flex: 0 0 68px;
+  }
+  .knob.sm { flex-direction: row; min-width: 90px; gap: 6px; text-align: left; }
+  .knob.sm .kstack { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; flex: 1 1 auto; }
+  .knob .klabel {
+    font: 700 9px/1 var(--font);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--label);
+    white-space: nowrap;
+  }
+  .knob .v {
+    display: inline-block;
+    width: 100%;
+    height: 16px;
+    line-height: 14px;
+    font: 700 11px/14px var(--font);
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    padding: 1px 2px;
+    border-radius: 3px;
+    cursor: text;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background-color 0.12s, color 0.12s;
+  }
+  .knob.sm .v { text-align: left; }
+  .knob .v:hover { background: var(--hover-bg); }
+  .knob input.v {
+    width: 64px;
+    height: 16px;
+    line-height: 14px;
+    background: var(--well);
+    color: var(--cream);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    font: 700 11px/14px var(--font);
+    text-align: center;
+    padding: 0 2px;
+    box-sizing: border-box;
+    outline: none;
+  }
+  .knob.sm input.v { width: 52px; text-align: left; }
+  .knob.dragging svg { filter: drop-shadow(0 0 6px rgba(91, 127, 199, 0.45)); }
+
+  /* Session Track Chip & Popover */
+  .track-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 26px;
+    padding: 0 8px;
+    border-radius: var(--r-pill);
+    background: var(--track);
+    border: 1px solid var(--line);
+    cursor: pointer;
+    flex: 0 0 auto;
+    width: 144px;
+    min-width: 144px;
+    max-width: 144px;
+    transition: border-color 0.12s, background-color 0.12s;
+  }
+  .track-chip:hover { border-color: var(--line-hi); background: var(--panel-hi); }
+  .track-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-lit); flex: 0 0 auto; }
+  .track-name { flex: 1 1 auto; min-width: 0; font: 700 11px/1 var(--font); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .track-edit-ico { font-size: 10px; color: var(--muted); opacity: 0.65; flex: 0 0 auto; }
+  .track-chip:hover .track-edit-ico { opacity: 1; color: var(--text); }
+  .track-name-input {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    height: 20px;
+    background: var(--well);
+    color: var(--cream);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    font: 600 11px/1 var(--font);
+    padding: 0 5px;
+    outline: none;
+  }
+
+  .session-btn { gap: 6px; position: relative; }
+  .sess-dots { display: inline-flex; align-items: center; gap: 3px; }
+  .sess-dots i { display: block; width: 6px; height: 6px; border-radius: 50%; }
+  .sess-count {
+    min-width: 18px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 99px;
+    background: var(--track);
+    border: 1px solid var(--line-hi);
+    font: 700 10px/14px var(--font);
+    text-align: center;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .session-drawer {
+    position: fixed;
+    top: 48px;
+    left: 220px;
+    width: 472px;
+    max-width: calc(100vw - 24px);
+    max-height: calc(100vh - 76px);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+    background: var(--panel);
+    border: 1px solid var(--line-hi);
+    border-radius: 10px;
+    box-shadow: 0 18px 46px rgba(0, 0, 0, 0.58);
+    z-index: 60;
+  }
+  .session-drawer[hidden] { display: none; }
+  .sess-head { display: flex; align-items: center; gap: 6px; }
+  .sess-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    overflow-y: auto;
+    max-height: 360px;
+    padding-right: 2px;
+  }
+  .sess-empty { font: 500 11px/1.4 var(--font); color: var(--muted); padding: 10px 4px; text-align: center; }
+  .sess-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    background: var(--track);
+    border: 1px solid var(--line);
+  }
+  .sess-row.pinned { border-color: var(--line-hi); background: rgba(255, 255, 255, 0.03); }
+  .sess-row.focused { border-color: var(--accent); background: rgba(91, 127, 199, 0.14); }
+  .sess-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    cursor: pointer;
+    flex: 0 0 auto;
+    transition: transform 0.1s;
+  }
+  .sess-swatch:hover { transform: scale(1.15); }
+  .sess-info { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .sess-title-row { display: flex; align-items: center; gap: 5px; min-width: 0; }
+  .sess-name { font: 700 11.5px/1.1 var(--font); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sess-tag {
+    font: 700 8.5px/1 var(--font);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 2px 5px;
+    border-radius: 4px;
+    background: var(--panel-hi);
+    color: var(--accent-lit);
+    flex: 0 0 auto;
+  }
+  .sess-rename-btn {
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font-size: 10.5px;
+    cursor: pointer;
+    padding: 0 3px;
+    border-radius: 3px;
+    flex: 0 0 auto;
+  }
+  .sess-rename-btn:hover { color: var(--text); background: var(--hover-bg); }
+  .sess-meta { font: 600 9.5px/1.1 var(--font); color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .sess-mini-cv {
+    width: 82px;
+    height: 24px;
+    border-radius: 4px;
+    background: var(--well);
+    border: 1px solid var(--line);
+    flex: 0 0 auto;
+  }
+  .sess-acts { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+  .sess-acts .sess-btn-edit { min-width: 56px; }
+  .sess-acts .sess-btn-pin  { min-width: 52px; }
+  .sess-acts .sess-btn-ctrl { min-width: 74px; }
+  .sess-acts .sess-btn-pwr  { min-width: 40px; }
+
+  /* Multi-Track Strip inside Monitor Well */
+  .multi-bar {
+    flex: 0 0 auto;
+    height: 28px;
+    min-height: 28px;
+    max-height: 28px;
+    display: none;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 6px;
+    border-radius: 6px;
+    background: var(--track);
+    border: 1px solid var(--line);
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+  .multi-bar.visible { display: flex; }
+  .track-chips { display: flex; align-items: center; gap: 4px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; flex: 1 1 auto; min-width: 0; }
+  .track-chips::-webkit-scrollbar { display: none; }
+  .tchip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 22px;
+    padding: 0 7px;
+    border-radius: 4px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.025);
+    color: var(--label);
+    font: 600 10.5px/1 var(--font);
+    cursor: pointer;
+    flex: 0 0 auto;
+    max-width: 185px;
+  }
+  .tchip:hover { background: var(--hover-bg); color: var(--text); }
+  .tchip.focused {
+    background: var(--panel-hi);
+    color: var(--text);
+    border-color: var(--chip-col, var(--accent));
+    box-shadow: inset 0 0 0 1px var(--chip-col, var(--accent));
+  }
+  .tchip .dot { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; }
+  .tchip .lbl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tchip .role { font: 700 8.5px/1 var(--font); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .tchip.focused .role { color: var(--chip-col, var(--accent-lit)); }
+  .tchip .unpin {
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font: 700 11px/1 var(--font);
+    cursor: pointer;
+    padding: 0 2px;
+    margin-left: 1px;
+  }
+  .tchip .unpin:hover { color: var(--danger); }
+
+  .deck.remote-editing .panel {
+    box-shadow: inset 0 2px 0 var(--remote-col, var(--accent));
+  }
+
+  @media (max-width: 1180px) {
+    #buildTag { display: none; }
+  }
+  @media (min-width: 881px) {
+    #bandPanes {
+      height: 170px;
+      min-height: 170px;
+      max-height: 170px;
+      grid-template-rows: 78px 86px;
+    }
+    #bandPane { height: 78px; }
+    #dynRow { height: 86px; align-content: center; overflow: hidden; }
+  }
+  @media (max-width: 1120px) and (min-width: 881px) {
+    .panel.mod { flex: 0 0 344px; }
+    .knobs { gap: 6px; }
+    .charcol { gap: 2px; }
+    #shape-group { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; }
+    .dynrow { gap: 2px 5px; padding: 2px 6px; }
+    .dynrow .knob.sm { width: 80px; min-width: 80px; max-width: 80px; flex: 0 0 80px; gap: 4px; }
+    .dynmeter { width: 80px; }
+  }
+  @media (max-height: 680px) {
+    .monitor-row { min-height: 165px; }
+    .bl-rows { height: 40px; min-height: 40px; max-height: 40px; }
+  }
+  @media (max-width: 880px) {
+    .main { overflow-y: auto; overflow-x: hidden; }
+    .deck { flex-direction: column; }
+    .panel.mod { flex: 0 0 auto; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <button class="pill power on" id="param_power" title="Bypass the whole plugin."><span class="led"></span><span id="powerText">Engaged</span></button>
+    <div class="brand">
+      <svg width="20" height="18" viewBox="0 0 20 18">
+        <path d="M2 16.5 L10 1.5 L18 16.5 Z" fill="none" stroke="#5b7fc7" stroke-width="2.2" stroke-linejoin="round"/>
+      </svg>
+      <div class="stack">
+        <div class="line">Werewolf Digital</div>
+        <div class="name">EQ</div>
+      </div>
+    </div>
+    <div class="track-chip" id="selfTrackChip" title="Click to rename this EQ track in the session">
+      <span class="track-dot" id="selfTrackDot"></span>
+      <span class="track-name" id="selfTrackName">EQ 1</span>
+      <span class="track-edit-ico">✎</span>
+    </div>
+    <div class="headsep"></div>
+    <div class="link-picker" id="linkPickerWrap" title="Select an active Werewolf Digital Beacon track for External Dynamic Sidechain and Reference/Masking Overlay. Wireless cross-track key — for sample-exact timing at large DAW buffer sizes (1024+), use Off (Host Bus) with a DAW sidechain send.">
+      <span class="link-led" id="linkLed"></span>
+      <span class="link-lbl">Beacon</span>
+      <select class="link-select" id="linkSourceSelect" aria-label="External WD Beacon source">
+        <option value="">Off (Host Bus)</option>
+      </select>
+    </div>
+    <button class="pill sm session-btn" id="sessionBtn" title="View, pin, and control all Werewolf Digital EQ instances in this session">
+      <span>Session</span>
+      <span class="sess-dots" id="sessionPinDots"></span>
+      <span class="sess-count" id="sessionCount">1</span>
+    </button>
+    <div class="spacer"></div>
+    <button class="pill sm" id="param_autogain" title="Loudness-compensated output (Match Bypass).">Auto Gain</button>
+    <button class="pill sm" id="param_delta" title="Hear only what the EQ changes.">Delta</button>
+    <div class="headsep"></div>
+    <div class="stat"><div class="k">Rate</div><div class="stat-val" id="srTag">—</div></div>
+    <div class="theme-strip" id="themeSwitcher" title="Switch instrument chassis finish">
+      <button class="theme-btn on" data-theme="studio">Studio</button>
+      <button class="theme-btn" data-theme="japandi-dark">Sumi</button>
+      <button class="theme-btn" data-theme="japandi-light">Washi</button>
+    </div>
+    <div id="buildTag">—</div>
+  </header>
+
+  <div class="main">
+    <div class="monitor-row">
+      <div class="monitor-well">
+        <div class="well-head">
+          <div class="well-title">Monitor</div>
+          <div class="well-readout" id="readout"><span class="k" id="readoutK">Cursor</span><span class="readout-val" id="readoutV">—</span></div>
+          <div class="spacer"></div>
+          <div class="pillbed accent" id="rangeSwitch" title="EQ Gain dB scale">
+            <button data-r="3" title="Mastering ±3 dB">±3</button><button data-r="6">±6</button><button data-r="12">±12</button><button data-r="30" class="on">±30</button>
+          </div>
+          <div class="pillbed accent" id="specStyleSwitch" title="Spectrum visualizer precision display mode">
+            <button data-s="region" class="on" title="Filled smooth high-res spectrum region + peak hold">Region</button><button data-s="line" title="High-res RTA contour lines + peak hold">Line</button><button data-s="fine" title="Dense 2px narrow spectral needles">Fine</button><button data-s="bars" title="Wide RTA bars">Bars</button>
+          </div>
+          <div class="pillbed accent" id="specSwitch" title="Which signal stream the analyzer plots">
+            <button data-m="both">Both</button><button data-m="pre">Pre</button><button data-m="post">Post</button><button data-m="off">Off</button>
+          </div>
+          <button class="pill xs warn" id="linkRefBtn" title="Overlay selected WD Beacon / External Sidechain spectrum in amber">Beacon Ref</button>
+          <button class="pill xs" id="maskBtn" title="Highlight frequency masking zones where EQ output overlaps Beacon Ref">Mask</button>
+          <button class="pill xs clash-act dim" id="resolveClashBtn" style="display:none" title="Create a zero-latency Dynamic EQ band at the strongest frequency collision, keyed from the colliding track via WD Beacon">⚡ Duck Clash</button>
+          <button class="pill xs" id="freezeBtn" title="Freeze spectrum display">Hold</button>
+        </div>
+        <div class="multi-bar" id="multiTrackBar">
+          <div class="track-chips" id="trackChips"></div>
+          <div class="pillbed accent" id="multiViewSwitch" title="Overlay multiple EQs on one graph or split into stacked lanes">
+            <button data-v="overlay" class="on">Overlay</button><button data-v="split">Split</button>
+          </div>
+          <button class="pill xs on" id="peerSpecBtn" title="Show post-EQ spectrum contours of pinned session tracks">Peer Spec</button>
+          <button class="pill xs" id="peerClashBtn" title="Highlight frequency masking collisions between this track and pinned session tracks">Clash</button>
+        </div>
+        <div class="well">
+          <canvas id="graph" tabindex="0"></canvas>
+          <div id="toast"></div>
+        </div>
+        <div id="specScrubMount"></div>
+      </div>
+
+      <aside class="meter-bridge">
+        <div class="m-lbl">In · Out</div>
+        <div class="vmeter-pair">
+          <div class="vmeter in" title="Input level"><i id="inBar"></i></div>
+          <div class="vmeter out" title="Output level"><i id="outBar"></i></div>
+        </div>
+        <div class="meter-vals">
+          <div class="meter-val"><span class="tag">IN</span><span id="inDb">-inf</span></div>
+          <div class="meter-val"><span class="tag">OUT</span><span id="outDb">-inf</span></div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="bands-deck" id="bandList">
+      <div class="well-head">
+        <div class="well-title">Bands</div>
+        <div class="well-hint" id="blCount">0 / 24</div>
+        <div class="spacer"></div>
+        <button class="pill xs" id="addBandBtn" title="Add an EQ band at the next free slot">+ Add Band</button>
+        <button class="pill xs on" id="blSort" title="Sort active bands from lowest to highest Hz (automation slots remain pinned)">Sort by Hz</button>
+      </div>
+      <div class="bl-rows" id="blRows" role="listbox" aria-label="Bands"></div>
+    </div>
+
+    <div class="deck">
+      <div class="panel rail">
+        <div class="rail-head">
+          <div class="rail-range" id="bandTitle">No band selected</div>
+          <button class="pill xs" id="returnLocalBtn" style="display:none" title="Return control to this track's own EQ">Back to This EQ</button>
+          <div class="spacer"></div>
+          <div class="fieldlabel" id="chanLabel" style="visibility:hidden">Channel</div>
+          <div class="charset" id="chan-group" style="visibility:hidden" title="Stereo/L/R/Mid/Side target"></div>
+          <div class="charset bandacts" id="bandActs" style="visibility:hidden">
+            <button class="pill xs" id="param_dynon" title="Dynamic EQ band: gain rides input or Link sidechain">Dynamic</button>
+            <button class="pill xs" id="param_listen" title="Solo this band">Listen</button>
+            <button class="pill xs" id="removeBand" title="Remove selected band">Remove</button>
+          </div>
+        </div>
+
+        <div id="bandPanes">
+          <div class="pane" id="bandPane" aria-hidden="true">
+            <div class="knobs">
+              <div class="knob" id="param_freq" data-size="46" data-label="Freq" title="Center or corner frequency"></div>
+              <div class="knob" id="param_gain" data-size="46" data-label="Gain" data-bipolar="1" title="Boost or cut"></div>
+              <div class="knob" id="param_q" data-size="46" data-label="Q" title="Resonance / bandwidth"></div>
+              <div class="knob" id="param_slope" data-size="46" data-label="Slope" title="Cut slope 6–96 dB/oct"></div>
+            </div>
+            <div class="vsep"></div>
+            <div class="charcol">
+              <div class="fieldlabel">Filter Shape</div>
+              <div class="charset" id="shape-group" title="Filter shape"></div>
+            </div>
+          </div>
+          <div class="dynrow" id="dynRow" aria-hidden="true">
+            <div class="knob sm" id="param_dynrange" data-label="Range" data-size="38" data-bipolar="1" title="Dynamic gain range"></div>
+            <div class="knob sm" id="param_dynratio" data-label="Ratio" data-size="38" title="Compression ratio"></div>
+            <div class="knob sm" id="param_dynknee" data-label="Knee" data-size="38" title="Knee width"></div>
+            <div class="knob sm" id="param_dynthresh" data-label="Threshold" data-size="38" title="Trigger threshold"></div>
+            <button class="pill xs" id="param_dynauto" title="Automatic riding threshold">Auto</button>
+            <div class="knob sm" id="param_dynatk" data-label="Attack" data-size="38"></div>
+            <div class="knob sm" id="param_dynrel" data-label="Release" data-size="38"></div>
+            <div class="knob sm" id="param_dynscfreq" data-label="Detector" data-size="38" title="Sidechain filter frequency"></div>
+            <button class="pill xs" id="param_dynscfreqtrack" title="Track band frequency">Track</button>
+            <div class="charset" id="dynsc-group" title="External key uses selected WdLink track (when active) or DAW Bus 1"></div>
+            <div class="dynmeter" id="dynMeter" title="Detector level, threshold, and dynamic ride">
+              <div class="det" id="dynDet"></div><div class="thr" id="dynThr"></div><div class="ride" id="dynRide"></div><span id="dynRideVal">0.0</span>
+            </div>
+          </div>
+          <div class="nohint active" id="noBand">Double-click or drag on the monitor curve (or click + Add Band) · Mouse wheel adjusts Q · Right-click removes</div>
+        </div>
+      </div>
+
+      <div class="panel mod">
+        <div class="mod-knobs">
+          <div class="knob" id="param_input" data-label="Input" data-size="44" data-bipolar="1" title="Input trim"></div>
+          <div class="knob" id="param_mix" data-label="Mix" data-size="44" title="Dry/Wet mix"></div>
+          <div class="knob" id="param_gainscale" data-label="Scale" data-size="44" title="Global static gain scale"></div>
+          <div class="knob" id="param_output" data-label="Output" data-size="48" data-bipolar="1" title="Final output gain"></div>
+        </div>
+        <div class="mod-choices">
+          <div class="gstack"><div class="fieldlabel">Channel Mode</div><div class="charset" id="mode-group"></div></div>
+          <div class="gstack"><div class="fieldlabel">Monitor</div><div class="charset" id="monitor-group"></div></div>
+          <div class="gstack"><div class="fieldlabel">Lookahead</div><div class="charset" id="lookahead-group"></div></div>
+          <div class="gstack"><div class="fieldlabel">Oversampling</div><div class="charset" id="os-group"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="session-drawer" id="sessionDrawer" hidden>
+    <div class="sess-head">
+      <div class="well-title">Session EQs</div>
+      <div class="well-hint" id="sessionSub">1 active</div>
+      <div class="spacer"></div>
+      <button class="pill xs" id="pinAllPeersBtn" title="Display all other EQ tracks in this window">Pin All</button>
+      <button class="pill xs" id="clearPeersBtn" title="Unpin all peer tracks">Clear</button>
+      <button class="pill xs" id="closeSessionBtn" title="Close session drawer">Close</button>
+    </div>
+    <div class="sess-list" id="sessionList"></div>
+  </div>
+
+<script>
+  window.addEventListener('error', e => {
+    if (e.message && (e.message.includes('ResizeObserver') || e.message.includes('loop completed with undelivered notifications'))) return;
+    let el = document.getElementById('errBanner');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'errBanner';
+      el.style.cssText = 'position:fixed;left:0;right:0;bottom:0;background:#2d4c85;color:#f2f5fa;font:11px monospace;padding:4px 10px;z-index:99;';
+      document.body.appendChild(el);
+    }
+    el.textContent = 'UI error: ' + e.message + ' @' + (e.lineno || '?');
+  });
+</script>
+
+<script src="./demo-bar.js"></script>
+<script src="./boot.js"></script>
+<script src="./wd/kit.js"></script>
+<script type="module">
+(async () => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+
+  const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const COL = {
+    accent:    cssVar('--accent')     || '#5b7fc7',
+    accentLit: cssVar('--accent-lit') || '#8fb0ec',
+    well:      cssVar('--well')       || '#06070a',
+    cream:     cssVar('--cream')      || '#f2f5fa',
+    warn:      cssVar('--warn')       || '#f59e0b',
+    danger:    cssVar('--danger')     || '#f43f5e',
+    sage:      cssVar('--sage')       || '#34d399',
+  };
+  function applyTheme(theme) {
+    const t = theme || 'studio';
+    if (t === 'studio') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', t);
+    COL.accent = cssVar('--accent') || '#5b7fc7';
+    COL.accentLit = cssVar('--accent-lit') || '#8fb0ec';
+    COL.well = cssVar('--well') || '#06070a';
+    COL.cream = cssVar('--cream') || '#f2f5fa';
+    COL.warn = cssVar('--warn') || '#f59e0b';
+    COL.danger = cssVar('--danger') || '#f43f5e';
+    COL.sage = cssVar('--sage') || '#34d399';
+    const sw = $('themeSwitcher');
+    if (sw) sw.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('on', b.dataset.theme === t));
+    try { localStorage.setItem('wd_theme', t); } catch (e) {}
+  }
+  {
+    let saved = 'studio';
+    try { saved = localStorage.getItem('wd_theme') || 'studio'; } catch (e) {}
+    applyTheme(saved);
+    const sw = $('themeSwitcher');
+    if (sw) {
+      sw.addEventListener('click', e => {
+        const btn = e.target.closest('.theme-btn');
+        if (btn && btn.dataset.theme) applyTheme(btn.dataset.theme);
+      });
+    }
+  }
+  const ink = a => 'rgba(242, 245, 250, ' + a + ')';
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+  // ------------------------------------------------------------------ host
+  let host = null;
+  if (window.__JUCE__ && window.__JUCE__.backend) {
+    try {
+      const lib = await import('./juce/index.js');
+      const be = window.__JUCE__.backend;
+      host = {
+        slider: id => lib.getSliderState(id),
+        combo:  id => lib.getComboBoxState(id),
+        toggle: id => lib.getToggleState(id),
+        call:   (name, ...args) => lib.getNativeFunction(name)(...args),
+        on:     (event, cb) => be.addEventListener(event, cb),
+      };
+    } catch (e) { console.warn('JUCE frontend unavailable:', e); }
+  }
+  const isWebDemo = !!window.__WD_WEB_HOST__;
+
+  // -------------------------------------------------- parameter access
+  const RANGES = {
+    freq:  { min: 10, max: 30000, center: 1000 },
+    gain:  { min: -30, max: 30 },
+    q:     { min: 0.025, max: 40, center: 1 },
+    slope: { min: 6, max: 96, center: 24 },
+    input: { min: -18, max: 18 },
+    output:{ min: -24, max: 12 },
+    mix:   { min: 0, max: 100 },
+    listen:{ min: 0, max: 24, interval: 1 },
+    gainscale: { min: 0, max: 200 },
+    dynrange:  { min: -24, max: 24 },
+    dynratio:  { min: 1, max: 20, center: 4 },
+    dynknee:   { min: 0, max: 24 },
+    dynthresh: { min: -60, max: 0 },
+    dynatk:    { min: 0.05, max: 250, center: 20 },
+    dynrel:    { min: 1, max: 2500, center: 150 },
+    dynlink:   { min: 0, max: 100 },
+    dynscfreq: { min: 10, max: 30000, center: 1000 },
+    gpan:      { min: -100, max: 100 },
+  };
+  const PARAM_CHOICES = {
+    shape: 11, chan: 5, dynsc: 2,
+    channelmode: 3, listenchan: 5, lookahead: 4, oversampling: 3,
+  };
+  const SESSION_PALETTE = ['#8fb0ec', '#34d399', '#f59e0b', '#fb7185', '#a78bfa', '#22d3ee', '#facc15', '#f472b6'];
+  const suffixOf = id => (id.match(/^b\d+(.*)$/) || [null, id])[1];
+  const skewOf = r => r.center ? Math.log(0.5) / Math.log((r.center - r.min) / (r.max - r.min)) : 1;
+  const fromNorm = (r, p) => {
+    p = clamp(p, 0, 1);
+    const s = skewOf(r);
+    if (s !== 1 && p > 0) p = Math.exp(Math.log(p) / s);
+    return r.min + (r.max - r.min) * p;
+  };
+  const toNormR = (r, v) => {
+    let p = clamp((v - r.min) / (r.max - r.min), 0, 1);
+    const s = skewOf(r);
+    if (s !== 1 && p > 0) p = Math.pow(p, s);
+    return p;
+  };
+  const rangeForParam = id => RANGES[suffixOf(id)] || RANGES[id] || { min: 0, max: 1 };
+
+  function hexToRgba(hex, alpha) {
+    const h = String(hex || '#8fb0ec').replace('#', '');
+    if (h.length !== 6) return `rgba(143, 176, 236, ${alpha})`;
+    const r = parseInt(h.slice(0, 2), 16) || 0;
+    const g = parseInt(h.slice(2, 4), 16) || 0;
+    const b = parseInt(h.slice(4, 6), 16) || 0;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  const paramDefaults = {};
+  let uiDirty = true, railDirty = true;
+  const sliders = {}, combos = {}, toggles = {};
+  let activeTargetId = 0; // 0 = this local instance; >0 = focused peer instanceId
+
+  const localSl = id => {
+    if (!host) return null;
+    if (!sliders[id]) {
+      sliders[id] = host.slider(id);
+      sliders[id].valueChangedEvent.addListener(() => {
+        if (activeTargetId === 0) uiDirty = true;
+      });
+    }
+    return sliders[id];
+  };
+  const localCb = id => {
+    if (!host) return null;
+    if (!combos[id]) {
+      combos[id] = host.combo(id);
+      combos[id].valueChangedEvent.addListener(() => {
+        if (activeTargetId === 0) uiDirty = true;
+      });
+    }
+    return combos[id];
+  };
+  const localTg = id => {
+    if (!host) return null;
+    if (!toggles[id]) {
+      toggles[id] = host.toggle(id);
+      toggles[id].valueChangedEvent.addListener(() => {
+        if (activeTargetId === 0) { uiDirty = true; railDirty = true; }
+      });
+    }
+    return toggles[id];
+  };
+
+  function sliderPropsFor(id) {
+    const ls = localSl(id);
+    if (ls && ls.properties && typeof ls.properties.end === 'number'
+        && ls.properties.end > ls.properties.start && ls.properties.name) {
+      return ls.properties;
+    }
+    const r = rangeForParam(id);
+    return {
+      start: r.min,
+      end: r.max,
+      skew: skewOf(r),
+      interval: r.interval || 0,
+      defaultValue: typeof paramDefaults[id] === 'number' ? paramDefaults[id] : r.min,
+    };
+  }
+
+  const remoteModels = new Map();
+  const activeRemoteDrags = new Set();
+
+  function makeListenerBag() {
+    return {
+      map: new Map(),
+      nextId: 1,
+      addListener(fn) {
+        const lid = this.nextId++;
+        this.map.set(lid, fn);
+        return lid;
+      },
+      removeListener(idOrFn) {
+        if (typeof idOrFn === 'number') { this.map.delete(idOrFn); return; }
+        for (const [k, v] of this.map) {
+          if (v === idOrFn) { this.map.delete(k); break; }
+        }
+      },
+      fire() {
+        for (const fn of this.map.values()) fn();
+      },
+    };
+  }
+
+  function getRemoteModel(peerId) {
+    if (remoteModels.has(peerId)) return remoteModels.get(peerId);
+    const norms = new Map();
+    const mSliders = new Map();
+    const mCombos = new Map();
+    const mToggles = new Map();
+    const gestures = new Set();
+
+    const defaultNormFor = id => {
+      const suf = suffixOf(id);
+      if (id === 'power' || suf === 'dynauto' || suf === 'dynscfreqtrack') return 1;
+      if (id === 'quality') return 1 / 3;
+      if (PARAM_CHOICES[suf]) return 0;
+      const def = paramDefaults[id];
+      const r = rangeForParam(id);
+      return typeof def === 'number' ? toNormR(r, def) : toNormR(r, r.min);
+    };
+
+    const emitEdit = (paramId, action, val) => {
+      if (host && !isWebDemo) host.call('remoteParamEdit', peerId, paramId, action, val || 0).catch(() => {});
+    };
+
+    const model = {
+      id: peerId,
+      norms,
+      slider(id) {
+        if (mSliders.has(id)) return mSliders.get(id);
+        const ev = makeListenerBag();
+        const st = {
+          get properties() { return sliderPropsFor(id); },
+          getNormalisedValue() {
+            return norms.has(id) ? norms.get(id) : defaultNormFor(id);
+          },
+          getScaledValue() {
+            const p = this.properties;
+            const n = clamp(this.getNormalisedValue(), 0, 1);
+            const skew = p.skew || 1;
+            let v = Math.pow(n, 1 / skew) * (p.end - p.start) + p.start;
+            if (p.interval && p.interval > 0)
+              v = clamp(p.start + p.interval * Math.floor((v - p.start) / p.interval + 0.5), p.start, p.end);
+            return v;
+          },
+          setNormalisedValue(n) {
+            n = clamp(n, 0, 1);
+            norms.set(id, n);
+            ev.fire();
+            uiDirty = true;
+            emitEdit(id, gestures.has(id) ? 'valueNorm' : 'atomicNorm', n);
+          },
+          sliderDragStarted() {
+            if (!gestures.has(id)) {
+              gestures.add(id);
+              activeRemoteDrags.add(peerId + ':' + id);
+              emitEdit(id, 'begin', 0);
+            }
+          },
+          sliderDragEnded() {
+            if (gestures.has(id)) {
+              gestures.delete(id);
+              activeRemoteDrags.delete(peerId + ':' + id);
+              emitEdit(id, 'end', 0);
+            }
+          },
+          valueChangedEvent: ev,
+        };
+        mSliders.set(id, st);
+        return st;
+      },
+      combo(id) {
+        if (mCombos.has(id)) return mCombos.get(id);
+        const ev = makeListenerBag();
+        const nChoices = PARAM_CHOICES[suffixOf(id)] || 2;
+        const st = {
+          get value() {
+            return norms.has(id) ? norms.get(id) : defaultNormFor(id);
+          },
+          setChoiceIndex(idx) {
+            const n = nChoices > 1 ? clamp(idx / (nChoices - 1), 0, 1) : 0;
+            norms.set(id, n);
+            ev.fire();
+            uiDirty = true;
+            emitEdit(id, 'atomicNorm', n);
+          },
+          valueChangedEvent: ev,
+        };
+        mCombos.set(id, st);
+        return st;
+      },
+      toggle(id) {
+        if (mToggles.has(id)) return mToggles.get(id);
+        const ev = makeListenerBag();
+        const st = {
+          getValue() {
+            return (norms.has(id) ? norms.get(id) : defaultNormFor(id)) > 0.5;
+          },
+          setValue(b) {
+            const n = b ? 1 : 0;
+            norms.set(id, n);
+            ev.fire();
+            uiDirty = true;
+            railDirty = true;
+            emitEdit(id, 'atomicNorm', n);
+          },
+          valueChangedEvent: ev,
+        };
+        mToggles.set(id, st);
+        return st;
+      },
+      applyNormsSnapshot(obj) {
+        if (!obj || typeof obj !== 'object') return;
+        let changed = false;
+        for (const [k, raw] of Object.entries(obj)) {
+          if (typeof raw !== 'number' || !isFinite(raw)) continue;
+          if (activeRemoteDrags.has(peerId + ':' + k)) continue;
+          const prev = norms.get(k);
+          if (prev == null || Math.abs(prev - raw) > 1e-6) {
+            norms.set(k, raw);
+            changed = true;
+            const s = mSliders.get(k); if (s) s.valueChangedEvent.fire();
+            const c = mCombos.get(k);  if (c) c.valueChangedEvent.fire();
+            const t = mToggles.get(k); if (t) t.valueChangedEvent.fire();
+          }
+        }
+        if (changed) {
+          uiDirty = true;
+          railDirty = true;
+          liveSig = '';
+        }
+      },
+      seedFromBandMeta(bands) {
+        if (!Array.isArray(bands)) return;
+        for (const b of bands) {
+          const i = b.i;
+          const setIfUnset = (pid, n) => {
+            if (!norms.has(pid) && !activeRemoteDrags.has(peerId + ':' + pid)) norms.set(pid, n);
+          };
+          setIfUnset(bandId(i, 'on'), b.on ? 1 : 0);
+          setIfUnset(bandId(i, 'shape'), clamp((b.shape | 0) / 10, 0, 1));
+          setIfUnset(bandId(i, 'freq'), toNormR(RANGES.freq, b.freq || 1000));
+          setIfUnset(bandId(i, 'gain'), toNormR(RANGES.gain, b.gain || 0));
+          setIfUnset(bandId(i, 'q'), toNormR(RANGES.q, b.q || 1));
+          setIfUnset(bandId(i, 'slope'), toNormR(RANGES.slope, b.slope || 12));
+          setIfUnset(bandId(i, 'chan'), clamp((b.chan | 0) / 4, 0, 1));
+          setIfUnset(bandId(i, 'dynon'), b.dyn ? 1 : 0);
+        }
+      },
+    };
+    remoteModels.set(peerId, model);
+    return model;
+  }
+
+  const slFor = (trackId, id) => trackId > 0 ? getRemoteModel(trackId).slider(id) : localSl(id);
+  const cbFor = (trackId, id) => trackId > 0 ? getRemoteModel(trackId).combo(id) : localCb(id);
+  const tgFor = (trackId, id) => trackId > 0 ? getRemoteModel(trackId).toggle(id) : localTg(id);
+
+  const sl = id => slFor(activeTargetId, id);
+  const cb = id => cbFor(activeTargetId, id);
+  const tg = id => tgFor(activeTargetId, id);
+
+  const bandId = (i, suffix) => 'b' + (i + 1) + suffix;
+  const getRealFor = (trackId, id, range) => { const s = slFor(trackId, id); return s ? fromNorm(range, s.getNormalisedValue()) : range.min; };
+  const setRealFor = (trackId, id, range, v) => { const s = slFor(trackId, id); if (s) s.setNormalisedValue(toNormR(range, v)); };
+  const gestureFor = (trackId, id, start) => {
+    const s = slFor(trackId, id);
+    if (!s) return;
+    if (start && s.sliderDragStarted) s.sliderDragStarted();
+    if (!start && s.sliderDragEnded) s.sliderDragEnded();
+  };
+  const comboIndexFor = (trackId, id, n) => { const s = cbFor(trackId, id); return s ? Math.round((s.value || 0) * (n - 1)) : 0; };
+  const setComboFor = (trackId, id, i) => { const s = cbFor(trackId, id); if (s && s.setChoiceIndex) s.setChoiceIndex(i); };
+
+  const getReal = (id, range) => getRealFor(activeTargetId, id, range);
+  const setReal = (id, range, v) => setRealFor(activeTargetId, id, range, v);
+  const gesture = (id, start) => gestureFor(activeTargetId, id, start);
+  const comboIndex = (id, n) => comboIndexFor(activeTargetId, id, n);
+  const setComboIndex = (id, i) => setComboFor(activeTargetId, id, i);
+
+  const SHAPES = ['Bell', 'Low Shelf', 'High Shelf', 'Notch', 'Low Cut', 'High Cut', 'Band Pass', 'Tilt', 'All Pass', 'LC Brick', 'HC Brick'];
+  const CHANS = ['Stereo', 'Left', 'Right', 'Mid', 'Side'];
+  const SHAPE = { bell: 0, lowShelf: 1, highShelf: 2, notch: 3, lowCut: 4, highCut: 5, bandPass: 6, tilt: 7, allPass: 8, lowCutBrickwall: 9, highCutBrickwall: 10 };
+  const usesGainY = s => s === SHAPE.bell || s === SHAPE.lowShelf || s === SHAPE.highShelf || s === SHAPE.tilt;
+  const usesSlopeY = s => s === SHAPE.lowCut || s === SHAPE.highCut;
+
+  // ---------------------------------------------------------- model state
+  let resp = null;
+  let sampleRate = 48000;
+  let selected = -1;
+
+  const dynRides = new Array(24).fill(0);
+  const dynDets = new Array(24).fill(-70);
+  const dynThrs = new Array(24).fill(-30);
+  let agDb = 0;
+
+  let linkSelected = '';
+  let linkReceiving = false;
+  let linkSrMismatch = false;
+  let scActive = false;
+  let scContourVisible = false;
+  let metersSeen = false;
+  let lastLinkSig = '';
+
+  const SPEC_BINS = 240, SPEC_FMIN = 10, SPEC_FMAX = 30000;
+  const SPEC_TILT = 4.5;
+  const SPEC_RANGE = 90;
+  const specFreq = Array.from({ length: SPEC_BINS }, (_, b) =>
+    SPEC_FMIN * Math.pow(SPEC_FMAX / SPEC_FMIN, (b + 0.5) / SPEC_BINS));
+  const specTilt = specFreq.map(f => SPEC_TILT * Math.log2(f / 1000));
+  let specTarget = null;
+  const specDisp = {
+    pre:  new Array(SPEC_BINS).fill(-120),
+    post: new Array(SPEC_BINS).fill(-120),
+    sc:   new Array(SPEC_BINS).fill(-120),
+  };
+  const specPeak = {
+    pre:  new Array(SPEC_BINS).fill(-120),
+    post: new Array(SPEC_BINS).fill(-120),
+  };
+  const specPeakHold = {
+    pre:  new Int16Array(SPEC_BINS),
+    post: new Int16Array(SPEC_BINS),
+  };
+  const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+  let specMode = lsGet('wdeqSpecMode') || 'both';
+  let specStyle = lsGet('wdeqSpecStyle') || 'region';
+  let showLinkRef = (lsGet('wdeqShowLinkRef') ?? '1') !== '0';
+  let showMask = (lsGet('wdeqShowMask') ?? '0') === '1';
+  let specFrozen = false;
+  const SPEC_HISTORY_CAPACITY = 600;
+  const SPEC_HISTORY_HZ = 60;
+  const specHistory = (window.WDKit && WDKit.createHistoryBuffer)
+    ? WDKit.createHistoryBuffer({
+        capacity: SPEC_HISTORY_CAPACITY,
+        cloneFrame: (src, dst) => {
+          const f = dst || {
+            pre: new Float32Array(SPEC_BINS),
+            post: new Float32Array(SPEC_BINS),
+            sc: new Float32Array(SPEC_BINS),
+            scActive: false,
+          };
+          for (let b = 0; b < SPEC_BINS; ++b) {
+            f.pre[b]  = src.pre  && Number.isFinite(src.pre[b])  ? src.pre[b]  : -120;
+            f.post[b] = src.post && Number.isFinite(src.post[b]) ? src.post[b] : -120;
+            f.sc[b]   = src.sc   && Number.isFinite(src.sc[b])   ? src.sc[b]   : -120;
+          }
+          f.scActive = !!src.scActive;
+          return f;
+        }
+      })
+    : null;
+  let specScrubTimeline = null;
+
+  function applyFrozenSpecFrame(frame) {
+    if (!frame) return;
+    specTarget = frame;
+    if (activeTargetId === 0 && typeof frame.scActive === 'boolean') scActive = frame.scActive;
+    for (let b = 0; b < SPEC_BINS; ++b) {
+      const preVal  = (frame.pre  && Number.isFinite(frame.pre[b]))  ? frame.pre[b]  : -120;
+      const postVal = (frame.post && Number.isFinite(frame.post[b])) ? frame.post[b] : -120;
+      const scVal   = (frame.sc   && Number.isFinite(frame.sc[b]))   ? frame.sc[b]   : -120;
+      specDisp.pre[b]  = (preVal  + specTilt[b] < -89.0) ? -120 : preVal;
+      specDisp.post[b] = (postVal + specTilt[b] < -89.0) ? -120 : postVal;
+      specDisp.sc[b]   = (scVal   + specTilt[b] < -89.0) ? -120 : scVal;
+      specPeak.pre[b]  = specDisp.pre[b];
+      specPeak.post[b] = specDisp.post[b];
+      specPeakHold.pre[b]  = 0;
+      specPeakHold.post[b] = 0;
+    }
+    let anyScVisible = false;
+    if (scActive) {
+      for (let b = 0; b < SPEC_BINS; ++b) {
+        if (specDisp.sc[b] + specTilt[b] > -89.4) { anyScVisible = true; break; }
+      }
+    }
+    scContourVisible = anyScVisible;
+  }
+
+  function syncFreezeState(next, frameOverride = null) {
+    if (!specHistory) {
+      specFrozen = !!next;
+      $('freezeBtn')?.classList.toggle('on', specFrozen);
+      return;
+    }
+    if (next && specHistory.length() === 0) {
+      specHistory.setFrozen(false);
+      specFrozen = false;
+      $('freezeBtn')?.classList.toggle('on', false);
+      if (specScrubTimeline) specScrubTimeline.update();
+      return;
+    }
+    if (specHistory.isFrozen() !== !!next) {
+      specHistory.setFrozen(!!next);
+    }
+    specFrozen = specHistory.isFrozen();
+    $('freezeBtn')?.classList.toggle('on', specFrozen);
+    if (specScrubTimeline) specScrubTimeline.update();
+    if (specFrozen) {
+      const f = frameOverride || specHistory.getActiveFrame();
+      if (f) applyFrozenSpecFrame(f);
+      uiDirty = false;
+      if (canvasReady) render();
+    } else {
+      uiDirty = true;
+    }
+  }
+  let hover = { node: -1, trackId: 0, clashIdx: -1, x: -1, y: -1, inPlot: false };
+  let drag = null;
+  let activeClashChips = [];
+  let lastBestClash = null;
+  let lastBestClashTime = 0;
+  let listenEngaged = 0;
+  let listenRestore = 0;
+  let dbRange = parseFloat(lsGet('wdeqDbRange') || '30');
+
+  // ---- Multi-instance Session EQ state
+  const selfMeta = { id: 0, name: 'EQ 1', customName: '', publishedName: '', publishing: false, color: '#8fb0ec', colorIndex: -1 };
+  let sessionInstances = [];
+  let pinnedIds = [];
+  let multiViewMode = 'overlay';
+  let showPeerSpec = (lsGet('wdeqPeerSpec') ?? '1') !== '0';
+  let showPeerClash = (lsGet('wdeqPeerClash') ?? '0') === '1';
+  let pendingRestorePinnedNames = [];
+  let userChangedPins = false;
+  let sessionDrawerOpen = false;
+  const peerResponses = new Map();
+  const peerMeters = new Map();
+  const peerSpecTarget = new Map();
+  const peerSpecDisp = new Map();
+  const peerSpecActive = new Map();
+
+  // ---------------------------------------------------------------- knobs
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  const ARC_FULL = 'M12.44 43.56 A22 22 0 1 1 43.56 43.56';
+  const ARC_UP   = 'M28 6 A22 22 0 0 1 43.56 43.56';
+  const ARC_DOWN = 'M28 6 A22 22 0 0 0 12.44 43.56';
+  const LEN_FULL = 2 * Math.PI * 22 * 0.75;
+  const LEN_HALF = LEN_FULL / 2;
+
+  function mountKnob(el) {
+    const size = parseInt(el.dataset.size || '46', 10);
+    const bipolar = el.dataset.bipolar === '1';
+    const sw = size < 44 ? 5.5 : 4.5;
+
+    const svg = document.createElementNS(SVGNS, 'svg');
+    svg.setAttribute('viewBox', '0 0 56 56');
+    svg.setAttribute('width', String(size));
+    svg.setAttribute('height', String(size));
+
+    if (size >= 44) {
+      const ticks = document.createElementNS(SVGNS, 'g');
+      for (let i = 0; i <= 10; i++) {
+        const deg = -135 + i * 27;
+        const rad = (deg - 90) * Math.PI / 180;
+        const major = (i === 0 || i === 5 || i === 10);
+        const r1 = 24.0;
+        const r2 = major ? 26.2 : 25.3;
+        const t = document.createElementNS(SVGNS, 'line');
+        t.setAttribute('x1', (28 + Math.cos(rad) * r1).toFixed(2));
+        t.setAttribute('y1', (28 + Math.sin(rad) * r1).toFixed(2));
+        t.setAttribute('x2', (28 + Math.cos(rad) * r2).toFixed(2));
+        t.setAttribute('y2', (28 + Math.sin(rad) * r2).toFixed(2));
+        t.setAttribute('stroke', major ? 'var(--label)' : 'var(--muted)');
+        t.setAttribute('stroke-width', major ? '1.3' : '0.9');
+        t.setAttribute('stroke-linecap', 'round');
+        t.setAttribute('opacity', major ? '0.75' : '0.42');
+        ticks.appendChild(t);
+      }
+      svg.appendChild(ticks);
+    }
+
+    const mk = (d, stroke, width) => {
+      const p = document.createElementNS(SVGNS, 'path');
+      p.setAttribute('d', d);
+      p.setAttribute('fill', 'none');
+      p.setAttribute('stroke', stroke);
+      p.setAttribute('stroke-width', String(width));
+      p.setAttribute('stroke-linecap', 'round');
+      return p;
+    };
+    const track = mk(ARC_FULL, 'var(--track)', sw);
+    const arc = mk(bipolar ? ARC_UP : ARC_FULL, 'var(--accent)', sw);
+    arc.setAttribute('stroke-dasharray', String(bipolar ? LEN_HALF : LEN_FULL));
+    arc.setAttribute('stroke-dashoffset', String(bipolar ? LEN_HALF : LEN_FULL));
+    arc.classList.add('karc');
+    svg.append(track, arc);
+
+    if (bipolar) {
+      const tick = document.createElementNS(SVGNS, 'line');
+      tick.setAttribute('x1', '28'); tick.setAttribute('y1', '3.5');
+      tick.setAttribute('x2', '28'); tick.setAttribute('y2', '8.2');
+      tick.setAttribute('stroke', 'var(--label)');
+      tick.setAttribute('stroke-width', '1.5');
+      tick.setAttribute('stroke-linecap', 'round');
+      svg.appendChild(tick);
+    }
+
+    const collar = document.createElementNS(SVGNS, 'circle');
+    collar.setAttribute('cx', '28'); collar.setAttribute('cy', '28');
+    collar.setAttribute('r', size < 44 ? '15.2' : '16.8');
+    collar.setAttribute('fill', 'rgba(0, 0, 0, 0.35)');
+    collar.setAttribute('stroke', 'var(--line)');
+    svg.appendChild(collar);
+
+    const cap = document.createElementNS(SVGNS, 'circle');
+    cap.setAttribute('cx', '28'); cap.setAttribute('cy', '28');
+    cap.setAttribute('r', size < 44 ? '13.4' : '14.6');
+    cap.setAttribute('fill', 'var(--panel-hi)');
+    cap.setAttribute('stroke', 'var(--line-hi)');
+    svg.appendChild(cap);
+
+    const needle = document.createElementNS(SVGNS, 'line');
+    needle.setAttribute('x1', '28'); needle.setAttribute('y1', size < 44 ? '15.5' : '14.6');
+    needle.setAttribute('x2', '28'); needle.setAttribute('y2', '21.2');
+    needle.setAttribute('stroke', 'var(--text)');
+    needle.setAttribute('stroke-width', size < 44 ? '2.6' : '2.4');
+    needle.setAttribute('stroke-linecap', 'round');
+    needle.classList.add('kneedle');
+    svg.appendChild(needle);
+
+    const lab = document.createElement('div');
+    lab.className = 'klabel';
+    lab.textContent = el.dataset.label || '';
+    const val = document.createElement('span');
+    val.className = 'v';
+    val.textContent = '—';
+
+    el.innerHTML = '';
+    if (el.classList.contains('sm')) {
+      const stack = document.createElement('div');
+      stack.className = 'kstack';
+      stack.append(lab, val);
+      el.append(svg, stack);
+    } else {
+      el.append(lab, svg, val);
+    }
+    paintKnob(el, bipolar ? 0.5 : 0);
+  }
+
+  function paintKnob(el, norm) {
+    const arc = el.querySelector('.karc');
+    const needle = el.querySelector('.kneedle');
+    if (!arc || !needle) return;
+    const n = clamp(norm, 0, 1);
+    if (el.dataset.bipolar === '1') {
+      const p = (n - 0.5) * 2;
+      arc.setAttribute('d', p >= 0 ? ARC_UP : ARC_DOWN);
+      arc.setAttribute('stroke-dashoffset', String(LEN_HALF * (1 - Math.abs(p))));
+    } else {
+      arc.setAttribute('stroke-dashoffset', String(LEN_FULL * (1 - n)));
+    }
+    needle.setAttribute('transform', 'rotate(' + (-135 + n * 270).toFixed(2) + ' 28 28)');
+  }
+
+  function bindSlider(el, id, fmt, onValueChange = null) {
+    const slider = sl(id);
+    if (!el || !slider) return;
+
+    {
+      const fresh = el.cloneNode(true);
+      el.parentNode.replaceChild(fresh, el);
+      el = fresh;
+    }
+    el.dataset.paramId = id;
+    const span = el.querySelector('.v');
+
+    const toNorm = (scaled) => {
+      const p = slider.properties || { start: 0, end: 1, skew: 1 };
+      const spanRange = (p.end - p.start) || 1;
+      const lin = Math.min(1, Math.max(0, (scaled - p.start) / spanRange));
+      return Math.pow(lin, p.skew || 1);
+    };
+
+    const updateDisplay = () => {
+      const v = slider.getScaledValue();
+      if (span && span.isConnected) span.textContent = fmt(v);
+      paintKnob(el, slider.getNormalisedValue());
+      if (onValueChange) onValueChange(v);
+    };
+
+    if (slider.customListenerId != null && slider.valueChangedEvent.removeListener)
+      slider.valueChangedEvent.removeListener(slider.customListenerId);
+    slider.customListenerId = slider.valueChangedEvent.addListener(updateDisplay);
+    updateDisplay();
+
+    el.addEventListener('dblclick', ev => {
+      ev.preventDefault();
+      let def = paramDefaults[id];
+      if (typeof def !== 'number') def = (slider.properties || {}).defaultValue;
+      if (typeof def !== 'number') return;
+      slider.sliderDragStarted();
+      slider.setNormalisedValue(toNorm(def));
+      slider.sliderDragEnded();
+      updateDisplay();
+    });
+
+    let st = null;
+    el.addEventListener('pointerdown', ev => {
+      if ((ev.button ?? 0) !== 0) return;
+      st = { y: ev.clientY, n: slider.getNormalisedValue(), pointerId: ev.pointerId };
+      slider.sliderDragStarted();
+      el.classList.add('dragging');
+      try { el.setPointerCapture(ev.pointerId); } catch (e) {}
+      ev.preventDefault();
+    });
+
+    el.addEventListener('pointermove', ev => {
+      if (!st || (st.pointerId != null && ev.pointerId !== st.pointerId)) return;
+      const fine = ev.shiftKey ? 0.1 : 1.0;
+      const delta = (st.y - ev.clientY) * fine / 250.0;
+      slider.setNormalisedValue(Math.min(1, Math.max(0, st.n + delta)));
+      updateDisplay();
+    });
+
+    const endKnobDrag = ev => {
+      if (st && (st.pointerId == null || ev.pointerId === st.pointerId)) {
+        slider.sliderDragEnded();
+        st = null;
+      }
+      el.classList.remove('dragging');
+      try { el.releasePointerCapture(ev.pointerId); } catch (e) {}
+    };
+    el.addEventListener('pointerup', endKnobDrag);
+    el.addEventListener('pointercancel', endKnobDrag);
+
+    if (window.WDKit) {
+      window.WDKit.attachWheelGesture(el, () => slider, (s, stepNorm) => {
+        s.setNormalisedValue(Math.min(1, Math.max(0, s.getNormalisedValue() + stepNorm)));
+        updateDisplay();
+      });
+      window.WDKit.upgradeKnobVisuals(el);
+      window.WDKit.attachKnobContextMenu(el, () => slider);
+    } else {
+      el.addEventListener('wheel', ev => {
+        ev.preventDefault();
+        const fine = ev.shiftKey ? 0.1 : 1.0;
+        const direction = ev.deltaY < 0 ? 1 : -1;
+        const n = slider.getNormalisedValue() + direction * fine / 100.0;
+        slider.sliderDragStarted();
+        slider.setNormalisedValue(Math.min(1, Math.max(0, n)));
+        slider.sliderDragEnded();
+        updateDisplay();
+      }, { passive: false });
+    }
+
+    if (span) {
+      span.addEventListener('pointerdown', ev => ev.stopPropagation());
+      span.addEventListener('dblclick', ev => ev.stopPropagation());
+      span.addEventListener('click', ev => {
+        ev.stopPropagation();
+        if (!span.isConnected) return;
+        const input = document.createElement('input');
+        input.className = 'v';
+        input.value = String(Number(slider.getScaledValue().toFixed(4)));
+        input.setAttribute('aria-label', el.dataset.label || id);
+        let done = false;
+        const commit = keep => {
+          if (done) return;
+          done = true;
+          if (keep) {
+            const raw = input.value.trim();
+            const unitHint = /ms\s*$/i.test(span.textContent || '') ? 'ms' : (/hz/i.test(span.textContent || '') ? 'Hz' : undefined);
+            const v = window.WDKit
+              ? window.WDKit.parseMusicalValue(raw, { unit: unitHint })
+              : (parseFloat(raw.replace(/k(?:hz)?\s*$/i, '').replace(/[^0-9.+\-eE]/g, '')) * (/k(?:hz)?\s*$/i.test(raw) ? 1000 : 1));
+            if (isFinite(v)) {
+              slider.sliderDragStarted();
+              slider.setNormalisedValue(toNorm(v));
+              slider.sliderDragEnded();
+            }
+          }
+          input.replaceWith(span);
+          updateDisplay();
+        };
+        input.addEventListener('keydown', e => {
+          if (e.key === 'Enter') { e.preventDefault(); commit(true); }
+          else if (e.key === 'Escape') { e.preventDefault(); commit(false); }
+          e.stopPropagation();
+        });
+        input.addEventListener('pointerdown', e => e.stopPropagation());
+        input.addEventListener('blur', () => commit(true));
+        span.replaceWith(input);
+        input.focus({ preventScroll: true });
+        input.select();
+      });
+    }
+  }
+
+  function bindToggle(el, id, onValueChange = null) {
+    const t = tg(id);
+    if (!el || !t) return;
+    const newEl = el.cloneNode(true);
+    el.parentNode.replaceChild(newEl, el);
+    el = newEl;
+
+    const updateDisplay = () => {
+      const v = !!t.getValue();
+      el.classList.toggle('on', v);
+      if (onValueChange) onValueChange(v, el);
+    };
+
+    if (t.customListenerId != null && t.valueChangedEvent.removeListener)
+      t.valueChangedEvent.removeListener(t.customListenerId);
+    t.customListenerId = t.valueChangedEvent.addListener(updateDisplay);
+    updateDisplay();
+
+    el.addEventListener('click', () => {
+      t.setValue(!t.getValue());
+      updateDisplay();
+    });
+  }
+
+  function mountPills(groupEl, choices) {
+    if (!groupEl) return [];
+    groupEl.innerHTML = '';
+    choices.forEach((name, i) => {
+      const b = document.createElement('button');
+      b.className = 'pill xs';
+      b.dataset.index = String(i);
+      b.textContent = name;
+      groupEl.appendChild(b);
+    });
+    return groupEl.querySelectorAll('button');
+  }
+
+  function bindChoicePills(groupEl, id, choices, onChange = null) {
+    if (!groupEl) return;
+    const buttons = mountPills(groupEl, choices);
+
+    const updateDisplay = () => {
+      const idx = comboIndex(id, choices.length);
+      buttons.forEach(btn => btn.classList.toggle('on', parseInt(btn.dataset.index, 10) === idx));
+      if (onChange) onChange(idx);
+    };
+
+    const s = cb(id);
+    if (s) {
+      if (s.customListenerId != null && s.valueChangedEvent.removeListener)
+        s.valueChangedEvent.removeListener(s.customListenerId);
+      s.customListenerId = s.valueChangedEvent.addListener(updateDisplay);
+    }
+    updateDisplay();
+
+    buttons.forEach(btn => btn.addEventListener('click', () => {
+      setComboIndex(id, parseInt(btn.dataset.index, 10));
+      updateDisplay();
+    }));
+  }
+
+  // ------------------------------------------------------- Ext Link Picker
+  let lastLinkLedSig = '';
+  function updateLinkLed() {
+    const wrap = $('linkPickerWrap');
+    if (!wrap) return;
+    const stateCls = linkSelected ? (linkSrMismatch ? 'mismatch' : (linkReceiving ? 'receiving' : 'waiting')) : '';
+    const tip = (linkSelected && linkSrMismatch)
+      ? 'Sample rate mismatch between this track and the selected WD Beacon track.'
+      : 'Select an active Werewolf Digital Beacon track for External Dynamic Sidechain and Reference/Masking Overlay. Wireless cross-track key — for sample-exact timing at large DAW buffer sizes (1024+), use Off (Host Bus) with a DAW sidechain send.';
+    const sig = stateCls + '|' + tip;
+    if (sig === lastLinkLedSig) return;
+    lastLinkLedSig = sig;
+    wrap.classList.remove('receiving', 'waiting', 'mismatch');
+    if (stateCls) wrap.classList.add(stateCls);
+    wrap.title = tip;
+  }
+
+  function renderLinkSources(res) {
+    const sel = $('linkSourceSelect');
+    if (!sel || !res || typeof res !== 'object') return;
+    const sources = Array.isArray(res.sources) ? res.sources : [];
+    if (typeof res.selected === 'string') linkSelected = res.selected;
+    if (!metersSeen) {
+      if (typeof res.receiving === 'boolean') linkReceiving = res.receiving;
+      if (typeof res.scActive === 'boolean') scActive = res.scActive;
+    }
+    if (typeof res.srMismatch === 'boolean') linkSrMismatch = res.srMismatch;
+
+    const sig = sources.map(s => `${s.name}:${s.sr}:${s.ch}`).join('|') + '#' + linkSelected;
+    updateLinkLed();
+    if (document.activeElement === sel) return;
+    if (sig === lastLinkSig) return;
+    lastLinkSig = sig;
+
+    sel.textContent = '';
+    const off = document.createElement('option');
+    off.value = '';
+    off.textContent = 'Off (Host Bus)';
+    sel.appendChild(off);
+
+    let foundSelected = (linkSelected === '');
+    for (const s of sources) {
+      const opt = document.createElement('option');
+      opt.value = s.name;
+      const sr = s.sr ? (s.sr / 1000).toFixed(s.sr % 1000 === 0 ? 0 : 1) + 'k' : '?';
+      const ch = s.ch === 1 ? 'Mono' : s.ch === 2 ? 'St' : (s.ch + 'ch');
+      opt.textContent = `${s.name} (${sr} · ${ch})`;
+      if (s.name === linkSelected) foundSelected = true;
+      sel.appendChild(opt);
+    }
+
+    if (!foundSelected && linkSelected) {
+      const offline = document.createElement('option');
+      offline.value = linkSelected;
+      offline.textContent = `${linkSelected} (waiting…)`;
+      sel.appendChild(offline);
+    }
+    sel.value = linkSelected;
+  }
+
+  async function refreshLinkSources() {
+    if (!host || isWebDemo) return;
+    const reqTarget = activeTargetId;
+    try {
+      const res = reqTarget > 0
+        ? await host.call('getBeaconSources', reqTarget)
+        : await host.call('getBeaconSources');
+      if (reqTarget === activeTargetId) renderLinkSources(res);
+    } catch (e) {}
+  }
+
+  {
+    const sel = $('linkSourceSelect');
+    if (sel) {
+      if (isWebDemo) {
+        sel.disabled = true;
+        sel.options[0].textContent = 'Off (WD Beacon)';
+      } else {
+        sel.addEventListener('pointerdown', refreshLinkSources);
+        sel.addEventListener('focus', refreshLinkSources);
+        sel.addEventListener('change', async () => {
+          const next = sel.value || '';
+          const reqTarget = activeTargetId;
+          linkSelected = next;
+          linkSrMismatch = false;
+          if (reqTarget === 0) {
+            specDisp.sc.fill(-120);
+            scContourVisible = false;
+          }
+          updateLinkLed();
+          if (next) {
+            showLinkRef = true;
+            lsSet('wdeqShowLinkRef', '1');
+            $('linkRefBtn').classList.add('on');
+          }
+          if (host) {
+            try {
+              const res = reqTarget > 0
+                ? await host.call('setBeaconSource', next, reqTarget)
+                : await host.call('setBeaconSource', next);
+              if (reqTarget === activeTargetId && res) {
+                if (typeof res.receiving === 'boolean') linkReceiving = res.receiving;
+                if (typeof res.srMismatch === 'boolean') linkSrMismatch = res.srMismatch;
+                updateLinkLed();
+              }
+            } catch (e) {}
+          }
+          uiDirty = true;
+        });
+      }
+    }
+  }
+
+  // ------------------------------------------------ Session EQ Multi-Track
+  function trackMeta(trackId) {
+    if (trackId === 0) return selfMeta;
+    const pr = peerResponses.get(trackId);
+    const pm = peerMeters.get(trackId);
+    const si = sessionInstances.find(x => x.id === trackId);
+    return {
+      id: trackId,
+      name: (pr && pr.name) || (pm && pm.name) || (si && si.name) || ('EQ ' + trackId),
+      color: (pr && pr.color) || (pm && pm.color) || (si && si.color) || '#34d399',
+      colorIndex: si ? si.colorIndex : -1,
+      power: pm ? pm.power : (pr ? pr.power : (si ? si.power : true)),
+      isSelf: false,
+    };
+  }
+
+  const respFor = trackId => (trackId === 0 ? resp : (peerResponses.get(trackId) || null));
+  const activeResp = () => respFor(activeTargetId);
+  const bandOf = (i, trackId = activeTargetId) => {
+    const r = respFor(trackId);
+    return r && i >= 0 && Array.isArray(r.bands) ? r.bands[i] : null;
+  };
+
+  function getVisibleTracks() {
+    const out = [{
+      id: 0,
+      isSelf: true,
+      name: selfMeta.name,
+      color: selfMeta.color,
+      power: tgFor(0, 'power') ? tgFor(0, 'power').getValue() : true,
+      resp,
+      specPre: specDisp.pre,
+      specPost: specDisp.post,
+      specPeakPre: specPeak.pre,
+      specPeakPost: specPeak.post,
+      specActive: true,
+      rides: dynRides,
+    }];
+    const added = new Set([0]);
+    const pushPeer = pid => {
+      if (!pid || added.has(pid)) return;
+      added.add(pid);
+      const tm = trackMeta(pid);
+      const pm = peerMeters.get(pid);
+      out.push({
+        id: pid,
+        isSelf: false,
+        name: tm.name,
+        color: tm.color,
+        power: tm.power !== false,
+        resp: peerResponses.get(pid) || null,
+        specPre: null,
+        specPost: peerSpecDisp.get(pid) || null,
+        specPeakPre: null,
+        specPeakPost: null,
+        specActive: !!peerSpecActive.get(pid),
+        rides: (pm && pm.rides) ? pm.rides : null,
+      });
+    };
+    for (const pid of pinnedIds) pushPeer(pid);
+    if (activeTargetId !== 0) pushPeer(activeTargetId);
+    return out;
+  }
+
+  function renderSelfChip() {
+    const chipEl = $('selfTrackChip');
+    const nameEl = $('selfTrackName');
+    const dotEl = $('selfTrackDot');
+    if (nameEl && nameEl.isConnected && !nameEl.querySelector('input'))
+      nameEl.textContent = selfMeta.name;
+    if (dotEl) dotEl.style.background = selfMeta.color;
+    if (chipEl) {
+      const pubName = selfMeta.publishedName || selfMeta.name;
+      chipEl.title = 'Click to rename this EQ track · Broadcasting on Beacon as "' + pubName + '"';
+    }
+  }
+
+  let lastSessBadgeSig = '';
+  function renderSessionHeaderBadge() {
+    const countTxt = String(Math.max(1, sessionInstances.length));
+    const btnOn = !!(sessionDrawerOpen || pinnedIds.length > 0 || activeTargetId !== 0);
+    const pinColors = pinnedIds.slice(0, 4).map(pid => pid + ':' + trackMeta(pid).color);
+    const sig = countTxt + '|' + btnOn + '|' + pinColors.join(',');
+    if (sig === lastSessBadgeSig) return;
+    lastSessBadgeSig = sig;
+
+    const cnt = $('sessionCount');
+    if (cnt) cnt.textContent = countTxt;
+    const btn = $('sessionBtn');
+    if (btn) btn.classList.toggle('on', btnOn);
+    const dots = $('sessionPinDots');
+    if (dots) {
+      dots.textContent = '';
+      for (const pid of pinnedIds.slice(0, 4)) {
+        const d = document.createElement('i');
+        d.style.background = trackMeta(pid).color;
+        dots.appendChild(d);
+      }
+    }
+  }
+
+  function syncTargetDeckChrome() {
+    const deckEl = document.querySelector('.deck');
+    const retBtn = $('returnLocalBtn');
+    const srEl = $('srTag');
+    if (activeTargetId !== 0) {
+      const tm = trackMeta(activeTargetId);
+      if (deckEl) {
+        deckEl.classList.add('remote-editing');
+        deckEl.style.setProperty('--remote-col', tm.color);
+      }
+      if (retBtn) {
+        retBtn.style.display = '';
+        retBtn.textContent = 'Back to ' + selfMeta.name;
+      }
+      const pr = peerResponses.get(activeTargetId);
+      if (srEl && pr && pr.sampleRate) srEl.textContent = (pr.sampleRate / 1000).toFixed(1) + ' kHz';
+    } else {
+      if (deckEl) {
+        deckEl.classList.remove('remote-editing');
+        deckEl.style.removeProperty('--remote-col');
+      }
+      if (retBtn) retBtn.style.display = 'none';
+      if (srEl && sampleRate) srEl.textContent = (sampleRate / 1000).toFixed(1) + ' kHz';
+    }
+  }
+
+  let lastMultiBarSig = '';
+  function renderMultiTrackBar() {
+    const bar = $('multiTrackBar');
+    const chips = $('trackChips');
+    if (!bar || !chips) return;
+    const show = pinnedIds.length > 0 || activeTargetId !== 0;
+    const sig = !show ? 'hidden' : [
+      activeTargetId,
+      selfMeta.name,
+      selfMeta.color,
+      pinnedIds.map(pid => { const tm = trackMeta(pid); return pid + ':' + tm.name + ':' + tm.color; }).join('|'),
+      (activeTargetId !== 0 && !pinnedIds.includes(activeTargetId)) ? (() => { const tm = trackMeta(activeTargetId); return 'unpinned:' + activeTargetId + ':' + tm.name + ':' + tm.color; })() : '',
+      multiViewMode,
+      showPeerSpec ? '1' : '0',
+      showPeerClash ? '1' : '0',
+    ].join('#');
+    if (sig === lastMultiBarSig) return;
+    lastMultiBarSig = sig;
+
+    bar.classList.toggle('visible', show);
+    if (!show) return;
+
+    chips.textContent = '';
+    const mkChip = (id, label, color, isSelf, isPinned) => {
+      const c = document.createElement('button');
+      c.type = 'button';
+      c.className = 'tchip' + (activeTargetId === id ? ' focused' : '');
+      c.style.setProperty('--chip-col', color);
+      const dot = document.createElement('span');
+      dot.className = 'dot';
+      dot.style.background = color;
+      const lbl = document.createElement('span');
+      lbl.className = 'lbl';
+      lbl.textContent = label;
+      c.append(dot, lbl);
+      if (isSelf) {
+        const role = document.createElement('span');
+        role.className = 'role';
+        role.textContent = 'This';
+        c.appendChild(role);
+      }
+      c.addEventListener('click', () => focusTrack(id));
+      if (!isSelf && isPinned) {
+        const x = document.createElement('span');
+        x.className = 'unpin';
+        x.textContent = '×';
+        x.title = 'Unpin ' + label + ' from this window';
+        x.addEventListener('click', ev => {
+          ev.stopPropagation();
+          togglePinPeer(id, false);
+        });
+        c.appendChild(x);
+      }
+      return c;
+    };
+
+    chips.appendChild(mkChip(0, selfMeta.name, selfMeta.color, true, false));
+    for (const pid of pinnedIds) {
+      const tm = trackMeta(pid);
+      chips.appendChild(mkChip(pid, tm.name, tm.color, false, true));
+    }
+    if (activeTargetId !== 0 && !pinnedIds.includes(activeTargetId)) {
+      const tm = trackMeta(activeTargetId);
+      chips.appendChild(mkChip(activeTargetId, tm.name, tm.color, false, false));
+    }
+
+    const vSw = $('multiViewSwitch');
+    if (vSw) vSw.querySelectorAll('button[data-v]').forEach(b => b.classList.toggle('on', b.dataset.v === multiViewMode));
+    $('peerSpecBtn')?.classList.toggle('on', showPeerSpec);
+    $('peerClashBtn')?.classList.toggle('on', showPeerClash);
+  }
+
+  function startInlineTrackRename(labelEl, targetId, currentText) {
+    if (!labelEl || labelEl.querySelector('input')) return;
+    const prev = currentText;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.maxLength = 47;
+    input.className = 'track-name-input';
+    input.value = prev;
+    let done = false;
+    const commit = async keep => {
+      if (done) return;
+      done = true;
+      const next = keep ? input.value.trim() : prev;
+      input.replaceWith(labelEl);
+      if (keep && host && !isWebDemo) {
+        try {
+          const res = await host.call('setInstanceMeta', targetId, next, null);
+          if (res && res.ok) {
+            if (targetId === 0 || targetId === selfMeta.id) {
+              selfMeta.name = res.name || selfMeta.name;
+              selfMeta.customName = res.customName || '';
+              if (typeof res.beaconPublishedName === 'string') selfMeta.publishedName = res.beaconPublishedName;
+              if (typeof res.beaconPublishing === 'boolean') selfMeta.publishing = res.beaconPublishing;
+              renderSelfChip();
+            }
+            await refreshSessionState();
+            renderMultiTrackBar();
+            uiDirty = true;
+          }
+        } catch (e) {}
+      }
+    };
+    input.addEventListener('keydown', ev => {
+      if (ev.key === 'Enter') { ev.preventDefault(); commit(true); }
+      else if (ev.key === 'Escape') { ev.preventDefault(); commit(false); }
+      ev.stopPropagation();
+    });
+    input.addEventListener('pointerdown', ev => ev.stopPropagation());
+    input.addEventListener('blur', () => commit(true));
+    labelEl.replaceWith(input);
+    input.focus({ preventScroll: true });
+    input.select();
+  }
+
+  function drawMiniCurve(cv, curve, color, power) {
+    if (!cv) return;
+    const c = cv.getContext('2d');
+    if (!c) return;
+    const w = cv.width, h = cv.height;
+    c.clearRect(0, 0, w, h);
+    c.strokeStyle = 'rgba(242, 245, 250, 0.16)';
+    c.lineWidth = 1;
+    c.beginPath();
+    c.moveTo(0, h / 2); c.lineTo(w, h / 2);
+    c.stroke();
+    if (!Array.isArray(curve) || !curve.length) return;
+    c.save();
+    if (!power) c.globalAlpha = 0.45;
+    c.beginPath();
+    for (let i = 0; i < curve.length; i++) {
+      const x = (i / (curve.length - 1)) * w;
+      const y = clamp(h / 2 - (curve[i] / 24) * (h / 2 - 2), 2, h - 2);
+      if (i === 0) c.moveTo(x, y); else c.lineTo(x, y);
+    }
+    c.strokeStyle = color || '#8fb0ec';
+    c.lineWidth = 1.6;
+    c.stroke();
+    c.restore();
+  }
+
+  let lastSessionIdsSig = '';
+  function renderSessionDrawer() {
+    if (!sessionDrawerOpen) return;
+    const active = document.activeElement;
+    if (active && active.closest && active.closest('#sessionList') && active.tagName === 'INPUT') return;
+    const listEl = $('sessionList');
+    if (!listEl) return;
+
+    const total = Math.max(1, sessionInstances.length);
+    const sub = $('sessionSub');
+    const subTxt = `${total} EQ instance${total === 1 ? '' : 's'} · ${pinnedIds.length} pinned`;
+    if (sub && sub.textContent !== subTxt) sub.textContent = subTxt;
+
+    if (!sessionInstances.length) {
+      lastSessionIdsSig = '';
+      listEl.textContent = '';
+      const e = document.createElement('div');
+      e.className = 'sess-empty';
+      e.textContent = 'No other Werewolf Digital EQ instances detected in this session yet. Insert EQ on more tracks (e.g. Bass, Vocal) to view and edit them here.';
+      listEl.appendChild(e);
+      return;
+    }
+
+    const idsSig = sessionInstances.map(x => `${x.id}:${x.isSelf ? 1 : 0}`).join(',');
+    const canReuse = idsSig === lastSessionIdsSig && listEl.children.length === sessionInstances.length;
+    if (!canReuse) {
+      lastSessionIdsSig = idsSig;
+      listEl.textContent = '';
+    }
+
+    for (let idx = 0; idx < sessionInstances.length; ++idx) {
+      const inst = sessionInstances[idx];
+      const isSelf = !!inst.isSelf;
+      const tid = isSelf ? 0 : inst.id;
+      const isPinned = !isSelf && pinnedIds.includes(inst.id);
+      const isFocused = activeTargetId === tid;
+      const srTxt = inst.sampleRate ? (inst.sampleRate / 1000).toFixed(inst.sampleRate % 1000 === 0 ? 0 : 1) + 'k' : '48k';
+      const outTxt = typeof inst.outDb === 'number' && inst.outDb > -69 ? ` · ${inst.outDb.toFixed(1)} dB` : '';
+      const metaTxt = `${inst.power === false ? 'Bypassed · ' : ''}${inst.activeBands || 0} band${inst.activeBands === 1 ? '' : 's'} · ${srTxt}${outTxt}`;
+      const rowCls = 'sess-row' + (isPinned ? ' pinned' : '') + (isFocused ? ' focused' : '');
+      const nameTxt = inst.name || ('EQ ' + (inst.order || 1));
+
+      if (canReuse) {
+        const row = listEl.children[idx];
+        row._inst = inst;
+        if (row.className !== rowCls) row.className = rowCls;
+        const sw = row.querySelector('.sess-swatch');
+        if (sw) sw.style.background = inst.color || '#8fb0ec';
+        const nm = row.querySelector('.sess-name');
+        if (nm && nm.textContent !== nameTxt) nm.textContent = nameTxt;
+        const meta = row.querySelector('.sess-meta');
+        if (meta && meta.textContent !== metaTxt) meta.textContent = metaTxt;
+        const mini = row.querySelector('.sess-mini-cv');
+        if (mini) drawMiniCurve(mini, inst.curveThumb, inst.color, inst.power !== false);
+        if (isSelf) {
+          const focBtn = row.querySelector('.sess-btn-edit');
+          if (focBtn) {
+            focBtn.classList.toggle('on', isFocused);
+            focBtn.textContent = isFocused ? 'Editing' : 'Edit';
+          }
+        } else {
+          const pinBtn = row.querySelector('.sess-btn-pin');
+          if (pinBtn) {
+            pinBtn.classList.toggle('on', isPinned);
+            pinBtn.textContent = isPinned ? 'Pinned' : 'Pin';
+            pinBtn.title = isPinned ? 'Remove from multi-track view' : 'Overlay/Split this EQ in this window';
+          }
+          const ctrlBtn = row.querySelector('.sess-btn-ctrl');
+          if (ctrlBtn) {
+            ctrlBtn.classList.toggle('on', isFocused);
+            ctrlBtn.textContent = isFocused ? 'Controlling' : 'Control';
+          }
+          const pwrBtn = row.querySelector('.sess-btn-pwr');
+          if (pwrBtn) {
+            pwrBtn.classList.toggle('on', inst.power !== false);
+            pwrBtn.textContent = inst.power !== false ? 'On' : 'Byp';
+          }
+        }
+        continue;
+      }
+
+      const row = document.createElement('div');
+      row.className = rowCls;
+      row._inst = inst;
+
+      const sw = document.createElement('button');
+      sw.type = 'button';
+      sw.className = 'sess-swatch';
+      sw.style.background = inst.color || '#8fb0ec';
+      sw.title = 'Click to cycle track color';
+      sw.addEventListener('click', async ev => {
+        ev.stopPropagation();
+        if (!host || isWebDemo) return;
+        const cur = row._inst;
+        const curSelf = !!cur.isSelf;
+        const nextIdx = cur.colorIndex >= 0 ? (cur.colorIndex + 1) % SESSION_PALETTE.length
+          : (curSelf ? 1 : ((cur.order || 1) % SESSION_PALETTE.length));
+        try {
+          const res = await host.call('setInstanceMeta', curSelf ? 0 : cur.id, null, nextIdx);
+          if (res && res.ok) {
+            if (curSelf) { selfMeta.color = res.color; selfMeta.colorIndex = res.colorIndex; renderSelfChip(); }
+            await refreshSessionState();
+            renderMultiTrackBar();
+            uiDirty = true;
+          }
+        } catch (e) {}
+      });
+
+      const info = document.createElement('div');
+      info.className = 'sess-info';
+      const trow = document.createElement('div');
+      trow.className = 'sess-title-row';
+      const nm = document.createElement('span');
+      nm.className = 'sess-name';
+      nm.textContent = nameTxt;
+      trow.appendChild(nm);
+      if (isSelf) {
+        const tag = document.createElement('span');
+        tag.className = 'sess-tag';
+        tag.textContent = 'This';
+        trow.appendChild(tag);
+      }
+      const ren = document.createElement('button');
+      ren.type = 'button';
+      ren.className = 'sess-rename-btn';
+      ren.textContent = '✎';
+      ren.title = 'Rename track';
+      ren.addEventListener('click', ev => {
+        ev.stopPropagation();
+        const cur = row._inst;
+        startInlineTrackRename(nm, cur.isSelf ? 0 : cur.id, cur.customName || cur.name || '');
+      });
+      trow.appendChild(ren);
+
+      const meta = document.createElement('div');
+      meta.className = 'sess-meta';
+      meta.textContent = metaTxt;
+      info.append(trow, meta);
+
+      const mini = document.createElement('canvas');
+      mini.className = 'sess-mini-cv';
+      mini.width = 82;
+      mini.height = 24;
+      drawMiniCurve(mini, inst.curveThumb, inst.color, inst.power !== false);
+
+      const acts = document.createElement('div');
+      acts.className = 'sess-acts';
+      if (isSelf) {
+        const focBtn = document.createElement('button');
+        focBtn.type = 'button';
+        focBtn.className = 'pill xs sess-btn-edit' + (isFocused ? ' on' : '');
+        focBtn.textContent = isFocused ? 'Editing' : 'Edit';
+        focBtn.addEventListener('click', () => focusTrack(0));
+        acts.appendChild(focBtn);
+      } else {
+        const pinBtn = document.createElement('button');
+        pinBtn.type = 'button';
+        pinBtn.className = 'pill xs sess-btn-pin' + (isPinned ? ' on' : '');
+        pinBtn.textContent = isPinned ? 'Pinned' : 'Pin';
+        pinBtn.title = isPinned ? 'Remove from multi-track view' : 'Overlay/Split this EQ in this window';
+        pinBtn.addEventListener('click', () => {
+          const cur = row._inst;
+          togglePinPeer(cur.id, !pinnedIds.includes(cur.id));
+        });
+
+        const ctrlBtn = document.createElement('button');
+        ctrlBtn.type = 'button';
+        ctrlBtn.className = 'pill xs sess-btn-ctrl' + (isFocused ? ' on' : '');
+        ctrlBtn.textContent = isFocused ? 'Controlling' : 'Control';
+        ctrlBtn.title = 'Control this track\'s EQ bands and parameters from this window';
+        ctrlBtn.addEventListener('click', () => focusTrack(row._inst.id));
+
+        const pwrBtn = document.createElement('button');
+        pwrBtn.type = 'button';
+        pwrBtn.className = 'pill xs sess-btn-pwr' + (inst.power !== false ? ' on' : '');
+        pwrBtn.textContent = inst.power !== false ? 'On' : 'Byp';
+        pwrBtn.title = 'Toggle remote EQ bypass';
+        pwrBtn.addEventListener('click', async () => {
+          const cur = row._inst;
+          const next = cur.power === false ? 1 : 0;
+          getRemoteModel(cur.id).toggle('power').setValue(next > 0.5);
+          cur.power = next > 0.5;
+          pwrBtn.classList.toggle('on', cur.power);
+          pwrBtn.textContent = cur.power ? 'On' : 'Byp';
+          uiDirty = true;
+        });
+
+        acts.append(pinBtn, ctrlBtn, pwrBtn);
+      }
+
+      row.append(sw, info, mini, acts);
+      listEl.appendChild(row);
+    }
+  }
+
+  async function syncSessionViewConfig(nextFocus = activeTargetId) {
+    if (!host || isWebDemo) return;
+    try {
+      const res = await host.call('setSessionViewConfig', pinnedIds, nextFocus, multiViewMode);
+      if (!res) return;
+      if (Array.isArray(res.pinnedIds)) pinnedIds = res.pinnedIds;
+      if (typeof res.focusedId === 'number') {
+        const actualFocus = (res.focusedId === selfMeta.id) ? 0 : res.focusedId;
+        if (actualFocus !== activeTargetId) activeTargetId = actualFocus;
+      }
+      if (activeTargetId > 0 && res.norms) {
+        getRemoteModel(activeTargetId).applyNormsSnapshot(res.norms);
+        if (typeof res.beaconSource === 'string') linkSelected = res.beaconSource;
+        if (typeof res.beaconReceiving === 'boolean') linkReceiving = res.beaconReceiving;
+        if (typeof res.beaconSrMismatch === 'boolean') linkSrMismatch = res.beaconSrMismatch;
+        if (typeof res.scActive === 'boolean') scActive = res.scActive;
+        updateLinkLed();
+      }
+      renderSessionHeaderBadge();
+      renderMultiTrackBar();
+      syncTargetDeckChrome();
+      renderSessionDrawer();
+      railDirty = uiDirty = true;
+    } catch (e) {}
+  }
+
+  async function refreshSessionState() {
+    if (!host || isWebDemo) return;
+    try {
+      const res = await host.call('getSessionState', sessionDrawerOpen);
+      if (!res || !Array.isArray(res.instances)) return;
+      if (res.selfId) selfMeta.id = res.selfId;
+      if (res.selfName) selfMeta.name = res.selfName;
+      if (typeof res.selfCustomName === 'string') selfMeta.customName = res.selfCustomName;
+      if (typeof res.beaconPublishedName === 'string') selfMeta.publishedName = res.beaconPublishedName;
+      if (typeof res.beaconPublishing === 'boolean') selfMeta.publishing = res.beaconPublishing;
+      if (res.selfColor) selfMeta.color = res.selfColor;
+      if (typeof res.selfColorIndex === 'number') selfMeta.colorIndex = res.selfColorIndex;
+      renderSelfChip();
+
+      sessionInstances = res.instances;
+      const liveIds = new Set(sessionInstances.filter(x => !x.isSelf).map(x => x.id));
+      pinnedIds = pinnedIds.filter(id => liveIds.has(id));
+      if (activeTargetId !== 0 && !liveIds.has(activeTargetId)) focusTrack(0);
+
+      if (pendingRestorePinnedNames.length > 0 && !userChangedPins && pinnedIds.length === 0) {
+        const matched = sessionInstances.filter(x => !x.isSelf && pendingRestorePinnedNames.includes(x.name));
+        if (matched.length > 0) {
+          pinnedIds = matched.map(x => x.id);
+          pendingRestorePinnedNames = [];
+          await syncSessionViewConfig(activeTargetId);
+        }
+      }
+
+      renderSessionHeaderBadge();
+      renderMultiTrackBar();
+      renderSessionDrawer();
+      syncTargetDeckChrome();
+    } catch (e) {}
+  }
+
+  function focusTrack(nextId, preferredBand = -1) {
+    const cleanId = (nextId > 0 && nextId !== selfMeta.id) ? nextId : 0;
+    const switched = (cleanId !== activeTargetId);
+    if (cleanId > 0) {
+      if (!pinnedIds.includes(cleanId)) pinnedIds.push(cleanId);
+      const pr = peerResponses.get(cleanId);
+      if (pr && pr.bands) getRemoteModel(cleanId).seedFromBandMeta(pr.bands);
+    }
+    activeTargetId = cleanId;
+
+    const r = respFor(activeTargetId);
+    if (preferredBand >= 0) {
+      selected = preferredBand;
+    } else if (switched) {
+      const cur = r && r.bands && selected >= 0 ? r.bands[selected] : null;
+      if (!cur || !cur.on) {
+        const firstOn = r && r.bands ? r.bands.find(b => b.on) : null;
+        selected = firstOn ? firstOn.i : -1;
+      }
+    }
+
+    if (switched) rebindAllControlsForTarget();
+    renderSessionHeaderBadge();
+    renderMultiTrackBar();
+    renderSessionDrawer();
+    syncTargetDeckChrome();
+    railDirty = uiDirty = true;
+    syncSessionViewConfig(activeTargetId);
+  }
+
+  function togglePinPeer(peerId, wantPin) {
+    if (!peerId || peerId === selfMeta.id) return;
+    userChangedPins = true;
+    pendingRestorePinnedNames = [];
+    if (wantPin) {
+      if (!pinnedIds.includes(peerId)) pinnedIds.push(peerId);
+    } else {
+      pinnedIds = pinnedIds.filter(id => id !== peerId);
+      if (activeTargetId === peerId) {
+        focusTrack(0);
+        return;
+      }
+    }
+    renderSessionHeaderBadge();
+    renderMultiTrackBar();
+    renderSessionDrawer();
+    uiDirty = true;
+    syncSessionViewConfig(activeTargetId);
+  }
+
+  {
+    const chip = $('selfTrackChip');
+    if (chip) chip.addEventListener('click', () => startInlineTrackRename($('selfTrackName'), 0, selfMeta.customName || selfMeta.name));
+
+    const sBtn = $('sessionBtn');
+    const drawer = $('sessionDrawer');
+    const setDrawer = open => {
+      sessionDrawerOpen = open;
+      if (drawer) drawer.hidden = !open;
+      renderSessionHeaderBadge();
+      if (open) refreshSessionState();
+    };
+    if (sBtn) sBtn.addEventListener('click', ev => { ev.stopPropagation(); setDrawer(!sessionDrawerOpen); });
+    if ($('closeSessionBtn')) $('closeSessionBtn').addEventListener('click', () => setDrawer(false));
+    if ($('pinAllPeersBtn')) $('pinAllPeersBtn').addEventListener('click', () => {
+      userChangedPins = true;
+      pendingRestorePinnedNames = [];
+      pinnedIds = sessionInstances.filter(x => !x.isSelf).map(x => x.id);
+      renderSessionHeaderBadge();
+      renderMultiTrackBar();
+      renderSessionDrawer();
+      uiDirty = true;
+      syncSessionViewConfig(activeTargetId);
+    });
+    if ($('clearPeersBtn')) $('clearPeersBtn').addEventListener('click', () => {
+      userChangedPins = true;
+      pendingRestorePinnedNames = [];
+      pinnedIds = [];
+      if (activeTargetId !== 0) focusTrack(0);
+      else {
+        renderSessionHeaderBadge();
+        renderMultiTrackBar();
+        renderSessionDrawer();
+        uiDirty = true;
+        syncSessionViewConfig(0);
+      }
+    });
+    if ($('returnLocalBtn')) $('returnLocalBtn').addEventListener('click', () => focusTrack(0));
+    document.addEventListener('pointerdown', ev => {
+      if (!sessionDrawerOpen || !drawer) return;
+      if (drawer.contains(ev.target) || (sBtn && sBtn.contains(ev.target))) return;
+      setDrawer(false);
+    });
+
+    const vSw = $('multiViewSwitch');
+    if (vSw) {
+      vSw.addEventListener('click', ev => {
+        const b = ev.target.closest('button[data-v]');
+        if (!b) return;
+        multiViewMode = b.dataset.v === 'split' ? 'split' : 'overlay';
+        renderMultiTrackBar();
+        uiDirty = true;
+        syncSessionViewConfig(activeTargetId);
+      });
+    }
+    const psBtn = $('peerSpecBtn');
+    if (psBtn) {
+      psBtn.classList.toggle('on', showPeerSpec);
+      psBtn.addEventListener('click', () => {
+        showPeerSpec = !showPeerSpec;
+        lsSet('wdeqPeerSpec', showPeerSpec ? '1' : '0');
+        renderMultiTrackBar();
+        uiDirty = true;
+      });
+    }
+    const pcBtn = $('peerClashBtn');
+    if (pcBtn) {
+      pcBtn.classList.toggle('on', showPeerClash);
+      pcBtn.addEventListener('click', () => {
+        showPeerClash = !showPeerClash;
+        lsSet('wdeqPeerClash', showPeerClash ? '1' : '0');
+        renderMultiTrackBar();
+        syncResolveClashButton();
+        uiDirty = true;
+      });
+    }
+    const rcBtn = $('resolveClashBtn');
+    if (rcBtn) {
+      rcBtn.addEventListener('click', () => {
+        if (lastBestClash && (Date.now() - lastBestClashTime) < 3500) {
+          resolveClashWithDynamicBand(lastBestClash);
+        } else {
+          toast('No active frequency clash detected yet');
+        }
+      });
+    }
+  }
+
+  // ------------------------------------------------------------- curve well
+  const canvas = $('graph');
+  const ctx = canvas.getContext('2d');
+  const PAD = { l: 46, r: 48, t: 20, b: 24 };
+  let W = 0, H = 0, dpr = 1;
+
+  const FMIN = 10, FMAX = 30000;
+  const plotWidth = () => Math.max(1, W - PAD.l - PAD.r);
+  const plotHeight = () => Math.max(1, H - PAD.t - PAD.b);
+  const xOf = f => PAD.l + (Math.log10(clamp(f, FMIN, FMAX) / FMIN) / Math.log10(FMAX / FMIN)) * plotWidth();
+  const fOf = x => FMIN * Math.pow(FMAX / FMIN, (x - PAD.l) / plotWidth());
+  const yOfVp = (db, vpTop, vpH) => {
+    const mid = vpTop + vpH / 2;
+    return mid - (db / dbRange) * (vpH / 2);
+  };
+  const dbOfYVp = (y, vpTop, vpH) => {
+    const mid = vpTop + vpH / 2;
+    return -(y - mid) / (vpH / 2) * dbRange;
+  };
+  const ySpecOfVp = (db, vpTop, vpH) => {
+    const foot = vpTop + vpH;
+    return foot - clamp((db + SPEC_RANGE) / SPEC_RANGE, 0, 1) * vpH;
+  };
+  const specDbOfYVp = (y, vpTop, vpH) => {
+    const foot = vpTop + vpH;
+    return ((foot - y) / vpH) * SPEC_RANGE - SPEC_RANGE;
+  };
+  const yOf = db => yOfVp(db, PAD.t, plotHeight());
+  const dbOfY = y => dbOfYVp(y, PAD.t, plotHeight());
+  const ySpecOf = db => ySpecOfVp(db, PAD.t, plotHeight());
+  const specDbOfY = y => specDbOfYVp(y, PAD.t, plotHeight());
+
+  function getViewports(tracks) {
+    const ph = plotHeight();
+    if (multiViewMode !== 'split' || tracks.length <= 1) {
+      const focusTrack = tracks.find(t => t.id === activeTargetId) || tracks[0];
+      return [{ vpTop: PAD.t, vpH: ph, track: focusTrack, tracks, isSplit: false }];
+    }
+    const gap = 8;
+    const n = tracks.length;
+    const laneH = Math.max(44, (ph - gap * (n - 1)) / n);
+    return tracks.map((t, idx) => ({
+      vpTop: PAD.t + idx * (laneH + gap),
+      vpH: laneH,
+      track: t,
+      tracks: [t],
+      isSplit: true,
+    }));
+  }
+
+  function viewportAtY(y, vps) {
+    for (const vp of vps) {
+      if (y >= vp.vpTop - 4 && y <= vp.vpTop + vp.vpH + 4) return vp;
+    }
+    return vps.find(vp => vp.track.id === activeTargetId) || vps[0];
+  }
+
+  function buildCols(pitch) {
+    const cols = [];
+    const pw = plotWidth();
+    if (pw < 8) return cols;
+    const nearest = f => clamp(Math.round(Math.log(f / SPEC_FMIN) / Math.log(SPEC_FMAX / SPEC_FMIN) * SPEC_BINS - 0.5), 0, SPEC_BINS - 1);
+    for (let x = PAD.l; x < W - PAD.r; x += pitch) {
+      const f0 = fOf(x), f1 = fOf(x + pitch);
+      let lo = -1, hi = -1;
+      for (let b = 0; b < SPEC_BINS; ++b) {
+        if (specFreq[b] >= f0 && specFreq[b] < f1) { if (lo < 0) lo = b; hi = b; }
+      }
+      if (lo < 0) lo = hi = nearest(Math.sqrt(f0 * f1));
+      cols.push([x, lo, hi]);
+    }
+    return cols;
+  }
+
+  let canvasReady = false;
+  let fineCols = [], wideCols = [];
+  function fitCanvas() {
+    dpr = window.devicePixelRatio || 1;
+    const cr = canvas.getBoundingClientRect();
+    const targetEl = canvas.parentElement || canvas;
+    const pr = targetEl.getBoundingClientRect();
+    const rw = pr.height > 40 ? pr.width : cr.width;
+    const rh = pr.height > 40 ? pr.height : cr.height;
+    const nextW = rw > 10 ? Math.floor(rw) : 900;
+    const nextH = rh > 10 ? Math.floor(rh) : 360;
+    const cw = Math.round(nextW * dpr);
+    const ch = Math.round(nextH * dpr);
+    if (cw === canvas.width && ch === canvas.height && nextW === W && nextH === H) return;
+    W = nextW;
+    H = nextH;
+    canvas.width = cw;
+    canvas.height = ch;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    fineCols = buildCols(3);
+    wideCols = buildCols(10);
+    if (canvasReady) {
+      uiDirty = false;
+      render();
+    } else {
+      uiDirty = true;
+    }
+  }
+  new ResizeObserver(fitCanvas).observe(canvas.parentElement || canvas);
+  fitCanvas();
+
+  const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+  function noteName(f) {
+    if (f < 16) return '';
+    const n = Math.round(12 * Math.log2(f / 440) + 69);
+    const cents = Math.round(1200 * Math.log2(f / (440 * Math.pow(2, (n - 69) / 12))));
+    return NOTE_NAMES[((n % 12) + 12) % 12] + (Math.floor(n / 12) - 1)
+         + (cents ? (cents > 0 ? '+' : '') + cents + '¢' : '');
+  }
+  const fmtHz = f => f >= 1000 ? (f / 1000).toFixed(f >= 10000 ? 1 : 2) + ' kHz' : Math.round(f) + ' Hz';
+  const fmtHzShort = f => f >= 1000 ? (f / 1000).toFixed(f >= 10000 ? 1 : 2) + 'k' : String(Math.round(f));
+  const fmtHzList = f => f >= 1000
+    ? (f / 1000).toFixed(f >= 10000 ? 1 : 2).replace(/\.?0+$/, '') + ' kHz'
+    : Math.round(f) + ' Hz';
+  const fmtDb = v => (v > 0 ? '+' : '') + v.toFixed(1) + ' dB';
+
+  const nodeYVp = (b, vpTop, vpH) => usesGainY(b.shape) ? yOfVp(clamp(b.gain, -dbRange, dbRange), vpTop, vpH) : yOfVp(0, vpTop, vpH);
+
+  function totalAtResp(f, rObj) {
+    if (!rObj || !rObj.freqs || !rObj.freqs.length) return 0;
+    const a = rObj.freqs, t = rObj.total;
+    if (f <= a[0]) return t[0];
+    if (f >= a[a.length - 1]) return t[t.length - 1];
+    let lo = 0, hi = a.length - 1;
+    while (hi - lo > 1) {
+      const m = (lo + hi) >> 1;
+      if (a[m] <= f) lo = m; else hi = m;
+    }
+    const p = (f - a[lo]) / (a[hi] - a[lo]);
+    return t[lo] + p * (t[hi] - t[lo]);
+  }
+  const totalAt = f => totalAtResp(f, activeResp());
+
+  function rideBellDb(f, fc, q, gDb) {
+    if (Math.abs(gDb) < 0.01) return 0;
+    const A = Math.pow(10, gDb / 40);
+    const w = f / fc, w2 = w * w, d = (1 - w2) * (1 - w2);
+    const num = d + w2 * A * A / (q * q);
+    const den = d + w2 / (A * A * q * q);
+    return 10 * Math.log10(num / den);
+  }
+
+  function tracePathVp(freqs, dbs, vpTop, vpH) {
+    const foot = vpTop + vpH;
+    ctx.beginPath();
+    for (let i = 0; i < freqs.length; ++i) {
+      const x = xOf(freqs[i]);
+      const y = clamp(yOfVp(clamp(dbs[i], -dbRange * 1.4, dbRange * 1.4), vpTop, vpH), vpTop - 4, foot + 4);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+  }
+
+  function traceSpecContourVp(arr, vpTop, vpH) {
+    const foot = vpTop + vpH;
+    ctx.beginPath();
+    let prevX = PAD.l, prevY = foot;
+    for (let b = 0; b < SPEC_BINS; ++b) {
+      const cur = arr[b];
+      let val = cur;
+      if (cur > -115 && b > 0 && b < SPEC_BINS - 1) {
+        const p = arr[b - 1], n = arr[b + 1];
+        if (p > -115 && n > -115) val = 0.2 * p + 0.6 * cur + 0.2 * n;
+      }
+      const x = xOf(specFreq[b]);
+      const y = ySpecOfVp(val + specTilt[b], vpTop, vpH);
+      if (b === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        const mx = 0.5 * (prevX + x);
+        const my = 0.5 * (prevY + y);
+        ctx.quadraticCurveTo(prevX, prevY, mx, my);
+      }
+      prevX = x; prevY = y;
+    }
+    ctx.lineTo(prevX, prevY);
+  }
+
+  let readoutSig = '';
+  function updateReadout(vps) {
+    let k = 'Curve', v = '—';
+    if (hover.inPlot && !drag && Array.isArray(vps) && vps.length) {
+      const vp = viewportAtY(hover.y, vps);
+      const f = clamp(fOf(hover.x), FMIN, FMAX);
+      const eqDb = totalAtResp(f, vp.track.resp);
+      const cursDb = dbOfYVp(hover.y, vp.vpTop, vp.vpH);
+      const specDb = specDbOfYVp(hover.y, vp.vpTop, vp.vpH);
+      const prefix = vp.isSplit ? (vp.track.name + ' · ') : '';
+      k = prefix + fmtHz(f) + (noteName(f) ? ' · ' + noteName(f) : '');
+      v = `EQ ${fmtDb(eqDb)} · ${cursDb >= 0 ? '+' : ''}${cursDb.toFixed(1)} dB · ${specDb.toFixed(0)} dBFS`;
+    } else {
+      const b = bandOf(selected, activeTargetId);
+      if (b && b.on) {
+        const tm = activeTargetId ? trackMeta(activeTargetId) : null;
+        v = usesGainY(b.shape) ? fmtDb(b.gain)
+          : usesSlopeY(b.shape) ? b.slope.toFixed(0) + ' dB/oct'
+          : 'Q ' + b.q.toFixed(b.q < 1 ? 3 : 2);
+        k = (tm ? tm.name + ' · ' : '') + 'Band ' + (b.i + 1) + ' · ' + fmtHz(b.freq);
+      }
+    }
+    const sig = k + '|' + v;
+    if (sig === readoutSig) return;
+    readoutSig = sig;
+    $('readoutK').textContent = k;
+    $('readoutV').textContent = v;
+  }
+
+  function drawSpecStreamVp(arr, peakArr, colorHex, isPost, style, vpTop, vpH, fillAlphaScale = 1.0) {
+    let anyMain = false, anyPeak = false;
+    for (let b = 0; b < SPEC_BINS; ++b) {
+      if (arr[b] + specTilt[b] > -89.4) anyMain = true;
+      if (peakArr && peakArr[b] + specTilt[b] > -89.4) anyPeak = true;
+      if (anyMain && (!peakArr || anyPeak)) break;
+    }
+    if (!anyMain && !anyPeak) return;
+
+    const foot = vpTop + vpH;
+    const strokeCol = isPost ? (colorHex || COL.accentLit) : 'rgba(242, 245, 250, 0.55)';
+    const holdCol   = isPost ? hexToRgba(colorHex || COL.accentLit, 0.42) : 'rgba(242, 245, 250, 0.25)';
+
+    if (style === 'region') {
+      ctx.save();
+      if (anyMain) {
+        traceSpecContourVp(arr, vpTop, vpH);
+        ctx.lineTo(W - PAD.r, foot);
+        ctx.lineTo(PAD.l, foot);
+        ctx.closePath();
+        const grad = ctx.createLinearGradient(0, vpTop, 0, foot);
+        if (isPost) {
+          grad.addColorStop(0, hexToRgba(colorHex || '#5b7fc7', 0.38 * fillAlphaScale));
+          grad.addColorStop(0.55, hexToRgba(colorHex || '#5b7fc7', 0.14 * fillAlphaScale));
+          grad.addColorStop(1, hexToRgba(colorHex || '#5b7fc7', 0.02 * fillAlphaScale));
+        } else {
+          grad.addColorStop(0, 'rgba(242, 245, 250, 0.22)');
+          grad.addColorStop(1, 'rgba(242, 245, 250, 0.01)');
+        }
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        traceSpecContourVp(arr, vpTop, vpH);
+        ctx.strokeStyle = strokeCol;
+        ctx.lineWidth = isPost ? (fillAlphaScale < 1 ? 1.45 : 1.8) : 1.25;
+        ctx.stroke();
+      }
+
+      if (peakArr && anyPeak) {
+        traceSpecContourVp(peakArr, vpTop, vpH);
+        ctx.strokeStyle = holdCol;
+        ctx.lineWidth = 1.0;
+        ctx.stroke();
+      }
+      ctx.restore();
+    } else if (style === 'line') {
+      ctx.save();
+      if (anyMain) {
+        if (!isPost) ctx.setLineDash([4, 3]);
+        traceSpecContourVp(arr, vpTop, vpH);
+        ctx.strokeStyle = strokeCol;
+        ctx.lineWidth = isPost ? (fillAlphaScale < 1 ? 1.5 : 2.0) : 1.4;
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      if (peakArr && anyPeak) {
+        traceSpecContourVp(peakArr, vpTop, vpH);
+        ctx.strokeStyle = holdCol;
+        ctx.lineWidth = 1.0;
+        ctx.stroke();
+      }
+      ctx.restore();
+    } else {
+      const cols = style === 'fine' ? fineCols : wideCols;
+      const pitch = style === 'fine' ? 3 : 10;
+      const bw = Math.max(1.5, pitch - (style === 'fine' ? 1 : 2));
+      const fillCol = isPost ? hexToRgba(colorHex || '#5b7fc7', 0.34 * fillAlphaScale) : 'rgba(242, 245, 250, 0.18)';
+      ctx.fillStyle = fillCol;
+      for (const [x, lo, hi] of cols) {
+        let m = -200, mp = -200;
+        for (let b = lo; b <= hi; ++b) {
+          m = Math.max(m, arr[b] + specTilt[b]);
+          if (peakArr) mp = Math.max(mp, peakArr[b] + specTilt[b]);
+        }
+        if (anyMain) {
+          const y = ySpecOfVp(m, vpTop, vpH);
+          if (y < foot - 1) ctx.fillRect(x, y, bw, foot - y);
+        }
+        if (peakArr && anyPeak) {
+          const yp = ySpecOfVp(mp, vpTop, vpH);
+          if (yp < foot - 1) {
+            ctx.fillStyle = strokeCol;
+            ctx.fillRect(x, yp, bw, 1.5);
+            ctx.fillStyle = fillCol;
+          }
+        }
+      }
+    }
+  }
+
+  function drawClashBands(arrA, arrB, vpTop, vpH) {
+    if (!arrA || !arrB) return;
+    for (let b = 0; b < SPEC_BINS; ++b) {
+      const aDb = arrA[b] + specTilt[b];
+      const bDb = arrB[b] + specTilt[b];
+      const minDb = Math.min(aDb, bDb);
+      const diff = Math.abs(aDb - bDb);
+      if (minDb > -48 && diff < 6.5) {
+        const x0 = xOf(specFreq[Math.max(0, b - 1)]);
+        const x1 = xOf(specFreq[Math.min(SPEC_BINS - 1, b + 1)]);
+        const intensity = clamp((minDb + 48) / 30, 0.15, 0.85) * (1 - diff / 7.5);
+        ctx.fillStyle = `rgba(244, 63, 94, ${(intensity * 0.28).toFixed(3)})`;
+        ctx.fillRect(x0, vpTop, Math.max(2, x1 - x0), vpH);
+      }
+    }
+  }
+
+  function computeClashPeaks(arrSelf, arrOther, meta) {
+    if (!arrSelf || !arrOther) return [];
+    const bins = [];
+    for (let b = 0; b < SPEC_BINS; ++b) {
+      const aDb = arrSelf[b] + specTilt[b];
+      const bDb = arrOther[b] + specTilt[b];
+      const minDb = Math.min(aDb, bDb);
+      const diff = Math.abs(aDb - bDb);
+      if (minDb > -48 && diff < 6.5) {
+        bins.push({ b, score: minDb - 0.5 * diff, rawOther: arrOther[b] });
+      }
+    }
+    if (!bins.length) return [];
+
+    const clusters = [];
+    let cur = [bins[0]];
+    for (let idx = 1; idx < bins.length; ++idx) {
+      if (bins[idx].b - bins[idx - 1].b <= 3) {
+        cur.push(bins[idx]);
+      } else {
+        clusters.push(cur);
+        cur = [bins[idx]];
+      }
+    }
+    clusters.push(cur);
+
+    const out = [];
+    for (const cl of clusters) {
+      let best = cl[0];
+      for (const item of cl) {
+        if (item.score > best.score) best = item;
+      }
+      const b0 = cl[0].b;
+      const b1 = cl[cl.length - 1].b;
+      const freqHz = clamp(specFreq[best.b], 35, 16000);
+      const fLo = specFreq[Math.max(0, b0 - 1)];
+      const fHi = specFreq[Math.min(SPEC_BINS - 1, b1 + 1)];
+      const bwOct = clamp(Math.log2(Math.max(fLo * 1.05, fHi) / Math.max(10, fLo)), 0.25, 2.0);
+      const q = clamp(1 / (2 * Math.sinh(Math.LN2 * 0.5 * bwOct)), 1.2, 6.0);
+      out.push({
+        freqHz,
+        q,
+        score: best.score,
+        peerRawDb: best.rawOther,
+        peerId: meta.peerId || 0,
+        peerName: meta.peerName || 'Ext Key',
+        peerColor: meta.peerColor || '#fb7185',
+        targetTrackId: meta.targetTrackId || 0,
+      });
+    }
+    out.sort((a, b) => b.score - a.score);
+    return out;
+  }
+
+  function syncResolveClashButton() {
+    const btn = $('resolveClashBtn');
+    if (!btn) return;
+    const anyOn = showPeerClash || (showMask && scActive && scContourVisible);
+    btn.style.display = anyOn ? '' : 'none';
+    if (!anyOn) return;
+    const fresh = lastBestClash && (Date.now() - lastBestClashTime) < 3000;
+    btn.classList.toggle('dim', !fresh);
+    if (fresh) {
+      btn.textContent = '⚡ Duck ' + fmtHzShort(lastBestClash.freqHz);
+      btn.title = `Create a zero-latency Dynamic EQ band at ${fmtHz(lastBestClash.freqHz)} keyed from ${lastBestClash.peerName} via WD Beacon`;
+    } else {
+      btn.textContent = '⚡ Duck Clash';
+      btn.title = 'Create a zero-latency Dynamic EQ band at the strongest frequency collision, keyed from the colliding track via WD Beacon';
+    }
+  }
+
+  function hitClashChip(x, y) {
+    for (let i = activeClashChips.length - 1; i >= 0; --i) {
+      const c = activeClashChips[i];
+      if (x >= c.x && x <= c.x + c.w && y >= c.y && y <= c.y + c.h) return i;
+    }
+    return -1;
+  }
+
+  async function resolveClashWithDynamicBand(clash) {
+    if (!clash) return;
+    const tid = clash.targetTrackId || 0;
+    const r = respFor(tid);
+    if (!r || !Array.isArray(r.bands)) return;
+    const free = r.bands.find(b => !b.on);
+    if (!free) { toast('All 24 bands are in use'); return; }
+    if (tid !== activeTargetId) focusTrack(tid, free.i);
+
+    const i = free.i;
+    const setSliderBalanced = (suffix, range, val) => {
+      const id = bandId(i, suffix);
+      gestureFor(tid, id, true);
+      setRealFor(tid, id, range, val);
+      gestureFor(tid, id, false);
+    };
+
+    const thrDb = clamp(Math.round((Number.isFinite(clash.peerRawDb) ? clash.peerRawDb : -24) - 3), -48, -6);
+
+    setComboFor(tid, bandId(i, 'shape'), SHAPE.bell);
+    setComboFor(tid, bandId(i, 'chan'), 0);
+    setSliderBalanced('freq', RANGES.freq, clash.freqHz);
+    setSliderBalanced('gain', RANGES.gain, 0);
+    setSliderBalanced('q', RANGES.q, clash.q || 2.5);
+    setSliderBalanced('dynrange', RANGES.dynrange, -6.0);
+    setSliderBalanced('dynratio', RANGES.dynratio, 4.0);
+    setSliderBalanced('dynknee', RANGES.dynknee, 6.0);
+    setSliderBalanced('dynatk', RANGES.dynatk, 8.0);
+    setSliderBalanced('dynrel', RANGES.dynrel, 120.0);
+    setSliderBalanced('dynthresh', RANGES.dynthresh, thrDb);
+
+    const tgAuto = tgFor(tid, bandId(i, 'dynauto'));
+    if (tgAuto) tgAuto.setValue(false);
+    const tgTrack = tgFor(tid, bandId(i, 'dynscfreqtrack'));
+    if (tgTrack) tgTrack.setValue(true);
+    setComboFor(tid, bandId(i, 'dynsc'), 1); // External
+    const tgDyn = tgFor(tid, bandId(i, 'dynon'));
+    if (tgDyn) tgDyn.setValue(true);
+    const tgOn = tgFor(tid, bandId(i, 'on'));
+    if (tgOn) tgOn.setValue(true);
+
+    free.on = true;
+    free.shape = SHAPE.bell;
+    free.freq = clash.freqHz;
+    free.gain = 0;
+    free.q = clash.q || 2.5;
+    free.dyn = true;
+
+    let labelSource = clash.peerName || 'External Key';
+    if (clash.peerId > 0 && host && !isWebDemo) {
+      try {
+        const res = await host.call('ensurePeerBeaconSource', clash.peerId, tid);
+        if (res && res.ok) {
+          if (typeof res.selected === 'string') linkSelected = res.selected;
+          if (typeof res.receiving === 'boolean') linkReceiving = res.receiving;
+          if (typeof res.srMismatch === 'boolean') linkSrMismatch = res.srMismatch;
+          if (typeof res.scActive === 'boolean') scActive = res.scActive;
+          if (res.peerName) labelSource = res.peerName;
+          showLinkRef = true;
+          lsSet('wdeqShowLinkRef', '1');
+          $('linkRefBtn')?.classList.add('on');
+          updateLinkLed();
+          refreshLinkSources();
+        }
+      } catch (e) {}
+    }
+
+    selectBand(i);
+    toast(`Band ${i + 1} · Ducking ${fmtHz(clash.freqHz)} from ${labelSource}`);
+  }
+
+  function drawTrackLayer(t, vpTop, vpH, isFocused, isMulti) {
+    const rObj = t.resp;
+    if (!rObj) return;
+    const foot = vpTop + vpH;
+    const right = W - PAD.r;
+    const bands = rObj.bands || [];
+    const lim = dbRange * 1.4;
+    const yZero = yOfVp(0, vpTop, vpH);
+    const tCol = t.isSelf && !isMulti ? COL.accentLit : (t.color || COL.accentLit);
+    const bypassed = !t.power;
+
+    ctx.save();
+    if (bypassed) ctx.globalAlpha = isFocused ? 0.55 : 0.42;
+
+    if (isFocused) {
+      for (const b of bands) {
+        if (!b.on || !b.curve) continue;
+        const sel = b.i === selected, hot = sel || (hover.node === b.i && hover.trackId === t.id);
+
+        if (b.dyn) {
+          const fc = getRealFor(t.id, bandId(b.i, 'freq'), RANGES.freq);
+          const q = getRealFor(t.id, bandId(b.i, 'q'), RANGES.q);
+          const range = getRealFor(t.id, bandId(b.i, 'dynrange'), RANGES.dynrange);
+          if (Math.abs(range) >= 0.05) {
+            ctx.beginPath();
+            for (let k = 0; k < rObj.freqs.length; ++k) {
+              const y = yOfVp(clamp(b.curve[k], -lim, lim), vpTop, vpH);
+              k ? ctx.lineTo(xOf(rObj.freqs[k]), y) : ctx.moveTo(xOf(rObj.freqs[k]), y);
+            }
+            for (let k = rObj.freqs.length - 1; k >= 0; --k) {
+              const db = b.curve[k] + rideBellDb(rObj.freqs[k], fc, q, range);
+              ctx.lineTo(xOf(rObj.freqs[k]), yOfVp(clamp(db, -lim, lim), vpTop, vpH));
+            }
+            ctx.closePath();
+            ctx.fillStyle = ink(hot ? 0.28 : 0.14);
+            ctx.fill();
+          }
+        }
+
+        ctx.beginPath();
+        for (let k = 0; k < rObj.freqs.length; ++k) {
+          const x = xOf(rObj.freqs[k]);
+          const y = clamp(yOfVp(clamp(b.curve[k], -lim, lim), vpTop, vpH), vpTop, foot);
+          k === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.lineTo(right, yZero);
+        ctx.lineTo(PAD.l, yZero);
+        ctx.closePath();
+        ctx.fillStyle = hexToRgba(tCol, sel ? 0.22 : 0.08);
+        ctx.fill();
+
+        tracePathVp(rObj.freqs, b.curve, vpTop, vpH);
+        ctx.strokeStyle = ink(hot ? 0.82 : 0.26);
+        ctx.lineWidth = hot ? 2.1 : 1.2;
+        ctx.stroke();
+      }
+    } else {
+      ctx.beginPath();
+      for (let k = 0; k < rObj.freqs.length; ++k) {
+        const x = xOf(rObj.freqs[k]);
+        const y = clamp(yOfVp(clamp(rObj.total[k], -lim, lim), vpTop, vpH), vpTop, foot);
+        k === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.lineTo(right, yZero);
+      ctx.lineTo(PAD.l, yZero);
+      ctx.closePath();
+      ctx.fillStyle = hexToRgba(tCol, 0.08);
+      ctx.fill();
+    }
+
+    // Total EQ curve
+    if (bypassed) ctx.setLineDash([6, 4]);
+    tracePathVp(rObj.freqs, rObj.total, vpTop, vpH);
+    ctx.strokeStyle = isFocused ? tCol : hexToRgba(tCol, 0.86);
+    ctx.lineWidth = isFocused ? 2.6 : 1.9;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Live dynamic ride trace (focused track)
+    if (isFocused && t.rides) {
+      for (const b of bands) {
+        if (!b.on || !b.dyn) continue;
+        const ride = t.rides[b.i] || 0;
+        const rideAlpha = clamp((Math.abs(ride) - 0.05) / 0.30, 0, 1);
+        if (rideAlpha <= 0.01) continue;
+        const fc = getRealFor(t.id, bandId(b.i, 'freq'), RANGES.freq);
+        const q = getRealFor(t.id, bandId(b.i, 'q'), RANGES.q);
+        ctx.strokeStyle = ink(0.94 * rideAlpha);
+        ctx.lineWidth = 3.2;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        let started = false;
+        for (let k = 0; k < rObj.freqs.length; ++k) {
+          const add = rideBellDb(rObj.freqs[k], fc, q, ride);
+          if (Math.abs(add) > 0.1) {
+            const y = yOfVp(clamp(rObj.total[k] + add, -lim, lim), vpTop, vpH);
+            started ? ctx.lineTo(xOf(rObj.freqs[k]), y) : ctx.moveTo(xOf(rObj.freqs[k]), y);
+            started = true;
+          } else if (started) {
+            ctx.stroke(); ctx.beginPath(); started = false;
+          }
+        }
+        if (started) ctx.stroke();
+        const tx = xOf(fc), ty = yOfVp(clamp(totalAtResp(fc, rObj) + ride, -lim, lim), vpTop, vpH);
+        ctx.fillStyle = hexToRgba(COL.cream, rideAlpha);
+        ctx.beginPath();
+        ctx.arc(tx, ty, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Band handles
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (const b of bands) {
+      if (!b.on) continue;
+      const x = xOf(b.freq), y = nodeYVp(b, vpTop, vpH);
+      const hot = hover.node === b.i && hover.trackId === t.id;
+      if (isFocused) {
+        const sel = b.i === selected;
+        const dragging = sel && drag && !drag.pending && drag.trackId === t.id;
+
+        ctx.strokeStyle = sel || dragging ? COL.cream : ink(0.28);
+        ctx.lineWidth = sel ? 1.3 : 1.0;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(x, vpTop); ctx.lineTo(x, foot);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        if (sel) {
+          const label = fmtHzShort(b.freq);
+          ctx.font = '700 9.5px ' + cssVar('--font');
+          const tw = ctx.measureText(label).width + 12;
+          const px = clamp(x - tw / 2, PAD.l + 4, right - tw - 4);
+          ctx.fillStyle = dragging ? tCol : COL.cream;
+          ctx.beginPath();
+          if (ctx.roundRect) ctx.roundRect(px, vpTop + 4, tw, 17, 8);
+          else ctx.rect(px, vpTop + 4, tw, 17);
+          ctx.fill();
+          ctx.fillStyle = (dragging && !t.isSelf) ? '#090a0c' : dragging ? '#ffffff' : COL.well;
+          ctx.fillText(label, px + tw / 2, vpTop + 12.5);
+        }
+
+        const pw = sel ? 22 : hot ? 20 : 18;
+        const ph = 18;
+        ctx.fillStyle = sel || dragging ? (t.isSelf && !isMulti ? COL.accent : tCol) : COL.cream;
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(x - pw / 2, y - ph / 2, pw, ph, 9);
+        else ctx.rect(x - pw / 2, y - ph / 2, pw, ph);
+        ctx.fill();
+
+        if (b.dyn) {
+          ctx.fillStyle = sel ? '#ffffff' : COL.well;
+          ctx.fillRect(x - pw / 2 + 4, y - ph / 2 + 2, pw - 8, 2);
+        }
+        ctx.fillStyle = sel || dragging ? ((t.isSelf && !isMulti) ? '#ffffff' : '#090a0c') : COL.well;
+        ctx.font = '700 10px ' + cssVar('--font');
+        ctx.fillText('' + (b.i + 1), x, y + 0.5);
+      } else {
+        const pw = hot ? 18 : 15;
+        const ph = hot ? 18 : 15;
+        ctx.fillStyle = COL.well;
+        ctx.strokeStyle = tCol;
+        ctx.lineWidth = hot ? 2.0 : 1.5;
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(x - pw / 2, y - ph / 2, pw, ph, 8);
+        else ctx.rect(x - pw / 2, y - ph / 2, pw, ph);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = tCol;
+        ctx.font = '700 9px ' + cssVar('--font');
+        ctx.fillText('' + (b.i + 1), x, y + 0.5);
+      }
+    }
+    ctx.restore();
+  }
+
+  function render() {
+    ctx.clearRect(0, 0, W, H);
+    activeClashChips = [];
+    const plotW = plotWidth(), plotH = plotHeight();
+    if (plotW < 40 || plotH < 40) return;
+    const foot = H - PAD.b;
+    const right = W - PAD.r;
+
+    const tracks = getVisibleTracks();
+    const vps = getViewports(tracks);
+    const isMulti = tracks.length > 1;
+    const MINOR_HZ = [30, 40, 60, 70, 80, 90, 300, 400, 600, 700, 800, 900, 3000, 4000, 6000, 7000, 8000, 9000, 15000];
+    const MAJOR_HZ = [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000];
+    const dbStep = dbRange <= 3 ? 1 : dbRange <= 6 ? 2 : dbRange <= 12 ? 3 : 6;
+    const fontStr = '600 9.5px ' + cssVar('--font');
+    const candidateClashes = [];
+
+    for (const vp of vps) {
+      const { vpTop, vpH, isSplit } = vp;
+      const vpFoot = vpTop + vpH;
+
+      ctx.fillStyle = COL.well;
+      ctx.fillRect(PAD.l, vpTop, plotW, vpH);
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(PAD.l, vpTop, plotW, vpH);
+      ctx.clip();
+
+      // Frequency grid lines
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(242, 245, 250, 0.035)';
+      for (const f of MINOR_HZ) {
+        const x = Math.round(xOf(f)) + 0.5;
+        ctx.beginPath(); ctx.moveTo(x, vpTop); ctx.lineTo(x, vpFoot); ctx.stroke();
+      }
+      ctx.strokeStyle = 'rgba(242, 245, 250, 0.08)';
+      for (const f of MAJOR_HZ) {
+        const x = Math.round(xOf(f)) + 0.5;
+        ctx.beginPath(); ctx.moveTo(x, vpTop); ctx.lineTo(x, vpFoot); ctx.stroke();
+      }
+
+      // Horizontal EQ dB gridlines
+      for (let db = -dbRange + dbStep; db <= dbRange - dbStep; db += dbStep) {
+        if (db === 0) continue;
+        const y = Math.round(yOfVp(db, vpTop, vpH)) + 0.5;
+        ctx.strokeStyle = 'rgba(242, 245, 250, 0.065)';
+        ctx.beginPath(); ctx.moveTo(PAD.l, y); ctx.lineTo(right, y); ctx.stroke();
+      }
+      {
+        const y0 = Math.round(yOfVp(0, vpTop, vpH)) + 0.5;
+        ctx.strokeStyle = 'rgba(242, 245, 250, 0.22)';
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(PAD.l, y0); ctx.lineTo(right, y0); ctx.stroke();
+      }
+
+      // Nyquist shading
+      const nyq = 0.5 * ((vp.track.resp && vp.track.resp.sampleRate) || sampleRate);
+      if (nyq < FMAX) {
+        const nx = xOf(nyq);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+        ctx.fillRect(nx, vpTop, right - nx, vpH);
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(Math.round(nx) + 0.5, vpTop);
+        ctx.lineTo(Math.round(nx) + 0.5, vpFoot);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Spectrum streams
+      if (!isSplit) {
+        if (specMode !== 'off' && specTarget) {
+          if (specMode === 'both' || specMode === 'pre')
+            drawSpecStreamVp(specDisp.pre, specPeak.pre, null, false, specStyle, vpTop, vpH, 1.0);
+          if (specMode === 'both' || specMode === 'post')
+            drawSpecStreamVp(specDisp.post, specPeak.post, isMulti ? selfMeta.color : COL.accentLit, true, specStyle, vpTop, vpH, 1.0);
+        }
+        if (showPeerSpec) {
+          for (const pt of tracks) {
+            if (pt.isSelf || !pt.specActive || !pt.specPost) continue;
+            drawSpecStreamVp(pt.specPost, null, pt.color, true, specStyle === 'bars' || specStyle === 'fine' ? specStyle : 'region', vpTop, vpH, pt.id === activeTargetId ? 0.9 : 0.65);
+          }
+        }
+        if (showPeerClash && specTarget) {
+          for (const pt of tracks) {
+            if (pt.isSelf || !pt.specActive || !pt.specPost) continue;
+            drawClashBands(specDisp.post, pt.specPost, vpTop, vpH);
+            candidateClashes.push(...computeClashPeaks(specDisp.post, pt.specPost, {
+              peerId: pt.id,
+              peerName: pt.name,
+              peerColor: pt.color,
+              targetTrackId: 0,
+              vpTop,
+            }));
+          }
+        }
+        if (showLinkRef && (scActive || scContourVisible)) {
+          ctx.save();
+          traceSpecContourVp(specDisp.sc, vpTop, vpH);
+          ctx.lineTo(right, vpFoot);
+          ctx.lineTo(PAD.l, vpFoot);
+          ctx.closePath();
+          const lg = ctx.createLinearGradient(0, vpTop, 0, vpFoot);
+          lg.addColorStop(0, 'rgba(245, 158, 11, 0.30)');
+          lg.addColorStop(1, 'rgba(245, 158, 11, 0.02)');
+          ctx.fillStyle = lg;
+          ctx.fill();
+          traceSpecContourVp(specDisp.sc, vpTop, vpH);
+          ctx.strokeStyle = COL.warn;
+          ctx.lineWidth = 1.6;
+          ctx.stroke();
+          ctx.restore();
+          if (showMask && scActive && scContourVisible) {
+            const refArr = specMode === 'pre' ? specDisp.pre : specDisp.post;
+            drawClashBands(refArr, specDisp.sc, vpTop, vpH);
+            candidateClashes.push(...computeClashPeaks(refArr, specDisp.sc, {
+              peerId: 0,
+              peerName: linkSelected || 'Beacon Ref',
+              peerColor: COL.warn,
+              targetTrackId: 0,
+              vpTop,
+            }));
+          }
+        }
+      } else {
+        const lt = vp.track;
+        if (lt.isSelf) {
+          if (specMode !== 'off' && specTarget) {
+            if (specMode === 'both' || specMode === 'pre')
+              drawSpecStreamVp(specDisp.pre, specPeak.pre, null, false, specStyle, vpTop, vpH, 1.0);
+            if (specMode === 'both' || specMode === 'post')
+              drawSpecStreamVp(specDisp.post, specPeak.post, lt.color, true, specStyle, vpTop, vpH, 1.0);
+          }
+          if (showLinkRef && (scActive || scContourVisible)) {
+            traceSpecContourVp(specDisp.sc, vpTop, vpH);
+            ctx.strokeStyle = COL.warn;
+            ctx.lineWidth = 1.4;
+            ctx.stroke();
+          }
+        } else if (showPeerSpec && lt.specActive && lt.specPost) {
+          drawSpecStreamVp(lt.specPost, null, lt.color, true, specStyle === 'bars' || specStyle === 'fine' ? specStyle : 'region', vpTop, vpH, 0.85);
+          if (showPeerClash && specTarget) {
+            drawClashBands(specDisp.post, lt.specPost, vpTop, vpH);
+            candidateClashes.push(...computeClashPeaks(specDisp.post, lt.specPost, {
+              peerId: lt.id,
+              peerName: lt.name,
+              peerColor: lt.color,
+              targetTrackId: 0,
+              vpTop,
+            }));
+          }
+        }
+      }
+
+      // Curves & band handles (non-focused first, focused on top)
+      for (const t of vp.tracks) {
+        if (t.id !== activeTargetId) drawTrackLayer(t, vpTop, vpH, false, isMulti);
+      }
+      for (const t of vp.tracks) {
+        if (t.id === activeTargetId) drawTrackLayer(t, vpTop, vpH, true, isMulti);
+      }
+
+      // Crosshair inside this viewport
+      if (hover.inPlot && hover.y >= vpTop && hover.y <= vpFoot) {
+        ctx.strokeStyle = 'rgba(242, 245, 250, 0.16)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([2, 3]);
+        ctx.beginPath();
+        ctx.moveTo(Math.round(hover.x) + 0.5, vpTop); ctx.lineTo(Math.round(hover.x) + 0.5, vpFoot);
+        ctx.moveTo(PAD.l, Math.round(hover.y) + 0.5); ctx.lineTo(right, Math.round(hover.y) + 0.5);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      // Track badge overlay in Split mode or Overlay multi-track legend
+      if (isSplit) {
+        const lt = vp.track;
+        const isFoc = lt.id === activeTargetId;
+        ctx.fillStyle = lt.color;
+        ctx.fillRect(PAD.l, vpTop, isFoc ? 3 : 2, vpH);
+        const badgeTxt = lt.name + (!lt.power ? ' · Bypassed' : isFoc ? ' · Editing' : '');
+        ctx.font = '700 10px ' + cssVar('--font');
+        const tw = ctx.measureText(badgeTxt).width + 22;
+        ctx.fillStyle = 'rgba(11, 13, 18, 0.82)';
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(PAD.l + 8, vpTop + 6, tw, 18, 5);
+        else ctx.rect(PAD.l + 8, vpTop + 6, tw, 18);
+        ctx.fill();
+        ctx.strokeStyle = isFoc ? lt.color : 'rgba(255,255,255,0.12)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.fillStyle = lt.color;
+        ctx.beginPath(); ctx.arc(PAD.l + 17, vpTop + 15, 3.5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = COL.cream;
+        ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+        ctx.fillText(badgeTxt, PAD.l + 24, vpTop + 15.5);
+      } else if (isMulti) {
+        let lx = PAD.l + 8;
+        const ly = vpTop + 15;
+        ctx.font = '700 9.5px ' + cssVar('--font');
+        for (const t of tracks) {
+          const isFoc = t.id === activeTargetId;
+          const label = t.name + (!t.power ? ' (Byp)' : '');
+          const tw = ctx.measureText(label).width + 20;
+          if (lx + tw > right - 8) break;
+          ctx.fillStyle = isFoc ? 'rgba(21, 25, 34, 0.90)' : 'rgba(11, 13, 18, 0.72)';
+          ctx.beginPath();
+          if (ctx.roundRect) ctx.roundRect(lx, ly - 9, tw, 18, 5);
+          else ctx.rect(lx, ly - 9, tw, 18);
+          ctx.fill();
+          ctx.strokeStyle = isFoc ? t.color : 'rgba(255,255,255,0.12)';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+          ctx.fillStyle = t.color;
+          ctx.beginPath(); ctx.arc(lx + 8, ly, 3.2, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = isFoc ? COL.cream : 'rgba(242, 245, 250, 0.72)';
+          ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+          ctx.fillText(label, lx + 14, ly + 0.5);
+          lx += tw + 5;
+        }
+      }
+
+      ctx.restore(); // end viewport clip
+
+      // Viewport border frame
+      const focBorder = isSplit && vp.track.id === activeTargetId;
+      ctx.strokeStyle = focBorder ? hexToRgba(vp.track.color, 0.55) : 'rgba(242, 245, 250, 0.14)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(PAD.l + 0.5, vpTop + 0.5, plotW - 1, vpH - 1);
+
+      // Left Axis dB labels per viewport
+      ctx.font = fontStr;
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = 'rgba(242, 245, 250, 0.52)';
+      if (!isSplit) {
+        for (let db = -dbRange; db <= dbRange; db += dbStep) {
+          const y = clamp(yOfVp(db, vpTop, vpH), vpTop + 5, vpFoot - 5);
+          ctx.fillText((db > 0 ? '+' : '') + db, PAD.l - 6, y);
+        }
+      } else {
+        for (const db of [dbRange, 0, -dbRange]) {
+          const y = clamp(yOfVp(db, vpTop, vpH), vpTop + 6, vpFoot - 6);
+          ctx.fillText((db > 0 ? '+' : '') + db, PAD.l - 6, y);
+        }
+      }
+
+      // Right Axis dBFS labels per viewport
+      ctx.textAlign = 'left';
+      ctx.fillStyle = 'rgba(143, 176, 236, 0.62)';
+      const specTicks = isSplit ? [0, -45, -90] : [0, -18, -36, -54, -72, -90];
+      for (const sdb of specTicks) {
+        const y = clamp(ySpecOfVp(sdb, vpTop, vpH), vpTop + 6, vpFoot - 6);
+        ctx.fillText(String(sdb), right + 6, y);
+      }
+    }
+
+    // ---- Top axis headers & Bottom logarithmic Hz ticks
+    ctx.font = fontStr;
+    ctx.fillStyle = 'rgba(242, 245, 250, 0.45)';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('dB', PAD.l - 6, 10);
+    ctx.textAlign = 'left';
+    ctx.fillText('dBFS', right + 6, 10);
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = 'rgba(242, 245, 250, 0.52)';
+    for (const f of [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]) {
+      const x = xOf(f);
+      ctx.fillText(f >= 1000 ? (f / 1000) + 'k' : String(f), x, foot + 6);
+    }
+
+    // Live interactive crosshair callout pills on the axes
+    if (hover.inPlot) {
+      const vp = viewportAtY(hover.y, vps);
+      const drawPill = (cx, cy, label, fill, txtCol) => {
+        ctx.font = '700 9.5px ' + cssVar('--font');
+        const tw = ctx.measureText(label).width + 10;
+        const h = 16;
+        ctx.fillStyle = fill;
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(cx - tw / 2, cy - h / 2, tw, h, 4);
+        else ctx.rect(cx - tw / 2, cy - h / 2, tw, h);
+        ctx.fill();
+        ctx.fillStyle = txtCol;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, cx, cy + 0.5);
+      };
+      const f = clamp(fOf(hover.x), FMIN, FMAX);
+      drawPill(clamp(hover.x, PAD.l + 24, right - 24), foot + 12, fmtHzShort(f), COL.accent, '#ffffff');
+      const curDb = dbOfYVp(hover.y, vp.vpTop, vp.vpH);
+      drawPill(PAD.l / 2, clamp(hover.y, vp.vpTop + 8, vp.vpTop + vp.vpH - 8), (curDb >= 0 ? '+' : '') + curDb.toFixed(1), COL.cream, COL.well);
+      const specDb = specDbOfYVp(hover.y, vp.vpTop, vp.vpH);
+      drawPill(right + PAD.r / 2, clamp(hover.y, vp.vpTop + 8, vp.vpTop + vp.vpH - 8), specDb.toFixed(0), 'rgba(29, 35, 48, 0.95)', COL.accentLit);
+    }
+
+    ctx.textBaseline = 'alphabetic';
+    if (candidateClashes.length > 0) {
+      candidateClashes.sort((a, b) => b.score - a.score);
+      const picked = [];
+      for (const c of candidateClashes) {
+        if (picked.every(p => Math.abs(Math.log2(c.freqHz / p.freqHz)) >= 0.35)) {
+          picked.push(c);
+          if (picked.length >= 3) break;
+        }
+      }
+      if (picked.length > 0) {
+        lastBestClash = picked[0];
+        lastBestClashTime = Date.now();
+      }
+      ctx.save();
+      ctx.font = '700 9.5px ' + cssVar('--font');
+      for (let ci = 0; ci < picked.length; ++ci) {
+        const c = picked[ci];
+        const label = '⚡ Duck ' + fmtHzShort(c.freqHz);
+        const tw = ctx.measureText(label).width + 14;
+        const ph = 18;
+        const px = clamp(xOf(c.freqHz) - tw / 2, PAD.l + 4, right - tw - 4);
+        const py = PAD.t + 30 + ci * 22;
+        const isHov = hover.clashIdx === activeClashChips.length;
+        ctx.fillStyle = isHov ? 'rgba(244, 63, 94, 0.92)' : 'rgba(17, 20, 28, 0.88)';
+        ctx.strokeStyle = isHov ? '#ffffff' : 'rgba(244, 63, 94, 0.78)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(px, py, tw, ph, 5);
+        else ctx.rect(px, py, tw, ph);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = isHov ? '#ffffff' : '#fda4af';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, px + tw / 2, py + ph / 2 + 0.5);
+        activeClashChips.push({ x: px, y: py, w: tw, h: ph, clash: c });
+      }
+      ctx.restore();
+    }
+    syncResolveClashButton();
+    updateReadout(vps);
+  }
+
+  function frame() {
+    if ((specMode !== 'off' || showLinkRef || showPeerSpec) && !specFrozen) {
+      let moving = false;
+      if (specTarget) {
+        for (const key of ['pre', 'post']) {
+          const d = specDisp[key], pk = specPeak[key], hold = specPeakHold[key], t = specTarget[key];
+          if (!t) continue;
+          for (let b = 0; b < SPEC_BINS; ++b) {
+            const goal = (t[b] + specTilt[b] < -89.0) ? -120 : t[b];
+            if (goal > d[b]) {
+              const diff = goal - d[b];
+              const a = diff > 4.5 ? 0.45 : (0.12 + 0.33 * (diff / 4.5));
+              d[b] += diff * a;
+            } else {
+              d[b] += (goal - d[b]) * 0.09;
+            }
+            if (Math.abs(goal - d[b]) < 0.04) d[b] = goal;
+
+            if (goal >= pk[b] && goal > -118) {
+              pk[b] = goal;
+              hold[b] = 18;
+            } else if (hold[b] > 0) {
+              --hold[b];
+            } else {
+              pk[b] = (pk[b] - 0.35 <= -119.5) ? -120 : (pk[b] - 0.35);
+            }
+
+            if (d[b] !== goal || (pk[b] > -119.5 && pk[b] + specTilt[b] > -89.5)) moving = true;
+          }
+        }
+        const dSc = specDisp.sc;
+        let anyScVisible = false;
+        const srcSc = (scActive && specTarget.sc) ? specTarget.sc : null;
+        for (let b = 0; b < SPEC_BINS; ++b) {
+          const raw = srcSc ? srcSc[b] : -120;
+          const goal = (raw + specTilt[b] < -89.0) ? -120 : raw;
+          if (goal > dSc[b]) {
+            const diff = goal - dSc[b];
+            const a = diff > 4.5 ? 0.45 : (0.12 + 0.33 * (diff / 4.5));
+            dSc[b] += diff * a;
+          } else {
+            dSc[b] += (goal - dSc[b]) * 0.09;
+          }
+          if (Math.abs(goal - dSc[b]) < 0.04) dSc[b] = goal;
+          if (dSc[b] !== goal) moving = true;
+          if (dSc[b] + specTilt[b] > -89.4) anyScVisible = true;
+        }
+        if (anyScVisible !== scContourVisible) moving = true;
+        scContourVisible = anyScVisible;
+      }
+
+      for (const [pid, tgt] of peerSpecTarget) {
+        let disp = peerSpecDisp.get(pid);
+        if (!disp) { disp = new Array(SPEC_BINS).fill(-120); peerSpecDisp.set(pid, disp); }
+        const active = !!tgt.active;
+        const src = tgt.post;
+        let anyVis = false;
+        for (let b = 0; b < SPEC_BINS; ++b) {
+          const raw = active && src ? src[b] : -120;
+          const goal = (raw + specTilt[b] < -89.0) ? -120 : raw;
+          if (goal > disp[b]) {
+            const diff = goal - disp[b];
+            const a = diff > 4.5 ? 0.45 : (0.12 + 0.33 * (diff / 4.5));
+            disp[b] += diff * a;
+          } else {
+            disp[b] += (goal - disp[b]) * 0.09;
+          }
+          if (Math.abs(goal - disp[b]) < 0.04) disp[b] = goal;
+          if (disp[b] !== goal) moving = true;
+          if (disp[b] + specTilt[b] > -89.4) anyVis = true;
+        }
+        if (anyVis !== !!peerSpecActive.get(pid)) moving = true;
+        peerSpecActive.set(pid, anyVis);
+      }
+      if (moving) uiDirty = true;
+    }
+    if (uiDirty) { uiDirty = false; render(); }
+    if (railDirty) { railDirty = false; syncRail(); }
+    renderBandList();
+    refreshRailLive();
+    meterFrame();
+    requestAnimationFrame(frame);
+  }
+
+  // --------------------------------------------------------- interaction
+  function hitNodeAnyTrack(x, y) {
+    const tracks = getVisibleTracks();
+    const vps = getViewports(tracks);
+    const vp = viewportAtY(y, vps);
+    let best = { trackId: vp.track.id, band: -1, vp };
+    let bestD = 14;
+    for (const t of vp.tracks) {
+      if (!t.resp || !Array.isArray(t.resp.bands)) continue;
+      for (const b of t.resp.bands) {
+        if (!b.on) continue;
+        const d = Math.hypot(x - xOf(b.freq), y - nodeYVp(b, vp.vpTop, vp.vpH));
+        let dd = d;
+        if (t.id === activeTargetId) {
+          dd -= (b.i === selected ? 4.0 : 2.2);
+        }
+        if (dd < bestD) {
+          bestD = dd;
+          best = { trackId: t.id, band: b.i, vp };
+        }
+      }
+    }
+    return best;
+  }
+
+  const toastEl = $('toast');
+  let toastTimer = 0;
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.style.opacity = 1;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.style.opacity = 0, 1600);
+  }
+
+  function selectBand(i) {
+    selected = i;
+    railDirty = uiDirty = true;
+  }
+
+  function ensureLocalResp() {
+    if (resp && Array.isArray(resp.bands)) return resp;
+    const freqs = [], total = [];
+    for (let k = 0; k < 200; ++k) {
+      freqs.push(FMIN * Math.pow(FMAX / FMIN, k / 199));
+      total.push(0);
+    }
+    resp = {
+      sampleRate,
+      freqs,
+      total,
+      bands: Array.from({ length: 24 }, (_, idx) => ({
+        i: idx,
+        on: !!(tgFor(0, bandId(idx, 'on'))?.getValue()),
+        shape: comboIndexFor(0, bandId(idx, 'shape'), 11),
+        freq: getRealFor(0, bandId(idx, 'freq'), RANGES.freq),
+        gain: getRealFor(0, bandId(idx, 'gain'), RANGES.gain),
+        q: getRealFor(0, bandId(idx, 'q'), RANGES.q),
+        slope: getRealFor(0, bandId(idx, 'slope'), RANGES.slope),
+        chan: comboIndexFor(0, bandId(idx, 'chan'), 5),
+        dyn: !!(tgFor(0, bandId(idx, 'dynon'))?.getValue()),
+      })),
+    };
+    return resp;
+  }
+
+  function createBandAt(x, y, targetTrackId = activeTargetId, vp = null) {
+    let r = respFor(targetTrackId);
+    if (targetTrackId === 0 && (!r || !Array.isArray(r.bands))) {
+      r = ensureLocalResp();
+    }
+    if (!r || !Array.isArray(r.bands)) return -1;
+    const free = r.bands.find(b => !b.on);
+    if (!free) { toast('All 24 bands are in use'); return -1; }
+    if (targetTrackId !== activeTargetId) focusTrack(targetTrackId, free.i);
+    const i = free.i;
+    const vpTop = vp ? vp.vpTop : PAD.t;
+    const vpH = vp ? vp.vpH : plotHeight();
+    const f = clamp(fOf(x), FMIN, FMAX);
+    const g = clamp(dbOfYVp(y, vpTop, vpH), -30, 30);
+    const shape = f < 50 ? SHAPE.lowCut : f > 18000 ? SHAPE.highCut : SHAPE.bell;
+    setRealFor(targetTrackId, bandId(i, 'freq'), RANGES.freq, f);
+    if (shape === SHAPE.bell) setRealFor(targetTrackId, bandId(i, 'gain'), RANGES.gain, g);
+    setComboFor(targetTrackId, bandId(i, 'shape'), shape);
+    const on = tgFor(targetTrackId, bandId(i, 'on'));
+    if (on) on.setValue(true);
+    free.on = true; free.freq = f; free.shape = shape;
+    if (shape === SHAPE.bell) free.gain = g;
+    selectBand(i);
+    return i;
+  }
+
+  function createNextBand() {
+    const r = activeResp();
+    if (!r || !Array.isArray(r.bands)) return;
+    const active = r.bands.filter(b => b.on).length;
+    const seedFreqs = [100, 250, 600, 1200, 2800, 6500, 12000, 45];
+    const f = seedFreqs[active % seedFreqs.length];
+    const vps = getViewports(getVisibleTracks());
+    const vp = vps.find(v => v.track.id === activeTargetId) || vps[0];
+    createBandAt(xOf(f), yOfVp(0, vp ? vp.vpTop : PAD.t, vp ? vp.vpH : plotHeight()), activeTargetId, vp);
+  }
+
+  function removeBand(i, targetTrackId = activeTargetId) {
+    const b = bandOf(i, targetTrackId);
+    if (!b) return;
+    if (Math.round(getRealFor(targetTrackId, 'listen', RANGES.listen)) === i + 1)
+      setRealFor(targetTrackId, 'listen', RANGES.listen, 0);
+    const on = tgFor(targetTrackId, bandId(i, 'on'));
+    if (on) on.setValue(false);
+    b.on = false;
+    if (targetTrackId === activeTargetId && selected === i) selected = -1;
+    railDirty = uiDirty = true;
+  }
+
+  function beginDrag(i, ev, targetTrackId = activeTargetId, vp = null) {
+    const b = bandOf(i, targetTrackId);
+    if (!b) return;
+    const ySuffix = usesGainY(b.shape) ? 'gain' : usesSlopeY(b.shape) ? 'slope' : 'q';
+    const gIds = [bandId(i, 'freq'), bandId(i, ySuffix)];
+    const vpH = vp ? vp.vpH : plotHeight();
+    drag = {
+      trackId: targetTrackId,
+      band: i,
+      vpH,
+      pointerId: ev.pointerId,
+      gestureIds: gIds,
+      startX: ev.clientX, startY: ev.clientY,
+      f0: b.freq, g0: b.gain, q0: b.q, s0: b.slope,
+    };
+    for (const gid of gIds) gestureFor(targetTrackId, gid, true);
+    try { canvas.setPointerCapture(ev.pointerId); } catch (e) {}
+  }
+
+  canvas.addEventListener('pointerdown', ev => {
+    canvas.focus({ preventScroll: true });
+    if ((ev.button ?? 0) !== 0) return;
+    const r = canvas.getBoundingClientRect();
+    const x = ev.clientX - r.left, y = ev.clientY - r.top;
+    const clashHit = hitClashChip(x, y);
+    if (clashHit >= 0 && activeClashChips[clashHit]) {
+      resolveClashWithDynamicBand(activeClashChips[clashHit].clash);
+      return;
+    }
+    const hit = hitNodeAnyTrack(x, y);
+    if (hit.band >= 0) {
+      if (hit.trackId !== activeTargetId) focusTrack(hit.trackId, hit.band);
+      else selectBand(hit.band);
+      beginDrag(hit.band, ev, hit.trackId, hit.vp);
+    } else {
+      const targetId = hit.vp.isSplit ? hit.vp.track.id : activeTargetId;
+      if (hit.vp.isSplit && targetId !== activeTargetId) focusTrack(targetId);
+      drag = {
+        pending: true,
+        trackId: targetId,
+        vp: hit.vp,
+        pointerId: ev.pointerId,
+        startX: ev.clientX, startY: ev.clientY,
+        px: x, py: y,
+      };
+      try { canvas.setPointerCapture(ev.pointerId); } catch (e) {}
+    }
+  });
+
+  canvas.addEventListener('dblclick', ev => {
+    const r = canvas.getBoundingClientRect();
+    const x = ev.clientX - r.left, y = ev.clientY - r.top;
+    const vps = getViewports(getVisibleTracks());
+    const vp = viewportAtY(y, vps);
+    const targetId = vp.isSplit ? vp.track.id : activeTargetId;
+    createBandAt(x, y, targetId, vp);
+  });
+
+  canvas.addEventListener('pointermove', ev => {
+    const r = canvas.getBoundingClientRect();
+    const x = ev.clientX - r.left, y = ev.clientY - r.top;
+    hover.x = x; hover.y = y;
+    hover.inPlot = x >= PAD.l && x <= W - PAD.r && y >= PAD.t && y <= H - PAD.b;
+
+    if (drag && (drag.pointerId == null || ev.pointerId === drag.pointerId)) {
+      if (drag.pending) {
+        if (Math.hypot(ev.clientX - drag.startX, ev.clientY - drag.startY) > 5) {
+          const tid = drag.trackId;
+          const vp = drag.vp;
+          const i = createBandAt(drag.px, drag.py, tid, vp);
+          drag = null;
+          if (i >= 0) beginDrag(i, ev, tid, vp);
+        }
+      } else {
+        const tid = drag.trackId;
+        const b = bandOf(drag.band, tid);
+        if (b) {
+          const wantListen = ev.altKey ? drag.band + 1 : 0;
+          if (wantListen !== listenEngaged) {
+            if (listenEngaged === 0 && wantListen > 0)
+              listenRestore = Math.round(getRealFor(tid, 'listen', RANGES.listen));
+            setRealFor(tid, 'listen', RANGES.listen, wantListen > 0 ? wantListen : listenRestore);
+            listenEngaged = wantListen;
+          }
+          const fine = ev.shiftKey ? 0.25 : 1;
+          const dxOct = (ev.clientX - drag.startX) / (plotWidth() / Math.log2(FMAX / FMIN));
+          const f = clamp(drag.f0 * Math.pow(2, dxOct * fine), FMIN, FMAX);
+          setRealFor(tid, bandId(b.i, 'freq'), RANGES.freq, f);
+          b.freq = f;
+
+          const dy = ev.clientY - drag.startY;
+          if (usesGainY(b.shape)) {
+            const g = clamp(drag.g0 - dy / (drag.vpH / 2) * dbRange * fine, -30, 30);
+            setRealFor(tid, bandId(b.i, 'gain'), RANGES.gain, g);
+            b.gain = g;
+          } else if (usesSlopeY(b.shape)) {
+            const s = clamp(drag.s0 - dy * 0.22 * fine, 6, 96);
+            setRealFor(tid, bandId(b.i, 'slope'), RANGES.slope, s);
+            b.slope = s;
+          } else {
+            const q = clamp(drag.q0 * Math.exp(-dy * 0.008 * fine), 0.025, 40);
+            setRealFor(tid, bandId(b.i, 'q'), RANGES.q, q);
+            b.q = q;
+          }
+        }
+      }
+    } else {
+      const prevNode = hover.node, prevTrack = hover.trackId, prevClash = hover.clashIdx;
+      const clashHit = hitClashChip(x, y);
+      hover.clashIdx = clashHit;
+      if (clashHit >= 0) {
+        hover.node = -1;
+        canvas.style.cursor = 'pointer';
+      } else {
+        const hit = hitNodeAnyTrack(x, y);
+        hover.node = hit.band;
+        hover.trackId = hit.trackId;
+        canvas.style.cursor = hover.node >= 0 ? 'grab' : 'crosshair';
+      }
+      if (prevNode !== hover.node || prevTrack !== hover.trackId || prevClash !== hover.clashIdx) uiDirty = true;
+    }
+    uiDirty = true;
+  });
+
+  function endCanvasDrag(ev) {
+    if (!drag || (drag.pointerId != null && ev.pointerId !== drag.pointerId)) return;
+    const tid = drag.trackId ?? activeTargetId;
+    if (!drag.pending && Array.isArray(drag.gestureIds)) {
+      for (const gid of drag.gestureIds) gestureFor(tid, gid, false);
+    } else if (drag.pending) {
+      selected = -1;
+      railDirty = true;
+    }
+    if (listenEngaged) {
+      setRealFor(tid, 'listen', RANGES.listen, listenRestore);
+      listenEngaged = 0;
+    }
+    drag = null;
+    uiDirty = true;
+    try { canvas.releasePointerCapture(ev.pointerId); } catch (e) {}
+  }
+  canvas.addEventListener('pointerup', endCanvasDrag);
+  canvas.addEventListener('pointercancel', endCanvasDrag);
+
+  canvas.addEventListener('pointerleave', () => {
+    hover.inPlot = false;
+    hover.node = -1;
+    uiDirty = true;
+  });
+
+  canvas.addEventListener('contextmenu', ev => {
+    ev.preventDefault();
+    const r = canvas.getBoundingClientRect();
+    const hit = hitNodeAnyTrack(ev.clientX - r.left, ev.clientY - r.top);
+    if (hit.band >= 0) removeBand(hit.band, hit.trackId);
+  });
+
+  let canvasWheelOpen = null;
+  let canvasWheelTimer = null;
+  function closeCanvasWheelGesture() {
+    if (canvasWheelTimer) {
+      clearTimeout(canvasWheelTimer);
+      canvasWheelTimer = null;
+    }
+    if (canvasWheelOpen) {
+      gestureFor(canvasWheelOpen.tid, canvasWheelOpen.id, false);
+      canvasWheelOpen = null;
+    }
+  }
+  canvas.addEventListener('pointerdown', closeCanvasWheelGesture);
+  window.addEventListener('blur', closeCanvasWheelGesture);
+  window.addEventListener('pagehide', closeCanvasWheelGesture);
+
+  canvas.addEventListener('wheel', ev => {
+    ev.preventDefault();
+    const targetTid = hover.node >= 0 ? hover.trackId : activeTargetId;
+    const targetBand = hover.node >= 0 ? hover.node : selected;
+    const b = bandOf(targetBand, targetTid);
+    if (!b || !b.on) return;
+    const dyPx = (window.WDKit && WDKit.normalizeWheelDelta) ? WDKit.normalizeWheelDelta(ev) : (ev.deltaY || 0);
+    if (dyPx === 0) return;
+    const fine = ev.shiftKey ? 0.25 : 1.0;
+    const q = clamp(b.q * Math.exp(-dyPx * 0.0016 * fine), 0.025, 40);
+    const id = bandId(b.i, 'q');
+    const isDiscrete = (ev.deltaMode !== 0) || (Math.abs(ev.deltaY) >= 100);
+    if (isDiscrete) {
+      closeCanvasWheelGesture();
+      gestureFor(targetTid, id, true);
+      setRealFor(targetTid, id, RANGES.q, q);
+      gestureFor(targetTid, id, false);
+    } else {
+      if (canvasWheelOpen && (canvasWheelOpen.tid !== targetTid || canvasWheelOpen.id !== id))
+        closeCanvasWheelGesture();
+      if (!canvasWheelOpen) {
+        canvasWheelOpen = { tid: targetTid, id };
+        gestureFor(targetTid, id, true);
+      }
+      setRealFor(targetTid, id, RANGES.q, q);
+      if (canvasWheelTimer) clearTimeout(canvasWheelTimer);
+      canvasWheelTimer = setTimeout(closeCanvasWheelGesture, 180);
+    }
+    b.q = q;
+    uiDirty = true;
+  }, { passive: false });
+
+  canvas.addEventListener('keydown', ev => {
+    const b = bandOf(selected, activeTargetId);
+    if (!b || !b.on) return;
+    const fine = ev.shiftKey;
+    const tid = activeTargetId;
+    const nudgeParam = (id, range, val) => {
+      gestureFor(tid, id, true);
+      setRealFor(tid, id, range, val);
+      gestureFor(tid, id, false);
+    };
+    let used = true;
+    if (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight') {
+      const step = (ev.key === 'ArrowLeft' ? -1 : 1) * (fine ? 1 / 96 : 1 / 24);
+      const f = clamp(b.freq * Math.pow(2, step), FMIN, FMAX);
+      nudgeParam(bandId(b.i, 'freq'), RANGES.freq, f); b.freq = f;
+    } else if (ev.key === 'ArrowUp' || ev.key === 'ArrowDown') {
+      const dir = ev.key === 'ArrowUp' ? 1 : -1;
+      if (usesGainY(b.shape)) {
+        const g = clamp(b.gain + dir * (fine ? 0.1 : 0.5), -30, 30);
+        nudgeParam(bandId(b.i, 'gain'), RANGES.gain, g); b.gain = g;
+      } else if (usesSlopeY(b.shape)) {
+        const s = clamp(b.slope + dir * (fine ? 1 : 6), 6, 96);
+        nudgeParam(bandId(b.i, 'slope'), RANGES.slope, s); b.slope = s;
+      } else {
+        const q = clamp(b.q * Math.exp(dir * (fine ? 0.02 : 0.1)), 0.025, 40);
+        nudgeParam(bandId(b.i, 'q'), RANGES.q, q); b.q = q;
+      }
+    } else if (ev.key === 'Delete' || ev.key === 'Backspace') {
+      removeBand(b.i, activeTargetId);
+    } else if (ev.key === 'Escape') {
+      selected = -1;
+    } else if (ev.key === 'Tab') {
+      const r = activeResp();
+      const enabled = r && r.bands ? r.bands.filter(x => x.on).map(x => x.i) : [];
+      if (enabled.length) {
+        const at = enabled.indexOf(selected);
+        selected = enabled[(at + (ev.shiftKey ? enabled.length - 1 : 1)) % enabled.length];
+      }
+    } else used = false;
+    if (used) { ev.preventDefault(); railDirty = uiDirty = true; }
+  });
+
+  // analyzer switches + precision style selector
+  {
+    const box = $('specSwitch');
+    const modeButtons = box.querySelectorAll('button[data-m]');
+    const apply = () => {
+      for (const b of modeButtons) b.classList.toggle('on', b.dataset.m === specMode);
+    };
+    for (const b of modeButtons)
+      b.addEventListener('click', () => {
+        specMode = b.dataset.m;
+        lsSet('wdeqSpecMode', specMode);
+        apply(); uiDirty = true;
+      });
+    apply();
+
+    const styleBox = $('specStyleSwitch');
+    const styleButtons = styleBox.querySelectorAll('button[data-s]');
+    const applyStyle = () => {
+      for (const b of styleButtons) b.classList.toggle('on', b.dataset.s === specStyle);
+    };
+    for (const b of styleButtons)
+      b.addEventListener('click', () => {
+        specStyle = b.dataset.s;
+        lsSet('wdeqSpecStyle', specStyle);
+        applyStyle(); uiDirty = true;
+      });
+    applyStyle();
+
+    const linkRefBtn = $('linkRefBtn');
+    linkRefBtn.classList.toggle('on', showLinkRef);
+    linkRefBtn.addEventListener('click', () => {
+      showLinkRef = !showLinkRef;
+      lsSet('wdeqShowLinkRef', showLinkRef ? '1' : '0');
+      linkRefBtn.classList.toggle('on', showLinkRef);
+      uiDirty = true;
+    });
+
+    const maskBtn = $('maskBtn');
+    maskBtn.classList.toggle('on', showMask);
+    maskBtn.addEventListener('click', () => {
+      showMask = !showMask;
+      lsSet('wdeqShowMask', showMask ? '1' : '0');
+      maskBtn.classList.toggle('on', showMask);
+      syncResolveClashButton();
+      uiDirty = true;
+    });
+
+    specScrubTimeline = (window.WDKit && WDKit.mountScrubTimeline && specHistory)
+      ? WDKit.mountScrubTimeline({
+          container: $('specScrubMount'),
+          historyBuffer: specHistory,
+          hz: SPEC_HISTORY_HZ,
+          label: 'WdEq 10-second spectrum scrub',
+          onToggleHold: (frozen, frame) => {
+            syncFreezeState(frozen, frame);
+          },
+          onScrub: (frame, _age, frozen) => {
+            if (frozen && specHistory.length() === 0) {
+              syncFreezeState(false);
+              return;
+            }
+            if (frozen && frame) {
+              applyFrozenSpecFrame(frame);
+              uiDirty = false;
+              if (canvasReady) render();
+            } else if (!frozen) {
+              uiDirty = true;
+            }
+          }
+        })
+      : null;
+
+    $('freezeBtn').addEventListener('click', () => {
+      const next = specHistory ? !specHistory.isFrozen() : !specFrozen;
+      syncFreezeState(next);
+    });
+  }
+
+  for (const btn of $('rangeSwitch').querySelectorAll('button')) {
+    if (parseFloat(btn.dataset.r) === dbRange) {
+      for (const o of $('rangeSwitch').querySelectorAll('button')) o.classList.remove('on');
+      btn.classList.add('on');
+    }
+    btn.addEventListener('click', () => {
+      dbRange = parseFloat(btn.dataset.r);
+      lsSet('wdeqDbRange', '' + dbRange);
+      for (const o of $('rangeSwitch').querySelectorAll('button')) o.classList.remove('on');
+      btn.classList.add('on');
+      uiDirty = true;
+    });
+  }
+
+  // ------------------------------------------------------------ band list
+  let blSortByFreq = (lsGet('wdeqBandSort') ?? '1') !== '0';
+  let blSig = '';
+  let blOrderSig = '';
+  let frozenBandOrder = null;
+
+  function renderBandList() {
+    const rowsEl = $('blRows');
+    if (!rowsEl) return;
+
+    const r = activeResp();
+    const live = r && Array.isArray(r.bands) ? r.bands.filter(b => b.on) : [];
+    const isDraggingAny = !!(drag && !drag.pending) || !!document.querySelector('.knob.dragging');
+    let view;
+    if (blSortByFreq) {
+      if (isDraggingAny) {
+        if (!frozenBandOrder) {
+          frozenBandOrder = [...live].sort((a, b) => a.freq - b.freq).map(b => b.i);
+        }
+        const rank = new Map(frozenBandOrder.map((id, idx) => [id, idx]));
+        view = [...live].sort((a, b) => {
+          const ra = rank.has(a.i) ? rank.get(a.i) : 999;
+          const rb = rank.has(b.i) ? rank.get(b.i) : 999;
+          return ra !== rb ? ra - rb : (a.freq - b.freq);
+        });
+      } else {
+        frozenBandOrder = null;
+        view = [...live].sort((a, b) => a.freq - b.freq);
+      }
+    } else {
+      frozenBandOrder = null;
+      view = live;
+    }
+
+    const dynOf = b => { const t = tg(bandId(b.i, 'dynon')); return t ? !!t.getValue() : !!b.dyn; };
+    const extOf = b => comboIndex(bandId(b.i, 'dynsc'), 2) === 1;
+    const sig = activeTargetId + '#' + view.map(b => `${b.i}:${b.freq.toFixed(1)}:${b.gain.toFixed(2)}:${b.shape}:${b.slope.toFixed(0)}:${(b.q || 0).toFixed(3)}:${b.chan | 0}:${dynOf(b)}:${extOf(b)}:${b.i === selected}`)
+                    .join('|') + '#' + blSortByFreq;
+    if (sig === blSig) return;
+    blSig = sig;
+
+    $('blCount').textContent = live.length + ' / 24';
+
+    if (!view.length) {
+      blOrderSig = '';
+      rowsEl.textContent = '';
+      const e = document.createElement('span');
+      e.className = 'bl-empty';
+      e.textContent = 'No active bands — double-click the curve or click + Add Band.';
+      rowsEl.appendChild(e);
+      return;
+    }
+
+    const orderSig = activeTargetId + ':' + view.map(b => b.i).join(',');
+    const canReuse = orderSig === blOrderSig && rowsEl.children.length === view.length;
+    if (!canReuse) {
+      blOrderSig = orderSig;
+      rowsEl.textContent = '';
+    }
+
+    const mk = (cls, text) => {
+      const e = document.createElement('span');
+      e.className = cls;
+      e.textContent = text;
+      return e;
+    };
+
+    for (let idxPos = 0; idxPos < view.length; ++idxPos) {
+      const b = view[idxPos];
+      const hasGain = usesGainY(b.shape);
+      const cut = usesSlopeY(b.shape);
+      const isDyn = dynOf(b);
+      const isExt = isDyn && extOf(b);
+      const chan = b.chan | 0;
+      const freqTxt = fmtHzList(b.freq);
+      const shapeTxt = SHAPES[b.shape] || '?';
+      const qTxt = 'Q ' + fmtQ(b.q || 0);
+      const gainN = hasGain ? ((b.gain > 0 ? '+' : '') + b.gain.toFixed(1)) : cut ? String(Math.round(b.slope)) : '—';
+      const gainU = hasGain ? 'dB' : cut ? 'dB/oct' : '';
+      const titleTxt = 'Band ' + (b.i + 1) + ' · ' + shapeTxt + ' · ' + fmtHz(b.freq)
+        + (hasGain ? ' · ' + fmtDb(b.gain) : cut ? ' · ' + Math.round(b.slope) + ' dB/oct' : '')
+        + ' · ' + qTxt + (chan > 0 ? ' · ' + CHANS[chan] : '') + (isDyn ? ' · Dynamic' : '');
+
+      if (canReuse) {
+        const row = rowsEl.children[idxPos];
+        row.className = 'brow' + (b.i === selected ? ' sel' : '');
+        row.setAttribute('aria-selected', b.i === selected ? 'true' : 'false');
+        row.title = titleTxt;
+        row._bandIdx = b.i;
+        const hzEl = row.querySelector('.hz');
+        const shEl = row.querySelector('.shape');
+        const bsEl = row.querySelector('.bs');
+        const bgN = row.querySelector('.bg .n');
+        const bgU = row.querySelector('.bg .u');
+        if (hzEl && hzEl.textContent !== freqTxt) hzEl.textContent = freqTxt;
+        if (shEl && shEl.textContent !== shapeTxt) shEl.textContent = shapeTxt;
+        if (bgN && bgN.textContent !== gainN) bgN.textContent = gainN;
+        if (bgU && bgU.textContent !== gainU) bgU.textContent = gainU;
+        if (bsEl) {
+          const bsSig = qTxt + '|' + (chan > 0 ? CHANS[chan] : '') + '|' + isDyn + '|' + isExt;
+          if (bsEl.dataset.bsSig !== bsSig) {
+            bsEl.dataset.bsSig = bsSig;
+            bsEl.textContent = '';
+            bsEl.appendChild(mk('q', qTxt));
+            if (chan > 0 && CHANS[chan]) bsEl.append(mk('sep', '·'), mk('chan', CHANS[chan]));
+            if (isDyn) bsEl.append(mk('sep', '·'), mk('dyn', 'DYN'));
+            if (isExt) bsEl.append(mk('sep', '·'), mk('ext', 'EXT'));
+          }
+        }
+      } else {
+        const row = document.createElement('button');
+        row.className = 'brow' + (b.i === selected ? ' sel' : '');
+        row.setAttribute('role', 'option');
+        row.setAttribute('aria-selected', b.i === selected ? 'true' : 'false');
+        row._bandIdx = b.i;
+
+        const idx = mk('idx', b.i + 1);
+        const meta = mk('meta', '');
+        const bf = document.createElement('div');
+        bf.className = 'bf';
+        bf.append(mk('hz', freqTxt), mk('shape', shapeTxt));
+        const bs = document.createElement('div');
+        bs.className = 'bs';
+        bs.dataset.bsSig = qTxt + '|' + (chan > 0 ? CHANS[chan] : '') + '|' + isDyn + '|' + isExt;
+        bs.appendChild(mk('q', qTxt));
+        if (chan > 0 && CHANS[chan]) bs.append(mk('sep', '·'), mk('chan', CHANS[chan]));
+        if (isDyn) bs.append(mk('sep', '·'), mk('dyn', 'DYN'));
+        if (isExt) bs.append(mk('sep', '·'), mk('ext', 'EXT'));
+        meta.append(bf, bs);
+
+        const bg = mk('bg', '');
+        bg.append(mk('n', gainN), mk('u', gainU));
+
+        row.append(idx, meta, bg);
+        row.title = titleTxt;
+        row.addEventListener('click', () => selectBand(row._bandIdx));
+        rowsEl.appendChild(row);
+      }
+    }
+  }
+
+  {
+    const sortBtn = $('blSort');
+    sortBtn.classList.toggle('on', blSortByFreq);
+    sortBtn.addEventListener('click', () => {
+      blSortByFreq = !blSortByFreq;
+      lsSet('wdeqBandSort', blSortByFreq ? '1' : '0');
+      sortBtn.classList.toggle('on', blSortByFreq);
+      blSig = '';
+      renderBandList();
+    });
+    const addBtn = $('addBandBtn');
+    if (addBtn) addBtn.addEventListener('click', createNextBand);
+  }
+
+  // -------------------------------------------------------------- the rail
+  let railBand = -2;
+  let railTarget = -1;
+  let railDynOn = false;
+  let lastAutoThrShown = -999;
+  const fmtQ = v => v.toFixed(v < 1 ? 3 : 2);
+  const fmtMs = v => v < 10 ? v.toFixed(1) + ' ms' : Math.round(v) + ' ms';
+  const fmtRel = v => v < 1000 ? Math.round(v) + ' ms' : (v / 1000).toFixed(2) + ' s';
+
+  const showPiece = (id, on) => {
+    const el = $(id);
+    if (!el) return;
+    el.classList.toggle('active', on);
+    el.setAttribute('aria-hidden', on ? 'false' : 'true');
+  };
+
+  function bindBandPane(i) {
+    railBand = i;
+    railTarget = activeTargetId;
+    lastAutoThrShown = -999;
+    const b = bandOf(i, activeTargetId);
+    const have = !!(b && b.on);
+    const tPrefix = activeTargetId ? (trackMeta(activeTargetId).name + ' · ') : '';
+    showPiece('bandPane', have);
+    showPiece('noBand', !have);
+    showPiece('dynRow', false);
+    $('chanLabel').style.visibility = have ? 'visible' : 'hidden';
+    $('chan-group').style.visibility = have ? 'visible' : 'hidden';
+    $('bandActs').style.visibility = have ? 'visible' : 'hidden';
+    if (!have) {
+      $('bandTitle').textContent = tPrefix + 'No band selected';
+      railDynOn = false;
+      return;
+    }
+    $('bandTitle').textContent = tPrefix + 'Band ' + (i + 1);
+
+    bindChoicePills($('shape-group'), bandId(i, 'shape'), SHAPES);
+    bindChoicePills($('chan-group'), bandId(i, 'chan'), CHANS);
+
+    bindSlider($('param_freq'), bandId(i, 'freq'), fmtHz);
+    bindSlider($('param_gain'), bandId(i, 'gain'), fmtDb);
+    bindSlider($('param_q'), bandId(i, 'q'), fmtQ);
+    bindSlider($('param_slope'), bandId(i, 'slope'), v => v.toFixed(1) + ' dB/oct');
+
+    bindToggle($('param_dynon'), bandId(i, 'dynon'), v => {
+      railDynOn = v;
+      showPiece('dynRow', v);
+    });
+    if (!host) {
+      railDynOn = !!b.dyn;
+      showPiece('dynRow', railDynOn);
+      $('param_dynon').classList.toggle('on', railDynOn);
+    }
+
+    bindSlider($('param_dynrange'), bandId(i, 'dynrange'), fmtDb);
+    bindSlider($('param_dynratio'), bandId(i, 'dynratio'), v => v >= 19.95 ? 'Brick' : v.toFixed(1) + ':1');
+    bindSlider($('param_dynknee'), bandId(i, 'dynknee'), v => v.toFixed(1) + ' dB');
+    bindSlider($('param_dynthresh'), bandId(i, 'dynthresh'), fmtDb);
+    bindToggle($('param_dynauto'), bandId(i, 'dynauto'));
+    bindSlider($('param_dynatk'), bandId(i, 'dynatk'), fmtMs);
+    bindSlider($('param_dynrel'), bandId(i, 'dynrel'), fmtRel);
+    bindSlider($('param_dynscfreq'), bandId(i, 'dynscfreq'), fmtHz);
+    bindToggle($('param_dynscfreqtrack'), bandId(i, 'dynscfreqtrack'));
+    bindChoicePills($('dynsc-group'), bandId(i, 'dynsc'), ['Self', 'External']);
+
+    $('param_dynthresh').addEventListener('pointerdown', () => {
+      const t = tg(bandId(i, 'dynauto'));
+      if (t && t.getValue()) t.setValue(false);
+    }, true);
+    $('param_dynscfreq').addEventListener('pointerdown', () => {
+      const t = tg(bandId(i, 'dynscfreqtrack'));
+      if (t && t.getValue()) t.setValue(false);
+    }, true);
+  }
+
+  $('param_listen').addEventListener('click', () => {
+    const b = bandOf(selected, activeTargetId);
+    if (!b || !b.on) return;
+    const held = Math.round(getReal('listen', RANGES.listen)) === b.i + 1;
+    setReal('listen', RANGES.listen, held ? 0 : b.i + 1);
+    uiDirty = true;
+  });
+  $('removeBand').addEventListener('click', () => removeBand(selected, activeTargetId));
+
+  function syncRail() {
+    const b = bandOf(selected, activeTargetId);
+    const have = !!(b && b.on);
+    if (railBand !== selected || railTarget !== activeTargetId || (have !== $('bandPane').classList.contains('active'))) {
+      bindBandPane(have ? selected : -1);
+      if (!have) railBand = selected;
+    }
+  }
+
+  const dbPos = db => clamp((db + 60) / 60, 0, 1) * 100;
+  let liveSig = '';
+  function refreshRailLive() {
+    const b = bandOf(selected, activeTargetId);
+    if (!b || !b.on || railBand !== selected || railTarget !== activeTargetId) return;
+    const i = b.i;
+    const listenOn = Math.round(getReal('listen', RANGES.listen)) === i + 1;
+    $('param_listen').classList.toggle('on', listenOn);
+    if (!railDynOn) return;
+
+    const pm = activeTargetId ? peerMeters.get(activeTargetId) : null;
+    const rides = pm && pm.rides ? pm.rides : dynRides;
+    const dets  = pm && pm.dets  ? pm.dets  : dynDets;
+    const thrs  = pm && pm.thrs  ? pm.thrs  : dynThrs;
+
+    const auto = tg(bandId(i, 'dynauto'));
+    const track = tg(bandId(i, 'dynscfreqtrack'));
+    const ride = rides[i] || 0;
+    const sig = [activeTargetId, listenOn, auto && auto.getValue() ? thrs[i].toFixed(1) : '',
+                 track && track.getValue() ? b.freq.toFixed(1) : '',
+                 ride.toFixed(1), dets[i].toFixed(1), thrs[i].toFixed(1)].join('|');
+    if (sig === liveSig) return;
+    liveSig = sig;
+
+    if (auto && auto.getValue()) {
+      const thrVal = thrs[i];
+      if (Math.abs(ride) >= 0.1 || Math.abs(thrVal - lastAutoThrShown) >= 0.15) {
+        lastAutoThrShown = thrVal;
+        const el = $('param_dynthresh');
+        const span = el.querySelector('span.v');
+        if (span) span.textContent = fmtDb(thrVal);
+        paintKnob(el, toNormR(RANGES.dynthresh, thrVal));
+      }
+    }
+    if (track && track.getValue()) {
+      const el = $('param_dynscfreq');
+      const span = el.querySelector('span.v');
+      if (span) span.textContent = fmtHz(b.freq);
+      paintKnob(el, toNormR(RANGES.freq, b.freq));
+    }
+    const half = clamp(Math.abs(ride) / 24, 0, 1) * 50;
+    const fill = $('dynRide');
+    fill.style.left = ride < 0 ? (50 - half) + '%' : '50%';
+    fill.style.width = half + '%';
+    $('dynRideVal').textContent = (ride > 0 ? '+' : '') + ride.toFixed(1);
+    $('dynDet').style.width = dbPos(dets[i]) + '%';
+    $('dynThr').style.left = dbPos(thrs[i]) + '%';
+  }
+
+  // ------------------------------------------------------------- meters
+  let mIn = -70, mOut = -70, mInT = -70, mOutT = -70;
+  const showDb = v => v <= -69.5 ? '-inf' : v.toFixed(1);
+  let meterSig = '';
+  let lastInFill = '', lastOutFill = '';
+  function meterFrame() {
+    mIn = Math.abs(mInT - mIn) < 0.02 ? mInT : (mIn + (mInT - mIn) * (mInT > mIn ? 0.6 : 0.12));
+    mOut = Math.abs(mOutT - mOut) < 0.02 ? mOutT : (mOut + (mOutT - mOut) * (mOutT > mOut ? 0.6 : 0.12));
+    const inFill = (clamp((mIn + 60) / 60, 0, 1) * 100).toFixed(1) + '%';
+    const outFill = (clamp((mOut + 60) / 60, 0, 1) * 100).toFixed(1) + '%';
+    if (inFill !== lastInFill) {
+      lastInFill = inFill;
+      $('inBar').style.setProperty('--fill', inFill);
+    }
+    if (outFill !== lastOutFill) {
+      lastOutFill = outFill;
+      $('outBar').style.setProperty('--fill', outFill);
+    }
+    const sig = showDb(mIn) + '|' + showDb(mOut) + '|' + agDb.toFixed(1);
+    if (sig === meterSig) return;
+    meterSig = sig;
+    $('inDb').textContent = showDb(mIn);
+    $('outDb').textContent = showDb(mOut);
+    const ag = $('param_autogain');
+    if (ag) ag.title = agDb !== 0
+      ? `Loudness-compensated output · currently ${agDb >= 0 ? '+' : ''}${agDb.toFixed(1)} dB`
+      : 'Loudness-compensated output (Match Bypass).';
+  }
+
+  // ------------------------------------------------------------------- init
+  function bindGlobalControls() {
+    bindSlider($('param_input'), 'input', fmtDb);
+    bindSlider($('param_output'), 'output', fmtDb);
+    bindSlider($('param_mix'), 'mix', v => Math.round(v) + '%');
+    bindSlider($('param_gainscale'), 'gainscale', v => Math.round(v) + '%');
+
+    bindChoicePills($('mode-group'), 'channelmode', ['Stereo', 'L / R', 'M / S']);
+    bindChoicePills($('monitor-group'), 'listenchan', ['Off', 'L', 'R', 'Mid', 'Side']);
+    bindChoicePills($('lookahead-group'), 'lookahead', ['Off', '2 ms', '5 ms', '10 ms']);
+    bindChoicePills($('os-group'), 'oversampling', ['Off', '2x', '4x']);
+
+    bindToggle($('param_autogain'), 'autogain');
+    bindToggle($('param_delta'), 'delta');
+    bindToggle($('param_power'), 'power', (v, el) => {
+      const txt = el ? el.querySelector('#powerText') : $('powerText');
+      if (txt) txt.textContent = v ? 'Engaged' : 'Bypassed';
+    });
+  }
+
+  function rebindAllControlsForTarget() {
+    bindGlobalControls();
+    railBand = -2;
+    railTarget = -1;
+    lastAutoThrShown = -999;
+    liveSig = '';
+    blSig = '';
+    blOrderSig = '';
+    frozenBandOrder = null;
+    meterSig = '';
+    lastLinkSig = '';
+    lastLinkLedSig = '';
+    lastMultiBarSig = '';
+    if (activeTargetId > 0) {
+      const pm = peerMeters.get(activeTargetId);
+      mInT = pm && typeof pm.in === 'number' ? pm.in : -70;
+      mOutT = pm && typeof pm.out === 'number' ? pm.out : -70;
+      agDb = pm && typeof pm.ag === 'number' ? pm.ag : 0;
+    }
+    syncTargetDeckChrome();
+    refreshLinkSources();
+    railDirty = uiDirty = true;
+  }
+
+  function initAll() {
+    document.querySelectorAll('.knob').forEach(mountKnob);
+    mountPills($('shape-group'), SHAPES);
+    mountPills($('chan-group'), CHANS);
+    mountPills($('dynsc-group'), ['Self', 'External']);
+    bindGlobalControls();
+  }
+
+  setTimeout(() => {
+    initAll();
+    if (window.WDKit) {
+      window.WDKit.mountHeaderKit({ host, onPresetApplied: () => { if (host) host.call('requestResponse').catch(() => {}); } });
+      window.WDKit.syncGlobalTheme(host, applyTheme);
+      window.WDKit.enhanceAllKnobs(id => sl(id));
+    }
+    fitCanvas();
+    canvasReady = true;
+    railDirty = uiDirty = true;
+    requestAnimationFrame(frame);
+  }, 120);
+
+  // -------------------------------------------------------------- events
+  if (host) {
+    host.on('response', data => {
+      resp = data;
+      sampleRate = data.sampleRate || sampleRate;
+      if (drag && !drag.pending && drag.trackId === 0) {
+        const live = bandOf(drag.band, 0);
+        const mine = resp.bands[drag.band];
+        if (live && mine) Object.assign(mine, {
+          freq: live.freq, gain: live.gain, q: live.q, slope: live.slope });
+      }
+      if (activeTargetId === 0) railDirty = true;
+      uiDirty = true;
+    });
+    const watchBeaconEpoch = window.WDKit ? window.WDKit.createBeaconEpochWatcher(() => refreshLinkSources()) : null;
+    if (window.WDKit) {
+      const telem = window.WDKit.createTelemetryPoller(({ kind, flags, floats }) => {
+        if (kind !== 4 || specFrozen || floats.length < 3 * SPEC_BINS) return;
+        const pre = Array.from(floats.subarray(0, SPEC_BINS));
+        const post = Array.from(floats.subarray(SPEC_BINS, 2 * SPEC_BINS));
+        const sc = Array.from(floats.subarray(2 * SPEC_BINS, 3 * SPEC_BINS));
+        specTarget = { pre, post, sc, scActive: (flags & 1) !== 0 };
+        if (activeTargetId === 0) scActive = (flags & 1) !== 0;
+        if (specHistory) {
+          specHistory.push(specTarget);
+          if (specScrubTimeline) specScrubTimeline.update();
+        }
+        uiDirty = true;
+      });
+      if (!isWebDemo) telem.start();
+    }
+
+    host.on('meters', m => {
+      if (!m) return;
+      metersSeen = true;
+      if (watchBeaconEpoch) watchBeaconEpoch(m);
+      if (typeof m.selfName === 'string' && m.selfName && m.selfName !== selfMeta.name) {
+        selfMeta.name = m.selfName;
+        renderSelfChip();
+        renderMultiTrackBar();
+      }
+      if (typeof m.selfColor === 'string' && m.selfColor && m.selfColor !== selfMeta.color) {
+        selfMeta.color = m.selfColor;
+        renderSelfChip();
+        renderMultiTrackBar();
+      }
+      if (m.rides) {
+        let moved = false;
+        for (let b = 0; b < 24; ++b) {
+          const rawR = m.rides[b] || 0;
+          const r = Math.abs(rawR) < 0.03 ? 0 : rawR;
+          if (Math.abs(r - dynRides[b]) > 0.03 || (r === 0 && dynRides[b] !== 0)) moved = true;
+          dynRides[b] = r;
+          dynDets[b] = m.dets ? m.dets[b] : -70;
+          dynThrs[b] = m.thrs ? m.thrs[b] : -30;
+        }
+        if (moved && activeTargetId === 0) uiDirty = true;
+      }
+      if (activeTargetId === 0) {
+        mInT = (typeof m.in === 'number' && isFinite(m.in)) ? m.in : -70;
+        mOutT = (typeof m.out === 'number' && isFinite(m.out)) ? m.out : -70;
+        agDb = (typeof m.ag === 'number' && isFinite(m.ag)) ? m.ag : 0;
+        if (typeof m.beaconSrMismatch === 'boolean') { linkSrMismatch = m.beaconSrMismatch; }
+        if (typeof m.linkActive === 'boolean') { linkReceiving = m.linkActive; updateLinkLed(); }
+        else if (typeof m.beaconReceiving === 'boolean') { linkReceiving = m.beaconReceiving; updateLinkLed(); }
+        if (typeof m.scActive === 'boolean' && m.scActive !== scActive) {
+          scActive = m.scActive;
+          uiDirty = true;
+        }
+      }
+    });
+    host.on('spectrum', s => {
+      if (!specFrozen && s) {
+        specTarget = s;
+        const nextScActive = typeof s.scActive === 'boolean' ? s.scActive : scActive;
+        if (activeTargetId === 0 && typeof s.scActive === 'boolean') scActive = s.scActive;
+        if (specHistory) {
+          specHistory.push({ pre: s.pre, post: s.post, sc: s.sc, scActive: nextScActive });
+          if (specScrubTimeline) specScrubTimeline.update();
+        }
+        uiDirty = true;
+      }
+    });
+    host.on('peerResponses', payload => {
+      if (!payload || !Array.isArray(payload.peers)) return;
+      for (const pr of payload.peers) {
+        if (!pr || !pr.id) continue;
+        if (drag && !drag.pending && drag.trackId === pr.id) {
+          const live = bandOf(drag.band, pr.id);
+          const mine = pr.bands && pr.bands[drag.band];
+          if (live && mine) Object.assign(mine, {
+            freq: live.freq, gain: live.gain, q: live.q, slope: live.slope });
+        }
+        peerResponses.set(pr.id, pr);
+      }
+      renderMultiTrackBar();
+      syncTargetDeckChrome();
+      railDirty = uiDirty = true;
+    });
+    host.on('peerMeters', payload => {
+      if (!payload || !Array.isArray(payload.peers)) return;
+      for (const pm of payload.peers) {
+        if (!pm || !pm.id) continue;
+        peerMeters.set(pm.id, pm);
+        if (pm.id === activeTargetId) {
+          mInT = (typeof pm.in === 'number' && isFinite(pm.in)) ? pm.in : -70;
+          mOutT = (typeof pm.out === 'number' && isFinite(pm.out)) ? pm.out : -70;
+          agDb = (typeof pm.ag === 'number' && isFinite(pm.ag)) ? pm.ag : 0;
+          if (typeof pm.beaconSrMismatch === 'boolean') linkSrMismatch = pm.beaconSrMismatch;
+          if (typeof pm.beaconReceiving === 'boolean') linkReceiving = pm.beaconReceiving;
+          if (typeof pm.scActive === 'boolean') scActive = pm.scActive;
+          updateLinkLed();
+        }
+      }
+    });
+    host.on('peerSpectrums', payload => {
+      if (!specFrozen && payload && Array.isArray(payload.peers)) {
+        for (const sp of payload.peers) {
+          if (sp && sp.id) peerSpecTarget.set(sp.id, sp);
+        }
+      }
+    });
+    host.on('remoteParams', payload => {
+      if (!payload || !payload.id || !payload.norms) return;
+      getRemoteModel(payload.id).applyNormsSnapshot(payload.norms);
+    });
+    host.on('peersRemoved', payload => {
+      if (!payload || !Array.isArray(payload.ids)) return;
+      for (const gid of payload.ids) {
+        pinnedIds = pinnedIds.filter(id => id !== gid);
+        peerResponses.delete(gid);
+        peerMeters.delete(gid);
+        peerSpecTarget.delete(gid);
+        peerSpecDisp.delete(gid);
+        peerSpecActive.delete(gid);
+        remoteModels.delete(gid);
+        if (activeTargetId === gid) focusTrack(0);
+      }
+      renderSessionHeaderBadge();
+      renderMultiTrackBar();
+      renderSessionDrawer();
+      uiDirty = true;
+    });
+
+    try {
+      const state = await host.call('getUiState');
+      if (state) {
+        if (state.build) $('buildTag').textContent = state.build;
+        if (state.sampleRate) {
+          sampleRate = state.sampleRate;
+          $('srTag').textContent = (state.sampleRate / 1000).toFixed(1) + ' kHz';
+        }
+        if (state.paramDefaults) Object.assign(paramDefaults, state.paramDefaults);
+        if (typeof state.beaconSource === 'string') linkSelected = state.beaconSource;
+        else if (typeof state.linkSource === 'string') linkSelected = state.linkSource;
+        if (typeof state.beaconReceiving === 'boolean') linkReceiving = state.beaconReceiving;
+        else if (typeof state.linkReceiving === 'boolean') linkReceiving = state.linkReceiving;
+        if (typeof state.beaconSrMismatch === 'boolean') linkSrMismatch = state.beaconSrMismatch;
+        if (state.selfId) selfMeta.id = state.selfId;
+        if (state.selfName) selfMeta.name = state.selfName;
+        if (typeof state.selfCustomName === 'string') selfMeta.customName = state.selfCustomName;
+        if (typeof state.beaconPublishedName === 'string') selfMeta.publishedName = state.beaconPublishedName;
+        if (typeof state.beaconPublishing === 'boolean') selfMeta.publishing = state.beaconPublishing;
+        if (state.selfColor) selfMeta.color = state.selfColor;
+        if (typeof state.selfColorIndex === 'number') selfMeta.colorIndex = state.selfColorIndex;
+        if (state.multiViewMode === 'split') multiViewMode = 'split';
+        if (Array.isArray(state.pinnedPeerNames)) pendingRestorePinnedNames = state.pinnedPeerNames.slice();
+        renderSelfChip();
+        renderSessionHeaderBadge();
+      }
+    } catch (e) { /* preview */ }
+    if (!isWebDemo) {
+      await refreshLinkSources();
+      await refreshSessionState();
+      setInterval(() => { refreshSessionState(); }, 2000);
+    }
+    try { await host.call('requestResponse'); } catch (e) {}
+  } else {
+    // plain-browser preview
+    renderSelfChip();
+    const freqs = [], total = [];
+    for (let i = 0; i < 200; ++i) {
+      const f = 10 * Math.pow(3000, i / 199);
+      freqs.push(f);
+      total.push(6 * Math.exp(-Math.pow(Math.log2(f / 200), 2))
+               - 9 * Math.exp(-Math.pow(Math.log2(f / 4000) * 1.6, 2)));
+    }
+    resp = { sampleRate: 48000, freqs, total,
+             bands: Array.from({ length: 24 }, (_, i) => ({
+               i, on: i < 6, shape: 0,
+               freq: [60, 180, 520, 1800, 4200, 11000][i] || 1000,
+               gain: [4.5, -3.5, 2.5, -5.0, -7.5, 3.0][i] || 0,
+               q: 1.2, slope: 12, chan: 0, dyn: i === 3,
+               curve: i < 6 ? total.map(v => v / 4) : undefined })) };
+    selected = 0;
+    scActive = true; linkSelected = 'Kick Bus'; linkReceiving = true;
+    renderLinkSources({
+      selected: 'Kick Bus', receiving: true, scActive: true,
+      sources: [{ name: 'Kick Bus', sr: 48000, ch: 2 }, { name: 'Snare Top', sr: 48000, ch: 1 }]
+    });
+    const pre = specFreq.map(f => -22 - 8 * Math.log2(Math.max(f, 60) / 60) + 3 * Math.sin(f / 90));
+    const sc  = specFreq.map(f => -26 - 10 * Math.log2(Math.max(f, 80) / 80) + 4 * Math.cos(f / 140));
+    specTarget = { pre, post: pre.map((v, k) => v + total[Math.min(199, Math.round(k / SPEC_BINS * 200))] - 3), sc };
+    setInterval(() => {
+      if (specFrozen) return;
+      const t = Date.now() * 0.001;
+      dynRides[3] = -4 + 3 * Math.sin(t * 3);
+      dynDets[3] = -24 + 8 * Math.sin(t * 2.1);
+      mInT = -14 + 4 * Math.sin(t * 5); mOutT = mInT - 3;
+      specTarget = {
+        pre: pre.map((v, k) => v + 2.5 * Math.sin(t * 4 + k * 0.2)),
+        post: pre.map((v, k) => v + 2.5 * Math.sin(t * 4 + k * 0.2) + total[Math.min(199, Math.round(k / SPEC_BINS * 200))] - 2),
+        sc: sc.map((v, k) => v + 3 * Math.cos(t * 3.2 + k * 0.17)),
+      };
+      if (specHistory) {
+        specHistory.push({ pre: specTarget.pre, post: specTarget.post, sc: specTarget.sc, scActive });
+        if (specScrubTimeline) specScrubTimeline.update();
+      }
+      uiDirty = true;
+    }, 33);
+  }
+})();
+</script>
+</body>
+</html>

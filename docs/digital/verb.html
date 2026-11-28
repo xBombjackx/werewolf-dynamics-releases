@@ -1,0 +1,2828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Werewolf Digital Reverb</title>
+<link rel="stylesheet" href="./wd/tokens.css">
+<script src="./demo-bar.js"></script>
+<script src="./modules/verb.js"></script>
+<script src="./wd-plugin-host.js"></script>
+<script src="./wd/kit.js"></script>
+<style>
+  /* ══════════════════════════════════════════════════════════════════════
+     Instrument Panel — the Werewolf Digital chassis.
+
+     This :root block is the WHOLE design language.
+     Reverb: iris #8a6cc4 / #b8a0ef / #513a86 (--accent / --accent-lit / --accent-deep).
+     ════════════════════════════════════════════════════════════════════ */
+  :root {
+    --bg:      #0b0d12;   /* deep studio obsidian chassis */
+    --panel:   #151922;   /* machined slate control bays  */
+    --panel-hi:#1d2330;   /* elevated cap / active surface */
+    --track:   #0d0f15;   /* recessed tracks & beds       */
+    --line:    rgba(255, 255, 255, 0.08);
+    --line-hi: rgba(255, 255, 255, 0.15);
+    --hover-bg:rgba(255, 255, 255, 0.06);
+    --text:    #f2f5fa;
+    --label:   #8b96a8;
+    --muted:   #586274;
+    --well:    #06070a;   /* pure OLED signal surface     */
+    --cream:   #f2f5fa;   /* live plot, on well           */
+
+    --accent:     #8a6cc4;
+    --accent-lit: #b8a0ef;
+    --accent-deep:#513a86;
+
+    --sage:      #34d399;
+    --sage-tint: rgba(52, 211, 153, 0.14);
+    --sage-deep: #6ee7b7;
+
+    --r-window: 0px;
+    --r-panel: 8px;
+    --r-pill: 5px;
+
+    --font: "Figtree", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    --font-display: "Figtree", "Segoe UI Variable Display", "Segoe UI Semibold", system-ui, sans-serif;
+  }
+  :root[data-theme="japandi-dark"] {
+    --bg:      #121316;
+    --panel:   #1b1d21;
+    --panel-hi:#24272d;
+    --track:   #0d0e10;
+    --line:    rgba(242, 237, 228, 0.08);
+    --line-hi: rgba(242, 237, 228, 0.15);
+    --hover-bg:rgba(242, 237, 228, 0.06);
+    --text:    #f2ede4;
+    --label:   #9e978c;
+    --muted:   #666057;
+    --well:    #090a0c;
+    --cream:   #f2ede4;
+    --accent-deep:#63489e;
+    --sage:      #7a9171;
+    --sage-tint: rgba(122, 145, 113, 0.18);
+    --sage-deep: #b8cfb0;
+  }
+  :root[data-theme="japandi-light"] {
+    --bg:      #e6e1d8;
+    --panel:   #dbd5c9;
+    --panel-hi:#e4dfd5;
+    --track:   #ccc5b8;
+    --line:    rgba(24, 25, 28, 0.11);
+    --line-hi: rgba(24, 25, 28, 0.20);
+    --hover-bg:rgba(24, 25, 28, 0.06);
+    --text:    #18191c;
+    --label:   #635f58;
+    --muted:   #8c867c;
+    --well:    #17181b;
+    --cream:   #f2ede4;
+    --accent-deep:#513a86;
+    --sage:      #4d6b47;
+    --sage-tint: rgba(77, 107, 71, 0.16);
+    --sage-deep: #2d4229;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 400 13px/1.45 var(--font);
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  :focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- header ---------- */
+  header {
+    flex: 0 0 auto;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand svg { display: block; }
+  .brand .stack { display: flex; flex-direction: column; gap: 1px; }
+  .brand .line { font: 700 8.5px/1 var(--font); letter-spacing: 0.22em; text-transform: uppercase; color: var(--label); }
+  .brand .name { font-family: var(--font-display); font-size: 19px; line-height: 1; letter-spacing: -0.01em; }
+  .headsep { width: 1px; height: 26px; background: var(--line); }
+  .spacer { flex: 1; }
+  .stat { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  .stat .k { font: 600 9px/1 var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  .stat .v { font: 700 11.5px/1 var(--font); font-variant-numeric: tabular-nums; }
+  #buildTag { font: 500 10px/1.3 var(--font); color: var(--muted); text-align: right; max-width: 150px; }
+
+  /* ---------- frame ---------- */
+  .body {
+    flex: 1 1 auto;
+    display: flex;
+    gap: 12px;
+    padding: 14px;
+    min-height: 0;
+  }
+  .col { flex: 1 1 auto; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+
+  /* ---------- wells ---------- */
+  .wells { flex: 1 1 auto; display: flex; gap: 8px; min-height: 118px; min-width: 0; }
+  .well-group { flex: 1.75 1 0; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .well-group.narrow { flex: 1.25 1 0; min-width: 204px; }
+  .well-group.inactive .well { opacity: 0.45; }
+  .well-group.inactive .well-title { color: var(--muted); }
+  .well-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 0 2px;
+    min-height: 22px;
+  }
+  .well-title { font: 700 11px/1 var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--label); }
+  .well-hint { font: 500 11.5px/1 var(--font); color: var(--muted); white-space: nowrap; }
+  .well-hint.accent { color: var(--accent-lit); font-weight: 600; }
+  :root[data-theme="japandi-light"] .well-hint.accent { color: var(--accent-deep); }
+  .well {
+    flex: 1;
+    min-height: 0;
+    border-radius: var(--r-panel);
+    overflow: hidden;
+    background: var(--well);
+    position: relative;
+  }
+  .well canvas { width: 100%; height: 100%; display: block; }
+
+  /* ---------- panels ---------- */
+  .panel {
+    background: var(--panel);
+    border-radius: var(--r-panel);
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .panel.rail { flex: 0 0 auto; }
+  .rail-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .rail-range { font: 500 11.5px/1 var(--font); color: var(--label); }
+  .rail-acts { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+
+  /* ---------- pills ---------- */
+  .pill {
+    height: 32px;
+    padding: 0 14px;
+    border-radius: var(--r-pill);
+    border: 1px solid var(--line);
+    background: transparent;
+    font: 600 12px/1 var(--font);
+    color: var(--label);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background-color 0.12s, color 0.12s;
+    white-space: nowrap;
+  }
+  .pill:hover { background: var(--hover-bg); }
+  .pill:active { background: var(--track); }
+  .pill.on { border-color: transparent; background: var(--accent); color: #f9f4ed; font-weight: 700; }
+  .pill.on:hover { background: var(--accent-deep); }
+  .pill:disabled { opacity: 0.45; cursor: default; }
+  .pill.sm { height: 28px; padding: 0 13px; font-size: 11.5px; }
+  .pill.wide { width: 100%; }
+  .pill.power { background: var(--track); color: var(--label); }
+  .pill.power.on { background: var(--well); color: var(--cream); }
+  .pill.power .led { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+  .pill.power.on .led { background: var(--accent-lit); box-shadow: 0 0 8px var(--accent-lit); }
+  .pillbed { display: flex; gap: 4px; padding: 3px; border-radius: var(--r-pill); background: var(--track); }
+  .pillbed button {
+    height: 26px; padding: 0 14px; border-radius: var(--r-pill); border: 0;
+    background-color: transparent; color: var(--label); font: 600 11.5px/1 var(--font); cursor: pointer;
+    transition: background-color 0.12s, color 0.12s; white-space: nowrap;
+  }
+  .pillbed button:hover:not(:disabled):not(.on) { background-color: var(--hover-bg); }
+  .pillbed.accent > button.on { background-color: var(--accent); color: #f9f4ed; font-weight: 700; }
+  .pillbed.sage > button.on { background-color: var(--sage); color: #f9f4ed; font-weight: 700; }
+  .pillbed > button:disabled { opacity: 0.45; cursor: default; }
+
+  .charset { display: flex; flex-wrap: wrap; gap: 5px; }
+  .fieldlabel { font: 600 10.5px/1 var(--font); color: var(--label); }
+
+  /* ---------- knob ---------- */
+  .knob {
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    width: 78px; cursor: ns-resize; touch-action: none;
+    border-radius: 12px; padding: 2px 0;
+  }
+  .knob:hover { background: var(--hover-bg); }
+  .knob .klabel { font: 600 10.5px/1 var(--font); color: var(--label); pointer-events: none; }
+  .knob .v { font: 700 14px/1 var(--font); font-variant-numeric: tabular-nums; pointer-events: none; }
+  .knob svg { display: block; pointer-events: none; }
+  .knob.dragging .v { color: var(--accent-deep); }
+  .knob.lg { width: 92px; }
+  .knob.sm { width: auto; flex-direction: row; align-items: center; gap: 7px; }
+  .knob.sm .kstack { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; }
+  .knob.sm .klabel { font-size: 10px; }
+  .knob.sm .v { font-size: 12.5px; }
+
+  /* ---------- meters ---------- */
+  .vmeters { flex: 1; min-height: 0; width: 100%; display: flex; gap: 10px; }
+  .vmeter-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .vmeter {
+    flex: 1; min-height: 40px; width: 16px; border-radius: var(--r-pill);
+    background: var(--well); overflow: hidden; position: relative;
+  }
+  .vmeter i {
+    position: absolute; left: 0; right: 0; bottom: 0; height: var(--fill, 0%);
+    background: linear-gradient(0deg, var(--accent), var(--accent-lit));
+    border-radius: var(--r-pill);
+  }
+  .vmeter-wrap .k { font: 600 9.5px/1 var(--font); letter-spacing: 0.1em; text-transform: uppercase; color: var(--label); }
+  .vmeter-wrap .v { font: 700 11.5px/1 var(--font); font-variant-numeric: tabular-nums; }
+
+  /* ---------- master strip ---------- */
+  .master {
+    flex: 0 0 132px;
+    background: var(--panel);
+    border-radius: var(--r-panel);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .master .stack { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+
+  /* ---------- band panes ---------- */
+  #band_panes_container { flex: 1 1 auto; min-height: 0; display: flex; }
+  .pane { display: none; }
+  .pane.active { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; flex: 1; min-width: 0; }
+  .vsep { width: 1px; align-self: stretch; min-height: 46px; background: var(--line); }
+  .knobs { display: flex; gap: 6px; }
+  .eqrow { display: none; }
+  .eqrow.active { display: flex; gap: 6px; }
+  .charcol { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 7px; }
+
+  /* ---------- modulation strip ---------- */
+  .mod { flex: 0 0 auto; }
+  .mod-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .mod-title { display: flex; flex-direction: column; gap: 2px; }
+  .mod-title .t { font: 700 10.5px/1 var(--font); letter-spacing: 0.12em; text-transform: uppercase; color: var(--label); }
+  .mod-title .s { font: 500 11px/1 var(--font); color: var(--muted); }
+
+  @media (max-width: 820px) {
+    .well-group.narrow { min-width: 146px; }
+    .knob { width: 66px; }
+  }
+
+  /* ── Precision Instrument Structural & Hardware Refinements ── */
+  header {
+    height: 46px;
+    padding: 0 14px;
+    gap: 10px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent), var(--panel);
+    border-bottom: 1px solid var(--line-hi);
+  }
+  .brand svg { filter: drop-shadow(0 0 5px var(--accent)); }
+  .brand .name { font-size: 16.5px; font-weight: 700; letter-spacing: -0.01em; }
+  .headsep { height: 20px; }
+  #buildTag { font: 500 9.5px/1.2 var(--font); color: var(--muted); max-width: 135px; opacity: 0.75; }
+
+  .theme-strip {
+    display: inline-flex;
+    background: var(--track);
+    border: 1px solid var(--line);
+    border-radius: var(--r-pill);
+    padding: 2px;
+    gap: 2px;
+  }
+  .theme-btn {
+    height: 22px;
+    padding: 0 8px;
+    border: 0;
+    border-radius: calc(var(--r-pill) - 1px);
+    background: transparent;
+    color: var(--label);
+    font: 600 10px/1 var(--font);
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: background-color 0.12s, color 0.12s;
+  }
+  .theme-btn:hover:not(.on) { color: var(--text); background: var(--hover-bg); }
+  .theme-btn.on { background: var(--panel-hi); color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35); }
+
+  .body { gap: 8px; padding: 8px 10px 10px; }
+  .col { gap: 8px; }
+  .wells { gap: 8px; }
+  .well {
+    border: 1px solid var(--line-hi);
+    box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.65);
+  }
+  .well-readout {
+    background: rgba(9, 11, 16, 0.84);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 6px;
+    backdrop-filter: blur(6px);
+  }
+  .panel, .master {
+    border: 1px solid var(--line);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+  .pill {
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--label);
+    border: 1px solid var(--line);
+  }
+  .pill:hover:not(:disabled):not(.on) { background: var(--hover-bg); color: var(--text); }
+  .pill.on { border-color: transparent; background: var(--accent); color: #ffffff; box-shadow: 0 1px 8px rgba(0, 0, 0, 0.35); }
+  .pill.on:hover { filter: brightness(1.1); background: var(--accent); }
+  .pillbed { border: 1px solid var(--line); background: var(--track); }
+  .pillbed button { color: var(--label); }
+  .pillbed button:hover:not(:disabled):not(.on) { background-color: var(--hover-bg); color: var(--text); }
+
+  .vmeter {
+    width: 14px;
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.75);
+  }
+  .vmeter i { border-radius: 2px; }
+
+  .knob .karc { filter: drop-shadow(0 0 3px var(--accent)); }
+  .knob .v {
+    pointer-events: auto;
+    cursor: text;
+    padding: 1px 4px;
+    border-radius: 3px;
+    transition: background-color 0.12s, color 0.12s;
+  }
+  .knob .v:hover { background: var(--hover-bg); }
+  .knob input.v {
+    width: 58px;
+    background: var(--well);
+    color: var(--text);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    font: 700 12px/1 var(--font);
+    text-align: center;
+    padding: 2px 3px;
+    outline: none;
+  }
+
+  /* ── Beacon Track Chip, Picker & External Key Ducking ── */
+  .track-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 26px;
+    padding: 0 8px;
+    border-radius: var(--r-pill);
+    background: var(--track);
+    border: 1px solid var(--line);
+    cursor: pointer;
+    flex: 0 1 118px;
+    min-width: 70px;
+    max-width: 124px;
+    transition: border-color 0.12s, background-color 0.12s;
+  }
+  .track-chip:hover { border-color: var(--line-hi); background: var(--panel-hi); }
+  .track-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-lit); flex: 0 0 auto; }
+  .track-name { flex: 1 1 auto; min-width: 0; font: 700 11px/1 var(--font); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .track-edit-ico { font-size: 10px; color: var(--muted); opacity: 0.65; flex: 0 0 auto; }
+  .track-chip:hover .track-edit-ico { opacity: 1; color: var(--text); }
+  .track-name-input {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    height: 20px;
+    background: var(--well);
+    color: var(--cream);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    font: 600 11px/1 var(--font);
+    padding: 0 5px;
+    outline: none;
+  }
+
+  .beacon-picker {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 6px 0 8px;
+    border-radius: var(--r-pill);
+    background: var(--track);
+    border: 1px solid var(--line);
+    flex: 0 0 auto;
+  }
+  .beacon-led {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--muted);
+    transition: background-color 0.15s, box-shadow 0.15s;
+    flex: 0 0 auto;
+  }
+  .beacon-picker.receiving .beacon-led { background: #34d399; box-shadow: 0 0 7px #34d399; }
+  .beacon-picker.waiting .beacon-led { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; }
+  .beacon-picker.mismatch { border-color: #ef4444; }
+  .beacon-picker.mismatch .beacon-led { background: #ef4444; box-shadow: 0 0 7px #ef4444; }
+  .beacon-lbl {
+    font: 700 9px/1 var(--font);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--label);
+    white-space: nowrap;
+  }
+  .beacon-select {
+    height: 22px;
+    max-width: 132px;
+    min-width: 92px;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font: 600 11px/1 var(--font);
+    cursor: pointer;
+    outline: none;
+  }
+  .beacon-select option { background: var(--panel); color: var(--text); }
+  .beacon-select:disabled { opacity: 0.55; cursor: default; }
+
+  .duck-key-wrap { display: flex; flex-direction: column; gap: 3px; align-items: flex-start; }
+  .duck-key-row { display: flex; align-items: center; gap: 6px; }
+  .duck-key-row .pillbed button { height: 24px; padding: 0 10px; font-size: 11px; }
+  .duck-key-hint { font: 600 10px/1 var(--font); color: var(--muted); white-space: nowrap; }
+  .duck-key-hint[hidden] { display: none; }
+  .duck-key-hint.warn { color: #f59e0b; }
+  :root[data-theme="japandi-light"] .duck-key-hint.warn { color: #b45309; }
+
+  .duck-status { display: inline-flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+  .duck-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    border-radius: 99px;
+    font: 700 9.5px/1.1 var(--font);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.14);
+    border: 1px solid rgba(56, 189, 248, 0.34);
+  }
+  .duck-badge.idle { opacity: 0.68; }
+  :root[data-theme="japandi-light"] .duck-badge {
+    color: #0284c7;
+    background: rgba(2, 132, 199, 0.12);
+    border-color: rgba(2, 132, 199, 0.32);
+  }
+
+  @media (max-width: 860px) {
+    header { padding: 0 10px; gap: 7px; }
+    .narrow-hide { display: none !important; }
+    .track-chip { max-width: 102px; min-width: 64px; padding: 0 7px; }
+    .beacon-select { min-width: 78px; max-width: 110px; }
+    .beacon-lbl { display: none; }
+    .mod { padding: 8px 10px; }
+    .mod-head { gap: 8px; }
+  }
+
+  /* ── Anti-wiggle fixed telemetry/meter tracks ── */
+  .stage-row > .meter-bridge {
+    flex: 0 0 116px;
+    width: 116px;
+    min-width: 116px;
+    max-width: 116px;
+    padding: 8px 6px;
+    overflow: hidden;
+  }
+  .stage-row > .meter-bridge .vmeters {
+    width: 100%;
+    justify-content: space-around;
+    gap: 4px;
+  }
+  .stage-row > .meter-bridge .vmeter-wrap {
+    flex: 0 0 48px;
+    width: 48px;
+    min-width: 48px;
+  }
+  .stage-row > .meter-bridge .vmeter-wrap .v {
+    display: block;
+    width: 48px;
+    min-width: 48px;
+    text-align: center;
+    font: 700 9.5px/1.1 var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .well-hint { font-variant-numeric: tabular-nums; }
+  .knob .v {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    min-height: 16px;
+    line-height: 16px;
+  }
+  .knob.sm { gap: 5px; }
+  .knob.sm .kstack { width: 50px; min-width: 50px; }
+  .knob.sm .v { width: 50px; overflow: hidden; text-overflow: ellipsis; }
+  .mod-head { flex-wrap: nowrap; gap: 8px; }
+  .mod-head > .mod-title { flex: 0 0 84px; width: 84px; min-width: 84px; }
+  .mod-head > .mod-title.duck-title { flex: 0 0 118px; width: 118px; min-width: 118px; }
+  .mod-title .s, .duck-status {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-variant-numeric: tabular-nums;
+    flex-wrap: nowrap;
+  }
+  .duck-key-wrap { min-height: 36px; justify-content: center; flex: 0 0 auto; }
+  .deck-master-bay { padding-left: 8px; gap: 6px; }
+  @media (max-width: 960px) {
+    .mod-head { flex-wrap: wrap; }
+  }
+
+</style>
+</head>
+<body>
+  <header>
+    <button class="pill power header-power-btn" id="param_power" title="Bypass the whole plugin. Crossfades over 30 ms so it never clicks."><span class="led"></span><span>Engaged</span></button>
+    <div class="brand">
+      <svg width="20" height="18" viewBox="0 0 20 18">
+        <path d="M2 16.5 L10 1.5 L18 16.5 Z" fill="none" stroke="#8a6cc4" stroke-width="2.2" stroke-linejoin="round"/>
+      </svg>
+      <div class="stack">
+        <div class="line">Werewolf Digital</div>
+        <div class="name">Reverb</div>
+      </div>
+    </div>
+    <div class="track-chip" id="selfTrackChip" title="Instance name broadcast to WD Beacon — click to rename"><span class="track-dot"></span><span class="track-name" id="selfTrackName">Verb 1</span><span class="track-edit-ico">✎</span></div>
+    <div class="beacon-picker" id="beaconPickerWrap" title="Select an active Werewolf Digital Beacon track for external reverb ducking key. Wireless cross-track key — for sample-exact timing at large DAW buffer sizes (1024+), use Off (Host Bus) with a DAW sidechain send.">
+      <span class="beacon-led"></span>
+      <span class="beacon-lbl">Beacon</span>
+      <select class="beacon-select" id="beaconSourceSelect"><option value="">Off (Host Bus)</option></select>
+    </div>
+    <div class="spacer"></div>
+    <button class="pill sm header-audition-pill" id="param_freeze" title="Hold the tail forever. Nothing new gets in.">Freeze</button>
+    <button class="pill sm header-audition-pill" id="param_delta" title="Monitor only what the reverb is adding — the tail on its own.">Delta</button>
+    <div class="stat narrow-hide"><div class="k">Sample rate</div><div class="v" id="srTag">—</div></div>
+    <div class="theme-strip" id="themeSwitcher" title="Switch instrument chassis finish">
+      <button class="theme-btn on" data-theme="studio">Studio</button>
+      <button class="theme-btn" data-theme="japandi-dark">Sumi</button>
+      <button class="theme-btn" data-theme="japandi-light">Washi</button>
+    </div>
+    <div class="headsep narrow-hide"></div>
+    <div id="buildTag" class="narrow-hide">—</div>
+  </header>
+
+  <div class="body">
+    <div class="col">
+
+      <div class="stage-row">
+        <div class="wells">
+          <!-- The decay well: how long each frequency rings, relative to the RT60. -->
+          <div class="well-group" id="decayContainer">
+            <div class="well-head">
+              <div class="well-title" id="decayTitle">Decay by frequency</div>
+              <div class="well-hint" id="decayHint">Drag a handle</div>
+            </div>
+            <div class="well"><canvas id="decayCanvas"></canvas></div>
+          </div>
+
+          <!-- The tail well: the envelope you set with the live output level running beneath it. -->
+          <div class="well-group narrow">
+            <div class="well-head">
+              <div class="well-title">Tail</div>
+              <div class="well-hint accent" id="tailHint">—</div>
+            </div>
+            <div class="well"><canvas id="tailCanvas"></canvas></div>
+          </div>
+        </div>
+
+        <div class="meter-bridge">
+          <div class="vmeters">
+            <div class="vmeter-wrap">
+              <div class="vmeter"><i id="inBar"></i></div>
+              <div class="k">In</div>
+              <div class="v" id="inVal">—</div>
+            </div>
+            <div class="vmeter-wrap">
+              <div class="vmeter"><i id="outBar"></i></div>
+              <div class="k">Out</div>
+              <div class="v" id="outVal">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel rail">
+        <div class="rail-head">
+          <div class="pillbed accent" id="page-selector">
+            <button data-page="space">Space</button>
+            <button data-page="tone">Tone</button>
+            <button data-page="blend">Blend</button>
+            <button data-page="decay">Decay curve</button>
+          </div>
+          <div class="rail-range" id="page_title">Hall</div>
+          <div class="rail-acts">
+            <button class="pill sm" id="param_decayEqEnable" title="Shape the decay time per frequency with four bands instead of the two passive ratios.">Decay EQ</button>
+          </div>
+        </div>
+
+        <div id="band_panes_container">
+          <div class="pane" id="pane_space">
+            <div class="knobs">
+              <div class="knob" id="param_decay" data-label="Decay" title="RT60: how long the tail takes to fall 60 dB."></div>
+              <div class="knob" id="param_predelay" data-label="Pre-delay" title="Gap between the dry sound and the first reflection."></div>
+              <div class="knob" id="param_size" data-label="Size" title="How big the space is. Larger spaces have sparser, later reflections."></div>
+            </div>
+            <div class="vsep"></div>
+            <div class="charcol">
+              <div class="fieldlabel">Model</div>
+              <div class="charset" id="mode-group" title="The reverb algorithm."></div>
+            </div>
+          </div>
+
+          <div class="pane" id="pane_tone">
+            <div class="knobs">
+              <div class="knob" id="param_dampingHf" data-label="Damping HF" title="Above this frequency the tail dies faster."></div>
+              <div class="knob" id="param_dampingLf" data-label="Damping LF" title="Below this frequency the tail dies faster."></div>
+              <div class="knob" id="param_diffusion" data-label="Diffusion" title="How quickly the echoes smear into a wash."></div>
+            </div>
+          </div>
+
+          <div class="pane" id="pane_blend">
+            <div class="knobs">
+              <div class="knob" id="param_balance" data-label="Early / late" title="Balance between early reflections and the late tail."></div>
+              <div class="knob" id="param_width" data-label="Width" title="Stereo width of the wet signal."></div>
+            </div>
+          </div>
+
+          <!-- Decay EQ off: the two passive shelves. -->
+          <div class="pane" id="pane_ratios">
+            <div class="knobs">
+              <div class="knob" id="param_lfDecayRatio" data-label="LF ratio" title="Decay time of the lows relative to RT60. Above 1 the bass rings longer."></div>
+              <div class="knob" id="param_hfDecayRatio" data-label="HF ratio" title="Decay time of the highs relative to RT60. Below 1 the top dies first."></div>
+            </div>
+          </div>
+
+          <!-- Decay EQ on: four frequency and multiplier bands. -->
+          <div class="pane" id="pane_eq">
+            <div class="knobs eqrow" id="eqrow_1">
+              <div class="knob" id="param_eqFreq1" data-label="Low shelf" title="Below this frequency the decay is multiplied."></div>
+              <div class="knob" id="param_eqMult1" data-label="Multiplier" title="Decay multiplier below band 1."></div>
+            </div>
+            <div class="knobs eqrow" id="eqrow_2">
+              <div class="knob" id="param_eqFreq2" data-label="Bell" title="Center of the first bell (Q 1)."></div>
+              <div class="knob" id="param_eqMult2" data-label="Multiplier" title="Decay multiplier around band 2."></div>
+            </div>
+            <div class="knobs eqrow" id="eqrow_3">
+              <div class="knob" id="param_eqFreq3" data-label="Bell" title="Center of the second bell (Q 1)."></div>
+              <div class="knob" id="param_eqMult3" data-label="Multiplier" title="Decay multiplier around band 3."></div>
+            </div>
+            <div class="knobs eqrow" id="eqrow_4">
+              <div class="knob" id="param_eqFreq4" data-label="High shelf" title="Above this frequency the decay is multiplied."></div>
+              <div class="knob" id="param_eqMult4" data-label="Multiplier" title="Decay multiplier above band 4."></div>
+            </div>
+            <div class="vsep"></div>
+            <div class="charcol" style="flex: 0 0 auto; min-width: auto;">
+              <div class="fieldlabel">Band</div>
+              <div class="pillbed accent" id="eq-band-selector">
+                <button data-band="1">1</button><button data-band="2">2</button><button data-band="3">3</button><button data-band="4">4</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel mod">
+        <div class="mod-head">
+          <div class="mod-title">
+            <div class="t">Modulation</div>
+            <div class="s" id="modState">—</div>
+          </div>
+          <div class="knobs" style="gap: 4px;">
+            <div class="knob sm" id="param_modrate" data-label="Rate" data-size="34" title="How fast delay lines drift. Keeps tail from ringing metallic."></div>
+            <div class="knob sm" id="param_moddepth" data-label="Depth" data-size="34" title="How far delay lines drift."></div>
+          </div>
+          <div class="vsep"></div>
+          <div class="mod-title duck-title">
+            <div class="t">Ducking</div>
+            <div class="s duck-status" id="duckState">—</div>
+          </div>
+          <div class="duck-key-wrap">
+            <div class="duck-key-row">
+              <span class="fieldlabel">Duck Key</span>
+              <div class="pillbed accent" id="ducksource-group" title="Int: duck the reverb tail from the dry input signal. Ext: duck the tail from DAW sidechain Bus 1 or a selected WD Beacon track."></div>
+            </div>
+            <div class="duck-key-hint" id="duckKeyHint" hidden>No key connected</div>
+          </div>
+          <div class="knobs" style="gap: 4px;">
+            <div class="knob sm" id="param_duckthresh" data-label="Threshold" data-size="34" title="Key level above which the tail is pulled down."></div>
+            <div class="knob sm" id="param_duckdepth" data-label="Depth" data-size="34" title="How far the tail is pulled down while the key signal plays."></div>
+            <div class="knob sm" id="param_duckrelease" data-label="Release" data-size="34" title="How quickly the tail recovers once the key signal drops."></div>
+          </div>
+          <div class="deck-master-bay">
+            <div class="knob sm" id="param_mix" data-size="38" data-label="Mix" title="Dry to wet. 100% is reverb only."></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+<script>
+  window.addEventListener('error', e => {
+    if (e.message && (e.message.includes('ResizeObserver') || e.message.includes('loop completed with undelivered notifications'))) return;
+    let el = document.getElementById('errBanner');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'errBanner';
+      el.style.cssText = 'position:fixed;left:0;right:0;bottom:0;background:#513a86;'
+        + 'color:#f2f5fa;font:11px monospace;padding:4px 10px;z-index:99;';
+      document.body.appendChild(el);
+    }
+    el.textContent = 'UI error: ' + e.message + ' @' + (e.lineno || '?');
+  });
+</script>
+
+<script type="module">
+(async () => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+
+  // Canvas 2D silently rejects 'var(--x)' color strings, so the theme is
+  // resolved to literals once and the wells draw from these.
+  const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const COL = {
+    accent:    cssVar('--accent')     || '#8a6cc4',
+    accentLit: cssVar('--accent-lit') || '#b8a0ef',
+    well:      cssVar('--well')       || '#06070a',
+    cream:     cssVar('--cream')      || '#f2f5fa',
+    theme:     'studio',
+  };
+  let drawDecayFn = null;
+  let drawTailFn = null;
+  function applyTheme(theme) {
+    const t = theme || 'studio';
+    COL.theme = t;
+    if (t === 'studio') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', t);
+    COL.accent = cssVar('--accent') || COL.accent;
+    COL.accentLit = cssVar('--accent-lit') || COL.accentLit;
+    COL.well = cssVar('--well') || '#06070a';
+    COL.cream = cssVar('--cream') || '#f2f5fa';
+    const sw = document.getElementById('themeSwitcher');
+    if (sw) {
+      sw.querySelectorAll('.theme-btn').forEach(b => {
+        b.classList.toggle('on', b.dataset.theme === t);
+      });
+    }
+    try { localStorage.setItem('wd_theme', t); } catch (e) {}
+    if (drawDecayFn) drawDecayFn();
+    if (drawTailFn) drawTailFn();
+  }
+  {
+    let saved = 'studio';
+    try { saved = localStorage.getItem('wd_theme') || 'studio'; } catch (e) {}
+    applyTheme(saved);
+    const sw = document.getElementById('themeSwitcher');
+    if (sw) {
+      sw.addEventListener('click', e => {
+        const btn = e.target.closest('.theme-btn');
+        if (btn && btn.dataset.theme) applyTheme(btn.dataset.theme);
+      });
+    }
+  }
+  // Well ink: cream at fixed alphas. Grid 7%, labels 34%, live plot 92%.
+  const ink = a => 'rgba(242, 245, 250, ' + a + ')';
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+  // ------------------------------------------------------------------ host
+  let host = null;
+  if (window.__JUCE__ && window.__JUCE__.backend) {
+    try {
+      const lib = await import('./juce/index.js');
+      const be = window.__JUCE__.backend;
+      host = {
+        slider: id => lib.getSliderState(id),
+        combo:  id => lib.getComboBoxState(id),
+        toggle: id => lib.getToggleState(id),
+        call:   (name, ...args) => lib.getNativeFunction(name)(...args),
+        on:     (event, cb) => be.addEventListener(event, cb),
+      };
+    } catch (e) { console.warn('JUCE frontend unavailable:', e); }
+  }
+
+  // ------------------------------------------------------------------ state
+  const MODE_CHOICES = ['Hall', 'Room', 'Plate', 'Vintage', 'Ambience', 'Nonlinear'];
+  const DUCKSOURCE_CHOICES = ['Int', 'Ext'];
+
+  let globalDecay = 2.0;
+  let predelayMs = 20.0;
+  let dampingHfHz = 8000.0;
+  let dampingLfHz = 100.0;
+  let currentModeIdx = 0;
+  let frozen = false;
+  let decayEqOn = false;
+  let lfDecayRatio = 1.2;
+  let hfDecayRatio = 0.5;
+  const eqBands = [
+    { freq: 200, mult: 1.0 },
+    { freq: 500, mult: 1.0 },
+    { freq: 2000, mult: 1.0 },
+    { freq: 6000, mult: 1.0 }
+  ];
+
+  let duckSourceIdx = 0;
+  let scActive = false;
+  let scPeakDb = -120;
+  let liveDuckDb = 0;
+  let beaconSelected = '';
+  let beaconReceiving = false;
+  let beaconSrMismatch = false;
+  let beaconMetersSeen = false;
+  let beaconRpcInFlight = false;
+  let lastBeaconSig = '';
+  let selfMeta = { name: 'Verb 1', customName: '', publishedName: '', publishing: false };
+  let selfEditing = false;
+  let syncDuckSourcePills = null;
+
+  const sliders = {}, combos = {}, toggles = {};
+  const sl = id => { if (!host) return null; if (!sliders[id]) sliders[id] = host.slider(id); return sliders[id]; };
+  const cb = id => { if (!host) return null; if (!combos[id]) combos[id] = host.combo(id); return combos[id]; };
+  const tg = id => { if (!host) return null; if (!toggles[id]) toggles[id] = host.toggle(id); return toggles[id]; };
+
+  const comboIndex = (id, n) => { const s = cb(id); return s ? Math.round((s.value || 0) * (n - 1)) : 0; };
+  const setComboIndex = (id, i) => { const s = cb(id); if (s && s.setChoiceIndex) s.setChoiceIndex(i); };
+
+  // ---------------------------------------------------------------- knobs
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  const ARC_FULL = 'M12.44 43.56 A22 22 0 1 1 43.56 43.56';
+  const ARC_UP   = 'M28 6 A22 22 0 0 1 43.56 43.56';
+  const ARC_DOWN = 'M28 6 A22 22 0 0 0 12.44 43.56';
+  const LEN_FULL = 2 * Math.PI * 22 * 0.75;
+  const LEN_HALF = LEN_FULL / 2;
+
+  function mountKnob(el) {
+    const size = parseInt(el.dataset.size || '56', 10);
+    const bipolar = el.dataset.bipolar === '1';
+    const sw = size < 48 ? 5.5 : 4.5;
+
+    const svg = document.createElementNS(SVGNS, 'svg');
+    svg.setAttribute('viewBox', '0 0 56 56');
+    svg.setAttribute('width', String(size));
+    svg.setAttribute('height', String(size));
+
+    if (size >= 48) {
+      const ticks = document.createElementNS(SVGNS, 'g');
+      for (let i = 0; i <= 10; i++) {
+        const deg = -135 + i * 27;
+        const rad = (deg - 90) * Math.PI / 180;
+        const major = (i === 0 || i === 5 || i === 10);
+        const r1 = 24.0;
+        const r2 = major ? 26.2 : 25.3;
+        const t = document.createElementNS(SVGNS, 'line');
+        t.setAttribute('x1', (28 + Math.cos(rad) * r1).toFixed(2));
+        t.setAttribute('y1', (28 + Math.sin(rad) * r1).toFixed(2));
+        t.setAttribute('x2', (28 + Math.cos(rad) * r2).toFixed(2));
+        t.setAttribute('y2', (28 + Math.sin(rad) * r2).toFixed(2));
+        t.setAttribute('stroke', major ? 'var(--label)' : 'var(--muted)');
+        t.setAttribute('stroke-width', major ? '1.3' : '0.9');
+        t.setAttribute('stroke-linecap', 'round');
+        t.setAttribute('opacity', major ? '0.75' : '0.42');
+        ticks.appendChild(t);
+      }
+      svg.appendChild(ticks);
+    }
+
+    const mk = (d, stroke, width) => {
+      const p = document.createElementNS(SVGNS, 'path');
+      p.setAttribute('d', d);
+      p.setAttribute('fill', 'none');
+      p.setAttribute('stroke', stroke);
+      p.setAttribute('stroke-width', String(width));
+      p.setAttribute('stroke-linecap', 'round');
+      return p;
+    };
+    const track = mk(ARC_FULL, 'var(--track)', sw);
+    const arc = mk(bipolar ? ARC_UP : ARC_FULL, 'var(--accent)', sw);
+    arc.setAttribute('stroke-dasharray', String(bipolar ? LEN_HALF : LEN_FULL));
+    arc.setAttribute('stroke-dashoffset', String(bipolar ? LEN_HALF : LEN_FULL));
+    arc.classList.add('karc');
+    svg.append(track, arc);
+
+    if (bipolar) {
+      const tick = document.createElementNS(SVGNS, 'line');
+      tick.setAttribute('x1', '28'); tick.setAttribute('y1', '3.5');
+      tick.setAttribute('x2', '28'); tick.setAttribute('y2', '8.2');
+      tick.setAttribute('stroke', 'var(--label)');
+      tick.setAttribute('stroke-width', '1.5');
+      tick.setAttribute('stroke-linecap', 'round');
+      svg.appendChild(tick);
+    }
+
+    const collar = document.createElementNS(SVGNS, 'circle');
+    collar.setAttribute('cx', '28'); collar.setAttribute('cy', '28');
+    collar.setAttribute('r', size < 48 ? '15.2' : '16.8');
+    collar.setAttribute('fill', 'rgba(0, 0, 0, 0.35)');
+    collar.setAttribute('stroke', 'var(--line)');
+    svg.appendChild(collar);
+
+    const cap = document.createElementNS(SVGNS, 'circle');
+    cap.setAttribute('cx', '28'); cap.setAttribute('cy', '28');
+    cap.setAttribute('r', size < 48 ? '13.4' : '14.6');
+    cap.setAttribute('fill', 'var(--panel-hi)');
+    cap.setAttribute('stroke', 'var(--line-hi)');
+    svg.appendChild(cap);
+
+    const needle = document.createElementNS(SVGNS, 'line');
+    needle.setAttribute('x1', '28'); needle.setAttribute('y1', size < 48 ? '15.5' : '14.6');
+    needle.setAttribute('x2', '28'); needle.setAttribute('y2', '21.2');
+    needle.setAttribute('stroke', 'var(--text)');
+    needle.setAttribute('stroke-width', size < 48 ? '2.6' : '2.4');
+    needle.setAttribute('stroke-linecap', 'round');
+    needle.classList.add('kneedle');
+    svg.appendChild(needle);
+
+    const lab = document.createElement('div');
+    lab.className = 'klabel';
+    lab.textContent = el.dataset.label || '';
+    const val = document.createElement('span');
+    val.className = 'v';
+    val.textContent = '—';
+
+    el.innerHTML = '';
+    if (el.classList.contains('sm')) {
+      const stack = document.createElement('div');
+      stack.className = 'kstack';
+      stack.append(lab, val);
+      el.append(svg, stack);
+    } else {
+      el.append(lab, svg, val);
+    }
+    paintKnob(el, bipolar ? 0.5 : 0);
+  }
+
+  function paintKnob(el, norm) {
+    const arc = el.querySelector('.karc');
+    const needle = el.querySelector('.kneedle');
+    if (!arc || !needle) return;
+    const n = clamp(norm, 0, 1);
+    if (el.dataset.bipolar === '1') {
+      const p = (n - 0.5) * 2;
+      arc.setAttribute('d', p >= 0 ? ARC_UP : ARC_DOWN);
+      arc.setAttribute('stroke-dashoffset', String(LEN_HALF * (1 - Math.abs(p))));
+    } else {
+      arc.setAttribute('stroke-dashoffset', String(LEN_FULL * (1 - n)));
+    }
+    needle.setAttribute('transform', 'rotate(' + (-135 + n * 270).toFixed(2) + ' 28 28)');
+  }
+
+  // --------------------------------------------------- slider / toggle binds
+  function bindSlider(el, id, fmt, onValueChange = null) {
+    const slider = sl(id);
+    if (!el) return;
+    if (!slider) { return; }
+
+    {
+      const fresh = el.cloneNode(true);
+      el.parentNode.replaceChild(fresh, el);
+      el = fresh;
+    }
+    el.dataset.paramId = id;
+    const span = el.querySelector('.v');
+
+    const toNorm = (scaled) => {
+      const p = slider.properties || { start: 0, end: 1, skew: 1 };
+      const spanRange = (p.end - p.start) || 1;
+      const lin = Math.min(1, Math.max(0, (scaled - p.start) / spanRange));
+      return Math.pow(lin, p.skew || 1);
+    };
+
+    const updateDisplay = () => {
+      const v = slider.getScaledValue();
+      if (span.isConnected) span.textContent = fmt(v);
+      paintKnob(el, slider.getNormalisedValue());
+      if (onValueChange) onValueChange(v);
+    };
+
+    if (slider.customListener) slider.valueChangedEvent.removeListener(slider.customListener);
+    slider.customListener = updateDisplay;
+    slider.valueChangedEvent.addListener(updateDisplay);
+    updateDisplay();
+
+    el.addEventListener('dblclick', ev => {
+      ev.preventDefault();
+      const def = (slider.properties || {}).defaultValue;
+      if (typeof def !== 'number') return;
+      slider.sliderDragStarted();
+      slider.setNormalisedValue(toNorm(def));
+      slider.sliderDragEnded();
+      updateDisplay();
+    });
+
+    let st = null;
+    el.addEventListener('pointerdown', ev => {
+      if ((ev.button ?? 0) !== 0) return;
+      // Drag + wheel step in NORMALIZED (knob-arc) space. Stepping in real units
+      // felt identical on linear knobs but collapsed the low end of skewed log
+      // ranges (attack/Q/rate): everything below ~1 fit in a few px / one wheel
+      // notch, so readouts hopped from 1 straight to the floor (2026-08-30).
+      st = { y: ev.clientY, n: slider.getNormalisedValue() };
+      slider.sliderDragStarted();
+      el.classList.add('dragging');
+      el.setPointerCapture(ev.pointerId);
+      ev.preventDefault();
+    });
+
+    el.addEventListener('pointermove', ev => {
+      if (!st) return;
+      const fine = ev.shiftKey ? 0.1 : 1.0;
+      const delta = (st.y - ev.clientY) * fine / 250.0;
+      slider.setNormalisedValue(Math.min(1, Math.max(0, st.n + delta)));
+      updateDisplay();
+    });
+
+    const endKnobDrag = ev => {
+      if (st) {
+        slider.sliderDragEnded();
+        st = null;
+      }
+      el.classList.remove('dragging');
+      if (ev && ev.pointerId !== undefined) {
+        try { el.releasePointerCapture(ev.pointerId); } catch (e) {}
+      }
+    };
+    el.addEventListener('pointerup', endKnobDrag);
+    el.addEventListener('pointercancel', endKnobDrag);
+    window.addEventListener('blur', endKnobDrag);
+
+    if (window.WDKit && WDKit.attachWheelGesture) {
+      WDKit.attachWheelGesture(el, () => slider, (s, stepNorm) => {
+        s.setNormalisedValue(clamp(s.getNormalisedValue() + stepNorm, 0, 1));
+        updateDisplay();
+      });
+    } else {
+      el.addEventListener('wheel', ev => {
+        ev.preventDefault();
+        const fine = ev.shiftKey ? 0.1 : 1.0;
+        const direction = ev.deltaY < 0 ? 1 : -1;
+        const n = slider.getNormalisedValue() + direction * fine / 100.0;
+        slider.sliderDragStarted();
+        slider.setNormalisedValue(Math.min(1, Math.max(0, n)));
+        slider.sliderDragEnded();
+        updateDisplay();
+      }, { passive: false });
+    }
+
+    span.addEventListener('pointerdown', ev => ev.stopPropagation());
+    span.addEventListener('dblclick', ev => ev.stopPropagation());
+    span.addEventListener('click', ev => {
+      ev.stopPropagation();
+      if (!span.isConnected) return;
+      const input = document.createElement('input');
+      input.className = 'v';
+      input.value = String(Number(slider.getScaledValue().toFixed(4)));
+      input.setAttribute('aria-label', el.dataset.label || id);
+      let done = false;
+      const commit = keep => {
+        if (done) return;
+        done = true;
+        if (keep) {
+          const raw = input.value.trim();
+          const unitHint = /predelay|duckrelease/i.test(id) ? 'ms' : '';
+          const v = (window.WDKit && WDKit.parseMusicalValue)
+            ? WDKit.parseMusicalValue(raw, { unit: unitHint })
+            : parseFloat(raw.replace(/[^0-9.+\-eE]/g, ''));
+          if (isFinite(v)) {
+            slider.sliderDragStarted();
+            slider.setNormalisedValue(toNorm(v));
+            slider.sliderDragEnded();
+          }
+        }
+        input.replaceWith(span);
+        updateDisplay();
+      };
+      input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); commit(true); }
+        else if (e.key === 'Escape') { e.preventDefault(); commit(false); }
+        e.stopPropagation();
+      });
+      input.addEventListener('pointerdown', e => e.stopPropagation());
+      input.addEventListener('blur', () => commit(true));
+      span.replaceWith(input);
+      input.focus();
+      input.select();
+    });
+  }
+
+  const OFFLINE_TOGGLES = { power: true, freeze: false, delta: false, decayEqEnable: false };
+  const OFFLINE_CHOICES = { mode: 0, ducksource: 0 };
+  const PARAM_DEFAULTS = {
+    decay: 2.0, predelay: 20.0, size: 100.0, dampingHf: 8000.0, dampingLf: 100.0,
+    diffusion: 50.0, modrate: 1.0, moddepth: 30.0, mix: 35.0, width: 100.0, balance: 50.0,
+    duckthresh: -12.0, duckdepth: 0.0, duckrelease: 150.0, hfDecayRatio: 0.5, lfDecayRatio: 1.2,
+    eqFreq1: 200.0, eqMult1: 1.0, eqFreq2: 500.0, eqMult2: 1.0,
+    eqFreq3: 2000.0, eqMult3: 1.0, eqFreq4: 6000.0, eqMult4: 1.0
+  };
+  const PARAM_BOUNDS = {
+    decay: [0.1, 120.0], predelay: [0.0, 200.0], hfDecayRatio: [0.2, 2.0], lfDecayRatio: [0.2, 2.0],
+    eqFreq1: [20.0, 1000.0], eqMult1: [0.25, 4.0], eqFreq2: [100.0, 4000.0], eqMult2: [0.25, 4.0],
+    eqFreq3: [500.0, 10000.0], eqMult3: [0.25, 4.0], eqFreq4: [1000.0, 20000.0], eqMult4: [0.25, 4.0]
+  };
+
+  function bindToggle(el, id, onValueChange = null) {
+    if (!el) return;
+    const t = tg(id);
+    if (!t) {
+      let localVal = !!OFFLINE_TOGGLES[id];
+      const syncLocal = () => {
+        el.classList.toggle('on', localVal);
+        if (onValueChange) onValueChange(localVal);
+      };
+      syncLocal();
+      const newEl = el.cloneNode(true);
+      el.parentNode.replaceChild(newEl, el);
+      el = newEl;
+      el.addEventListener('click', () => {
+        localVal = !localVal;
+        OFFLINE_TOGGLES[id] = localVal;
+        syncLocal();
+      });
+      return;
+    }
+    const updateDisplay = () => {
+      const v = !!t.getValue();
+      el.classList.toggle('on', v);
+      if (onValueChange) onValueChange(v);
+    };
+
+    if (t.customListener) t.valueChangedEvent.removeListener(t.customListener);
+    t.customListener = updateDisplay;
+    t.valueChangedEvent.addListener(updateDisplay);
+    updateDisplay();
+
+    const newEl = el.cloneNode(true);
+    el.parentNode.replaceChild(newEl, el);
+    el = newEl;
+    el.addEventListener('click', () => {
+      t.setValue(!t.getValue());
+      updateDisplay();
+    });
+  }
+
+  function bindChoicePills(groupEl, id, choices, onChange = null) {
+    if (!groupEl) return;
+    groupEl.innerHTML = '';
+    choices.forEach((name, i) => {
+      const b = document.createElement('button');
+      b.className = 'pill sm';
+      b.dataset.index = String(i);
+      b.textContent = name;
+      groupEl.appendChild(b);
+    });
+    const buttons = groupEl.querySelectorAll('button');
+    const s = cb(id);
+
+    const updateDisplay = () => {
+      const idx = s ? comboIndex(id, choices.length) : (OFFLINE_CHOICES[id] || 0);
+      buttons.forEach(btn => btn.classList.toggle('on', parseInt(btn.dataset.index, 10) === idx));
+      if (onChange) onChange(idx);
+    };
+
+    if (s) {
+      if (s.customListener) s.valueChangedEvent.removeListener(s.customListener);
+      s.customListener = updateDisplay;
+      s.valueChangedEvent.addListener(updateDisplay);
+    }
+    updateDisplay();
+
+    buttons.forEach(btn => btn.addEventListener('click', () => {
+      const nextIdx = parseInt(btn.dataset.index, 10);
+      OFFLINE_CHOICES[id] = nextIdx;
+      setComboIndex(id, nextIdx);
+      updateDisplay();
+    }));
+    return updateDisplay;
+  }
+
+  // ------------------------------------------------------------ decay well
+  const decayCanvas = $('decayCanvas');
+  const dCtx = decayCanvas.getContext('2d');
+  let dW = 0, dH = 0, dDpr = 1;
+  const AXIS = 16;
+  const HANDLE_PAD = 24;
+  const SPEC_BINS = 240;
+  const SPEC_DB_MIN = -84.0;
+  const SPEC_DB_MAX = -6.0;
+  const smoothWetBins = new Float32Array(SPEC_BINS).fill(-120.0);
+  const peakWetBins   = new Float32Array(SPEC_BINS).fill(-120.0);
+  const displayWetBins = new Float32Array(SPEC_BINS).fill(-120.0);
+
+  // Offscreen float32 ring-buffer spectrogram waterfall (`SPEC_BINS x WF_ROWS`).
+  // Rasterizing from float32 into a fixed-bin ImageData avoids both 8-bit Skia
+  // `destination-out` premultiplied-alpha quantization hangs (stuck at alpha=21)
+  // and `source-over` column-overlap moire stripes across arbitrary window widths,
+  // while preserving waterfall history across window resizes.
+  const WF_ROWS = 112;
+  const wfCanvas = document.createElement('canvas');
+  wfCanvas.width = SPEC_BINS;
+  wfCanvas.height = WF_ROWS;
+  const wfCtx = wfCanvas.getContext('2d');
+  const wfRing = new Float32Array(SPEC_BINS * WF_ROWS);
+  const wfRowTaper = new Float32Array(WF_ROWS);
+  for (let r = 0; r < WF_ROWS; ++r)
+    wfRowTaper[r] = Math.pow(1.0 - r / WF_ROWS, 1.35);
+  const wfImg = (wfCtx && typeof wfCtx.createImageData === 'function')
+    ? wfCtx.createImageData(SPEC_BINS, WF_ROWS)
+    : null;
+  const wfPixels = wfImg && wfImg.data ? wfImg.data : null;
+  let wfHead = 0;
+  let wfActiveRows = 0;
+  let wfHasVisiblePixels = false;
+
+  function pushWetSpectrum(bins) {
+    if (!bins || bins.length < SPEC_BINS) return;
+    let maxBin = -120.0;
+    let prevMax = -120.0;
+    for (let i = 0; i < SPEC_BINS; ++i) {
+      const raw = Number.isFinite(bins[i]) ? bins[i] : -120.0;
+      const prev = smoothWetBins[i];
+      if (prev > prevMax || peakWetBins[i] > prevMax) prevMax = Math.max(prev, peakWetBins[i]);
+      const next = prev + (raw - prev) * (raw > prev ? 0.30 : 0.12);
+      smoothWetBins[i] = next;
+      peakWetBins[i] = next >= peakWetBins[i] ? next : Math.max(-120.0, peakWetBins[i] - 0.35);
+      if (next > maxBin) maxBin = next;
+    }
+    for (let i = 0; i < SPEC_BINS; ++i) {
+      const a = smoothWetBins[Math.max(0, i - 1)];
+      const b = smoothWetBins[i];
+      const c = smoothWetBins[Math.min(SPEC_BINS - 1, i + 1)];
+      displayWetBins[i] = 0.2 * a + 0.6 * b + 0.2 * c;
+    }
+
+    wfHead = (wfHead - 1 + WF_ROWS) % WF_ROWS;
+    const headBase = wfHead * SPEC_BINS;
+    let rowHasEnergy = false;
+    for (let b = 0; b < SPEC_BINS; ++b) {
+      const norm = clamp((smoothWetBins[b] - SPEC_DB_MIN) / (SPEC_DB_MAX - SPEC_DB_MIN), 0, 1);
+      wfRing[headBase + b] = norm;
+      if (norm > 0.015) rowHasEnergy = true;
+    }
+    if (rowHasEnergy) wfActiveRows = WF_ROWS;
+    else if (wfActiveRows > 0) --wfActiveRows;
+
+    if (wfPixels && (wfActiveRows > 0 || wfHasVisiblePixels)) {
+      if (wfActiveRows === 0) {
+        wfPixels.fill(0);
+        wfCtx.putImageData(wfImg, 0, 0);
+        wfHasVisiblePixels = false;
+      } else {
+        for (let r = 0; r < WF_ROWS; ++r) {
+          const fade = wfRowTaper[r];
+          const srcBase = ((wfHead + r) % WF_ROWS) * SPEC_BINS;
+          let pIdx = r * SPEC_BINS * 4;
+          for (let b = 0; b < SPEC_BINS; ++b) {
+            const eff = wfRing[srcBase + b] * fade;
+            if (eff <= 0.012) {
+              wfPixels[pIdx] = 0;
+              wfPixels[pIdx + 1] = 0;
+              wfPixels[pIdx + 2] = 0;
+              wfPixels[pIdx + 3] = 0;
+            } else if (eff < 0.35) {
+              const t = eff / 0.35;
+              wfPixels[pIdx]     = (48 + 38 * t) | 0;
+              wfPixels[pIdx + 1] = (32 + 28 * t) | 0;
+              wfPixels[pIdx + 2] = (96 + 52 * t) | 0;
+              wfPixels[pIdx + 3] = (115 * t) | 0;
+            } else if (eff < 0.72) {
+              const t = (eff - 0.35) / 0.37;
+              wfPixels[pIdx]     = (86 + 76 * t) | 0;
+              wfPixels[pIdx + 1] = (60 + 68 * t) | 0;
+              wfPixels[pIdx + 2] = (148 + 72 * t) | 0;
+              wfPixels[pIdx + 3] = (115 + 86 * t) | 0;
+            } else {
+              const t = Math.min(1, (eff - 0.72) / 0.28);
+              wfPixels[pIdx]     = (162 + 78 * t) | 0;
+              wfPixels[pIdx + 1] = (128 + 104 * t) | 0;
+              wfPixels[pIdx + 2] = (220 + 35 * t) | 0;
+              wfPixels[pIdx + 3] = (201 + 49 * t) | 0;
+            }
+            pIdx += 4;
+          }
+        }
+        wfCtx.putImageData(wfImg, 0, 0);
+        wfHasVisiblePixels = true;
+      }
+    }
+
+    if (maxBin > SPEC_DB_MIN + 0.25 || prevMax > SPEC_DB_MIN + 0.25 || wfActiveRows > 0)
+      drawDecay();
+  }
+
+  let dPxW = 0, dPxH = 0, dPrevDpr = 0;
+  function fitDecayCanvas() {
+    const nextDpr = window.devicePixelRatio || 1;
+    const r = decayCanvas.getBoundingClientRect();
+    const nextPxW = Math.round(r.width * nextDpr);
+    const nextPxH = Math.round(r.height * nextDpr);
+    if (nextPxW === dPxW && nextPxH === dPxH && nextDpr === dPrevDpr) return;
+    dDpr = dPrevDpr = nextDpr;
+    dW = r.width; dH = r.height;
+    dPxW = nextPxW; dPxH = nextPxH;
+    decayCanvas.width = nextPxW;
+    decayCanvas.height = nextPxH;
+    dCtx.setTransform(dDpr, 0, 0, dDpr, 0, 0);
+    drawDecay();
+  }
+  new ResizeObserver(fitDecayCanvas).observe(decayCanvas.parentElement || decayCanvas);
+
+  const FMIN = 20.0, FMAX = 20000.0;
+  const MULT_MIN = 0.25, MULT_MAX = 4.0;
+  const RATIO_MIN = 0.2, RATIO_MAX = 2.0;
+  const hzToX = hz => clamp((Math.log(clamp(hz, FMIN, FMAX) / FMIN) / Math.log(FMAX / FMIN)) * dW, 0, dW);
+  const xToHz = x => FMIN * Math.pow(FMAX / FMIN, clamp(x / dW, 0, 1));
+
+  const yLo = () => decayEqOn ? MULT_MIN : RATIO_MIN;
+  const yHi = () => decayEqOn ? MULT_MAX : RATIO_MAX;
+  const plotTop = () => HANDLE_PAD;
+  const plotBot = () => dH - AXIS;
+  const multToY = m => {
+    const n = Math.log(clamp(m, yLo(), yHi()) / yLo()) / Math.log(yHi() / yLo());
+    return plotBot() - n * (plotBot() - plotTop());
+  };
+  const specDbToY = db => {
+    const n = clamp((db - SPEC_DB_MIN) / (SPEC_DB_MAX - SPEC_DB_MIN), 0, 1);
+    return plotBot() - n * (plotBot() - plotTop() + 10);
+  };
+
+  function multiplierAt(f) {
+    if (decayEqOn) {
+      const f1 = eqBands[0].freq, m1 = eqBands[0].mult;
+      const r1 = Math.pow(f / f1, 2);
+      const mLs = Math.sqrt((m1 * m1 + r1) / (1.0 + r1));
+
+      const f2 = eqBands[1].freq, m2 = eqBands[1].mult;
+      const x2 = Math.log(f / f2);
+      const mBell1 = 1.0 + (m2 - 1.0) * Math.exp(-(x2 * x2) / (2.0 * 0.49));
+
+      const f3 = eqBands[2].freq, m3 = eqBands[2].mult;
+      const x3 = Math.log(f / f3);
+      const mBell2 = 1.0 + (m3 - 1.0) * Math.exp(-(x3 * x3) / (2.0 * 0.49));
+
+      const f4 = eqBands[3].freq, m4 = eqBands[3].mult;
+      const r4 = Math.pow(f / f4, 2);
+      const mHs = Math.sqrt((1.0 + m4 * m4 * r4) / (1.0 + r4));
+      return mLs * mBell1 * mBell2 * mHs;
+    }
+    const rLo = Math.pow(f / 200, 2);
+    const mLs = Math.sqrt((lfDecayRatio * lfDecayRatio + rLo) / (1.0 + rLo));
+    const rHi = Math.pow(f / 2000, 2);
+    const mHs = Math.sqrt((1.0 + hfDecayRatio * hfDecayRatio * rHi) / (1.0 + rHi));
+    return mLs * mHs;
+  }
+
+  const RATIO_X_HZ = [100, 8000];
+  function handles() {
+    if (decayEqOn)
+      return eqBands.map((b, i) => ({ idx: i, x: hzToX(b.freq), y: multToY(b.mult), label: b.mult.toFixed(2) + '×' }));
+    return [
+      { idx: 4, x: hzToX(RATIO_X_HZ[0]), y: multToY(lfDecayRatio), label: 'LF ' + lfDecayRatio.toFixed(2) + '×' },
+      { idx: 5, x: hzToX(RATIO_X_HZ[1]), y: multToY(hfDecayRatio), label: 'HF ' + hfDecayRatio.toFixed(2) + '×' },
+    ];
+  }
+
+  let dragHandle = -1;
+  let hoverX = -1;
+
+  function drawDecay() {
+    dCtx.clearRect(0, 0, dW, dH);
+    if (dW < 40 || dH < 60) return;
+
+    const bot = plotBot();
+
+    // 1. Live Wet-Tank Scrolling Waterfall (top-to-bottom reverberant persistence)
+    if (wfHasVisiblePixels) {
+      dCtx.save();
+      dCtx.globalAlpha = 0.62;
+      dCtx.imageSmoothingEnabled = true;
+      try { dCtx.drawImage(wfCanvas, 0, 0, dW, bot); } catch (_) {}
+      dCtx.restore();
+    }
+
+    // 2. Live Post-FDN Wet-Tank Spectrum Glow & Peak-Hold Trace
+    let hasWetSpec = false;
+    for (let i = 0; i < SPEC_BINS; ++i) {
+      if (smoothWetBins[i] > SPEC_DB_MIN + 0.5 || peakWetBins[i] > SPEC_DB_MIN + 0.5) {
+        hasWetSpec = true;
+        break;
+      }
+    }
+    if (hasWetSpec) {
+      dCtx.save();
+      dCtx.beginPath();
+      dCtx.rect(0, 0, dW, bot);
+      dCtx.clip();
+
+      // Peak-hold tail memory halo (plotted at true log-bin centers `(i + 0.5) / SPEC_BINS`)
+      dCtx.beginPath();
+      dCtx.moveTo(0, specDbToY(peakWetBins[0]));
+      for (let i = 0; i < SPEC_BINS; ++i) {
+        const x = ((i + 0.5) / SPEC_BINS) * dW;
+        dCtx.lineTo(x, specDbToY(peakWetBins[i]));
+      }
+      dCtx.lineTo(dW, specDbToY(peakWetBins[SPEC_BINS - 1]));
+      dCtx.strokeStyle = 'rgba(184, 160, 239, 0.28)';
+      dCtx.lineWidth = 1.1;
+      dCtx.stroke();
+
+      // Live wet-tank spectrum area + crest (spatially smoothed to reduce FFT beating jitter)
+      dCtx.beginPath();
+      dCtx.moveTo(0, specDbToY(displayWetBins[0]));
+      for (let i = 0; i < SPEC_BINS; ++i) {
+        const x = ((i + 0.5) / SPEC_BINS) * dW;
+        dCtx.lineTo(x, specDbToY(displayWetBins[i]));
+      }
+      dCtx.lineTo(dW, specDbToY(displayWetBins[SPEC_BINS - 1]));
+      const specGrad = dCtx.createLinearGradient(0, plotTop() - 8, 0, bot);
+      specGrad.addColorStop(0.0, 'rgba(196, 174, 248, 0.34)');
+      specGrad.addColorStop(0.55, 'rgba(138, 108, 196, 0.14)');
+      specGrad.addColorStop(1.0, 'rgba(81, 58, 134, 0.01)');
+
+      dCtx.strokeStyle = 'rgba(220, 206, 255, 0.84)';
+      dCtx.lineWidth = 1.65;
+      dCtx.lineJoin = 'round';
+      dCtx.stroke();
+
+      dCtx.lineTo(dW, bot);
+      dCtx.lineTo(0, bot);
+      dCtx.closePath();
+      dCtx.fillStyle = specGrad;
+      dCtx.fill();
+      dCtx.restore();
+    }
+
+    // 3. Subtle Damping LF / HF rolloff curtains
+    const effHf = (currentModeIdx === 4) ? 3500.0 : (currentModeIdx === 1 ? dampingHfHz * 0.85 : dampingHfHz);
+    if (dampingLfHz > 22.0) {
+      const xLf = hzToX(dampingLfHz);
+      const gLf = dCtx.createLinearGradient(0, 0, xLf, 0);
+      gLf.addColorStop(0, 'rgba(9, 11, 16, 0.42)');
+      gLf.addColorStop(1, 'rgba(9, 11, 16, 0.0)');
+      dCtx.fillStyle = gLf;
+      dCtx.fillRect(0, 0, xLf, bot);
+      dCtx.strokeStyle = ink(0.14);
+      dCtx.lineWidth = 1;
+      dCtx.beginPath(); dCtx.moveTo(xLf, 0); dCtx.lineTo(xLf, bot); dCtx.stroke();
+    }
+    if (effHf < 19500.0) {
+      const xHf = hzToX(effHf);
+      const gHf = dCtx.createLinearGradient(xHf, 0, dW, 0);
+      gHf.addColorStop(0, 'rgba(9, 11, 16, 0.0)');
+      gHf.addColorStop(1, 'rgba(9, 11, 16, 0.45)');
+      dCtx.fillStyle = gHf;
+      dCtx.fillRect(xHf, 0, dW - xHf, bot);
+      dCtx.strokeStyle = ink(0.14);
+      dCtx.lineWidth = 1;
+      dCtx.beginPath(); dCtx.moveTo(xHf, 0); dCtx.lineTo(xHf, bot); dCtx.stroke();
+    }
+
+    // 4. Grid: cream at 7%
+    dCtx.strokeStyle = ink(0.07);
+    dCtx.lineWidth = 1;
+    dCtx.font = '600 9px ' + cssVar('--font');
+    dCtx.fillStyle = ink(0.34);
+    dCtx.textAlign = 'center';
+    [50, 100, 200, 500, 1000, 2000, 5000, 10000].forEach(hz => {
+      const x = hzToX(hz);
+      dCtx.beginPath(); dCtx.moveTo(x, 0); dCtx.lineTo(x, bot); dCtx.stroke();
+      dCtx.fillText(hz >= 1000 ? (hz / 1000) + 'k' : String(hz), x, dH - 4);
+    });
+
+    // Unity reference line
+    const yUnity = multToY(1.0);
+    dCtx.strokeStyle = ink(0.14);
+    dCtx.setLineDash([3, 4]);
+    dCtx.beginPath(); dCtx.moveTo(0, yUnity); dCtx.lineTo(dW, yUnity); dCtx.stroke();
+    dCtx.setLineDash([]);
+
+    // Setting curve: soft outer glow + accentLit 2.6px
+    dCtx.save();
+    dCtx.strokeStyle = 'rgba(138, 108, 196, 0.34)';
+    dCtx.lineWidth = 6.0;
+    dCtx.lineJoin = 'round';
+    dCtx.beginPath();
+    for (let px = 0; px <= dW; px += 2) {
+      const y = multToY(multiplierAt(xToHz(px)));
+      px ? dCtx.lineTo(px, y) : dCtx.moveTo(px, y);
+    }
+    dCtx.stroke();
+    dCtx.restore();
+
+    dCtx.strokeStyle = COL.accentLit;
+    dCtx.lineWidth = 2.6;
+    dCtx.lineJoin = 'round';
+    dCtx.beginPath();
+    for (let px = 0; px <= dW; px += 2) {
+      const y = multToY(multiplierAt(xToHz(px)));
+      px ? dCtx.lineTo(px, y) : dCtx.moveTo(px, y);
+    }
+    dCtx.stroke();
+
+    // Handles: dashed guide line + cream pill carrying value
+    handles().forEach(h => {
+      const active = dragHandle === h.idx || (decayEqOn && h.idx + 1 === currentEqBand);
+      dCtx.strokeStyle = ink(dragHandle === h.idx ? 0.85 : (active ? 0.62 : 0.42));
+      dCtx.lineWidth = 1.5;
+      dCtx.setLineDash([4, 4]);
+      dCtx.beginPath(); dCtx.moveTo(h.x, 0); dCtx.lineTo(h.x, bot); dCtx.stroke();
+      dCtx.setLineDash([]);
+
+      dCtx.font = '700 10px ' + cssVar('--font');
+      const tw = dCtx.measureText(h.label).width + 16;
+      const by = clamp(h.y - 10, 4, bot - 22);
+
+      dCtx.fillStyle = dragHandle === h.idx ? COL.accentLit : COL.cream;
+      dCtx.beginPath();
+      if (dCtx.roundRect) dCtx.roundRect(h.x - tw / 2, by, tw, 20, 10);
+      else dCtx.rect(h.x - tw / 2, by, tw, 20);
+      dCtx.fill();
+
+      dCtx.fillStyle = COL.well;
+      dCtx.textAlign = 'center';
+      dCtx.textBaseline = 'middle';
+      dCtx.fillText(h.label, h.x, by + 10.5);
+      dCtx.textBaseline = 'alphabetic';
+    });
+
+    if (dragHandle === -1 && hoverX >= 0) {
+      const y = multToY(multiplierAt(xToHz(hoverX)));
+      dCtx.fillStyle = COL.cream;
+      dCtx.beginPath();
+      dCtx.arc(hoverX, y, 4, 0, Math.PI * 2);
+      dCtx.fill();
+    }
+  }
+
+  const fmtHzShort = hz => hz >= 1000 ? (hz / 1000).toFixed(1) + ' kHz' : Math.round(hz) + ' Hz';
+  const fmtSec = v => v < 1.0 ? v.toFixed(2) + ' s' : v < 10 ? v.toFixed(1) + ' s' : Math.round(v) + ' s';
+
+  function updateDecayHint() {
+    const hint = $('decayHint');
+    if (hoverX >= 0 && dragHandle === -1) {
+      const f = xToHz(hoverX);
+      hint.textContent = fmtSec(globalDecay * multiplierAt(f)) + ' at ' + fmtHzShort(f);
+    } else {
+      hint.textContent = 'Drag a handle';
+    }
+  }
+
+  function updateDecayTitle() {
+    $('decayTitle').textContent = decayEqOn ? 'Decay EQ' : 'Decay by frequency';
+  }
+
+  function writeScaled(slider, scaled) {
+    if (!slider) return;
+    const p = slider.properties || { start: 0, end: 1, skew: 1 };
+    const v = clamp(scaled, p.start, p.end);
+    const lin = (v - p.start) / ((p.end - p.start) || 1);
+    slider.setNormalisedValue(Math.pow(clamp(lin, 0, 1), p.skew || 1));
+    if (typeof slider.customListener === 'function')
+      slider.customListener();
+  }
+
+  function applyLocalFallbackParam(id, v) {
+    const b = PARAM_BOUNDS[id];
+    const cl = b ? clamp(v, b[0], b[1]) : v;
+    if (id === 'predelay') { predelayMs = cl; updateTailHint(); drawTail(); }
+    else if (id === 'decay') { globalDecay = cl; updateTailHint(); updateDecayHint(); drawTail(); }
+    else if (id === 'lfDecayRatio') { lfDecayRatio = cl; drawDecay(); }
+    else if (id === 'hfDecayRatio') { hfDecayRatio = cl; drawDecay(); }
+    else if (/^eqFreq([1-4])$/.test(id)) { eqBands[parseInt(RegExp.$1, 10) - 1].freq = cl; drawDecay(); }
+    else if (/^eqMult([1-4])$/.test(id)) { eqBands[parseInt(RegExp.$1, 10) - 1].mult = cl; drawDecay(); }
+  }
+
+  function setParamScaled(id, scaled) {
+    const s = sl(id);
+    if (s) writeScaled(s, scaled);
+    else applyLocalFallbackParam(id, scaled);
+  }
+
+  function resetParamDefault(id) {
+    const s = sl(id);
+    if (s) {
+      const def = s.properties ? s.properties.defaultValue : undefined;
+      if (typeof def === 'number') {
+        s.sliderDragStarted();
+        writeScaled(s, def);
+        s.sliderDragEnded();
+      }
+    } else if (Object.prototype.hasOwnProperty.call(PARAM_DEFAULTS, id)) {
+      applyLocalFallbackParam(id, PARAM_DEFAULTS[id]);
+    }
+  }
+
+  let dragStart = null;
+  decayCanvas.addEventListener('pointerdown', ev => {
+    if ((ev.button ?? 0) !== 0) return;
+    const r = decayCanvas.getBoundingClientRect();
+    const mx = ev.clientX - r.left, my = ev.clientY - r.top;
+    dragHandle = -1;
+    for (const h of handles()) {
+      if (Math.abs(mx - h.x) < 15 && Math.abs(my - h.y) < 24) { dragHandle = h.idx; break; }
+    }
+    if (dragHandle === -1) return;
+
+    if (dragHandle < 4) {
+      const b = eqBands[dragHandle];
+      dragStart = { x: ev.clientX, y: ev.clientY, freq: b.freq, val: b.mult };
+      const sF = sl('eqFreq' + (dragHandle + 1)), sM = sl('eqMult' + (dragHandle + 1));
+      if (sF) sF.sliderDragStarted();
+      if (sM) sM.sliderDragStarted();
+    } else {
+      dragStart = { x: ev.clientX, y: ev.clientY, freq: 0, val: dragHandle === 4 ? lfDecayRatio : hfDecayRatio };
+      const sR = sl(dragHandle === 4 ? 'lfDecayRatio' : 'hfDecayRatio');
+      if (sR) sR.sliderDragStarted();
+    }
+    if (dragHandle < 4) currentEqBand = dragHandle + 1;
+    selectPage('decay');
+    decayCanvas.setPointerCapture(ev.pointerId);
+    ev.preventDefault();
+    drawDecay();
+  });
+
+  decayCanvas.addEventListener('dblclick', ev => {
+    const r = decayCanvas.getBoundingClientRect();
+    const mx = ev.clientX - r.left, my = ev.clientY - r.top;
+    let hit = -1;
+    for (const h of handles()) {
+      if (Math.abs(mx - h.x) < 15 && Math.abs(my - h.y) < 24) { hit = h.idx; break; }
+    }
+    if (hit === -1) return;
+    if (hit < 4) {
+      resetParamDefault('eqFreq' + (hit + 1));
+      resetParamDefault('eqMult' + (hit + 1));
+    } else {
+      resetParamDefault(hit === 4 ? 'lfDecayRatio' : 'hfDecayRatio');
+    }
+    drawDecay();
+  });
+
+  decayCanvas.addEventListener('pointermove', ev => {
+    const r = decayCanvas.getBoundingClientRect();
+    const mx = ev.clientX - r.left, my = ev.clientY - r.top;
+    if (dragHandle === -1) {
+      let near = false;
+      for (const h of handles()) if (Math.abs(mx - h.x) < 15 && Math.abs(my - h.y) < 24) near = true;
+      decayCanvas.style.cursor = near ? 'move' : 'default';
+      hoverX = my < plotBot() ? mx : -1;
+      updateDecayHint();
+      drawDecay();
+      return;
+    }
+    const dx = ev.clientX - dragStart.x;
+    const dy = dragStart.y - ev.clientY;
+    const plotH = Math.max(16, plotBot() - plotTop());
+    const newVal = dragStart.val * Math.exp((dy / plotH) * Math.log(yHi() / yLo()));
+    if (dragHandle < 4) {
+      const newFreq = dragStart.freq * Math.exp((dx / Math.max(16, dW)) * Math.log(FMAX / FMIN));
+      setParamScaled('eqFreq' + (dragHandle + 1), newFreq);
+      setParamScaled('eqMult' + (dragHandle + 1), newVal);
+    } else {
+      setParamScaled(dragHandle === 4 ? 'lfDecayRatio' : 'hfDecayRatio', newVal);
+    }
+    drawDecay();
+  });
+
+  const stopDecayDrag = ev => {
+    if (dragHandle === -1) return;
+    if (dragHandle < 4) {
+      const sF = sl('eqFreq' + (dragHandle + 1)), sM = sl('eqMult' + (dragHandle + 1));
+      if (sF) sF.sliderDragEnded();
+      if (sM) sM.sliderDragEnded();
+    } else {
+      const sR = sl(dragHandle === 4 ? 'lfDecayRatio' : 'hfDecayRatio');
+      if (sR) sR.sliderDragEnded();
+    }
+    dragHandle = -1;
+    if (ev && ev.pointerId !== undefined) {
+      try { decayCanvas.releasePointerCapture(ev.pointerId); } catch (e) {}
+    }
+    updateDecayHint();
+    drawDecay();
+  };
+  decayCanvas.addEventListener('pointerup', stopDecayDrag);
+  decayCanvas.addEventListener('pointercancel', stopDecayDrag);
+  window.addEventListener('blur', stopDecayDrag);
+  decayCanvas.addEventListener('pointerleave', () => {
+    hoverX = -1;
+    updateDecayHint();
+    drawDecay();
+  });
+
+  // ------------------------------------------------------------- tail well
+  const tailCanvas = $('tailCanvas');
+  const tCtx = tailCanvas.getContext('2d');
+  let tW = 0, tH = 0, tDpr = 1;
+  const DB_FLOOR = -60;
+  const HIST_HZ = 60;
+  // 9,600 samples (~160 s at 60 Hz) covers the entire 120 s max RT60 / 150 s max span
+  // with wall-clock timestamps so frame-rate differences never skew time alignment.
+  const HIST_CAP = 9600;
+  const RIGHT_PAD = 8;
+  const histTime = new Float64Array(HIST_CAP);
+  const histIn   = new Float32Array(HIST_CAP).fill(-120.0);
+  const histWet  = new Float32Array(HIST_CAP).fill(-120.0);
+  const histDuck = new Float32Array(HIST_CAP).fill(0.0);
+  const histSc   = new Float32Array(HIST_CAP).fill(-120.0);
+  let histHead = 0; // index of newest sample when histCount > 0
+  let histCount = 0;
+  let newestAudibleSec = -1e9;
+  const nowSec = () => (typeof performance !== 'undefined' && typeof performance.now === 'function'
+    ? performance.now()
+    : Date.now()) * 0.001;
+
+  let tailDragHandle = null; // 'predelay' | 'decay' | null
+  let tailDragStart = null;
+  let tailHoverHandle = null;
+
+  function truncateTextWithEllipsis(ctx, text, maxW) {
+    if (maxW <= 0) return '';
+    if (ctx.measureText(text).width <= maxW) return text;
+    const ell = '…';
+    const ellW = ctx.measureText(ell).width;
+    if (maxW <= ellW + 2) return '';
+    let lo = 0, hi = text.length;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if (ctx.measureText(text.slice(0, mid)).width + ellW <= maxW) lo = mid;
+      else hi = mid - 1;
+    }
+    return lo > 0 ? (text.slice(0, lo).trimEnd() + ell) : '';
+  }
+
+  let tPxW = 0, tPxH = 0, tPrevDpr = 0;
+  function fitTailCanvas() {
+    const nextDpr = window.devicePixelRatio || 1;
+    const r = tailCanvas.getBoundingClientRect();
+    const nextPxW = Math.round(r.width * nextDpr);
+    const nextPxH = Math.round(r.height * nextDpr);
+    if (nextPxW === tPxW && nextPxH === tPxH && nextDpr === tPrevDpr) return;
+    tDpr = tPrevDpr = nextDpr;
+    tW = r.width; tH = r.height;
+    tailCanvas.width = nextPxW;
+    tailCanvas.height = nextPxH;
+    tCtx.setTransform(tDpr, 0, 0, tDpr, 0, 0);
+    drawTail();
+  }
+  new ResizeObserver(fitTailCanvas).observe(tailCanvas.parentElement || tailCanvas);
+
+  function tailSpanSeconds() {
+    const total = predelayMs / 1000 + globalDecay;
+    return clamp(total * 1.25, 0.5, 150);
+  }
+
+  function activeTailSpan() {
+    return tailDragStart ? tailDragStart.span : tailSpanSeconds();
+  }
+
+  function tailGeometry() {
+    const top = 22;
+    const bot = tH - AXIS;
+    const xNow = Math.max(24, tW - RIGHT_PAD);
+    const plotW = Math.max(16, xNow - 4);
+    const span = activeTailSpan();
+    const xForAge = sec => xNow - (sec / span) * plotW;
+    const yForDb = db => top + (clamp(db, DB_FLOOR, 0) / DB_FLOOR) * (bot - top);
+
+    const preSec = predelayMs / 1000;
+    const xPreRaw = clamp(xForAge(preSec), 4, xNow);
+    const xDecRaw = clamp(xForAge(preSec + globalDecay), 4, xNow);
+
+    const preLabel = 'Pre ' + fmtMsShort(predelayMs);
+    const decLabel = frozen ? 'Frozen' : ('Decay ' + fmtSec(globalDecay));
+
+    tCtx.font = '700 9.5px ' + cssVar('--font');
+    const pwPre = tCtx.measureText(preLabel).width + 14;
+    const pwDec = tCtx.measureText(decLabel).width + 14;
+
+    const halfPre = Math.max(28, pwPre * 0.5 + 3);
+    const hxPre = clamp(xPreRaw, halfPre, Math.max(halfPre, xNow - halfPre - 1));
+    const hyPre = top + 12;
+
+    const hyDec = clamp(bot - 14, top + 28, bot - 11);
+    const halfDec = Math.max(28, pwDec * 0.5 + 3);
+    const sameBand = Math.abs(hyDec - hyPre) < 20;
+    const maxDecX = sameBand
+      ? Math.max(halfDec, hxPre - halfPre - halfDec - 4)
+      : Math.max(halfDec, xNow - halfDec - 1);
+    const hxDec = clamp(xDecRaw, halfDec, maxDecX);
+
+    return {
+      top, bot, xNow, plotW, span, xForAge, yForDb,
+      preSec, xPreRaw, xDecRaw, preLabel, decLabel,
+      pwPre, pwDec, hxPre, hyPre, hxDec, hyDec
+    };
+  }
+
+  function hitTestTailHandle(mx, my) {
+    if (tW < 40 || tH < 60) return null;
+    const g = tailGeometry();
+    if (Math.abs(mx - g.hxPre) <= g.pwPre * 0.5 + 7 && Math.abs(my - g.hyPre) <= 13)
+      return 'predelay';
+    if (!frozen && Math.abs(mx - g.hxDec) <= g.pwDec * 0.5 + 7 && Math.abs(my - g.hyDec) <= 13)
+      return 'decay';
+    if (Math.abs(mx - g.xPreRaw) <= 7 && my >= g.top && my <= g.top + 38)
+      return 'predelay';
+    if (!frozen && Math.abs(mx - g.xDecRaw) <= 7 && my >= g.top + 24 && my <= g.bot)
+      return 'decay';
+    return null;
+  }
+
+  // Builds peak-preserving (max for dB levels, min for negative ducking) polylines
+  // from wall-clock history: unbucketed continuous coordinates at normal spans
+  // (no Math.round(x) shimmy) and peak-preserving pixel buckets at long spans.
+  function collectVisiblePoints(valArr, reduceMin, tRef, span, xForAge) {
+    const pts = [];
+    if (histCount < 2) return pts;
+    const plotW = Math.max(16, tW - RIGHT_PAD - 4);
+    const useContinuous = (span * HIST_HZ) <= (plotW * 1.25);
+    if (useContinuous) {
+      for (let k = 0; k < histCount; ++k) {
+        const idx = (histHead - k + HIST_CAP) % HIST_CAP;
+        const age = Math.max(0, tRef - histTime[idx]);
+        const rawX = xForAge(age);
+        const x = Math.max(0, rawX);
+        pts.push({ x, v: valArr[idx] });
+        if (rawX <= 0) break;
+      }
+      return pts;
+    }
+    let curBucket = null;
+    let bucketX = 0;
+    let bucketVal = 0;
+    for (let k = 0; k < histCount; ++k) {
+      const idx = (histHead - k + HIST_CAP) % HIST_CAP;
+      const age = Math.max(0, tRef - histTime[idx]);
+      const rawX = xForAge(age);
+      const x = Math.max(0, rawX);
+      const bx = Math.round(x);
+      const v = valArr[idx];
+      if (curBucket === null) {
+        curBucket = bx;
+        bucketX = x;
+        bucketVal = v;
+      } else if (bx === curBucket) {
+        if (reduceMin ? (v < bucketVal) : (v > bucketVal)) {
+          bucketVal = v;
+          bucketX = x;
+        }
+      } else {
+        pts.push({ x: bucketX, v: bucketVal });
+        curBucket = bx;
+        bucketX = x;
+        bucketVal = v;
+      }
+      if (rawX <= 0) break;
+    }
+    if (curBucket !== null)
+      pts.push({ x: bucketX, v: bucketVal });
+    return pts;
+  }
+
+  function drawTail() {
+    tCtx.clearRect(0, 0, tW, tH);
+    if (tW < 40 || tH < 60) return;
+
+    const g = tailGeometry();
+    const { top, bot, xNow, span, xForAge, yForDb } = g;
+    const tRef = nowSec();
+
+    // 1. Time grid (`NOW` anchored on the right edge, elapsed time extending left)
+    const steps = [0.1, 0.2, 0.25, 0.5, 1, 2, 5, 10, 20, 50];
+    let step = steps[steps.length - 1];
+    for (const s of steps) if (span / s <= 6) { step = s; break; }
+    tCtx.font = '600 9px ' + cssVar('--font');
+    tCtx.fillStyle = ink(0.34);
+    tCtx.textBaseline = 'alphabetic';
+    tCtx.strokeStyle = ink(0.07);
+    tCtx.lineWidth = 1;
+
+    // Right-edge NOW marker line & label
+    tCtx.strokeStyle = ink(0.16);
+    tCtx.beginPath(); tCtx.moveTo(xNow, top - 2); tCtx.lineTo(xNow, bot); tCtx.stroke();
+    tCtx.textAlign = 'right';
+    tCtx.fillText('now', xNow, tH - 4);
+
+    tCtx.textAlign = 'center';
+    tCtx.strokeStyle = ink(0.07);
+    for (let s = step; s < span; s += step) {
+      const x = xForAge(s);
+      if (x < 16) break;
+      if (xNow - x < 28) continue;
+      tCtx.beginPath(); tCtx.moveTo(x, top); tCtx.lineTo(x, bot); tCtx.stroke();
+      const lbl = '-' + (s < 1 ? s.toFixed(step < 0.25 ? 2 : 1).replace(/0+$/, '').replace(/\.$/, '') : s) + 's';
+      tCtx.fillText(lbl, x, tH - 4);
+    }
+
+    // Horizontal -20 / -40 dB reference hairlines
+    [-20, -40].forEach(db => {
+      const y = yForDb(db);
+      tCtx.beginPath(); tCtx.moveTo(0, y); tCtx.lineTo(xNow, y); tCtx.stroke();
+    });
+
+    tCtx.save();
+    tCtx.beginPath();
+    tCtx.rect(0, top, xNow + 2, bot - top);
+    tCtx.clip();
+
+    // 2. Ducking Ribbon hanging downward from top ceiling (amber Int / cyan Ext)
+    const duckPts = collectVisiblePoints(histDuck, true, tRef, span, xForAge);
+    if (duckPts.length > 1 && duckPts.some(p => p.v < -0.05)) {
+      const ribbonMaxPx = (bot - top) * 0.48;
+      const duckToY = dDb => top + (clamp(Math.abs(dDb), 0, 24) / 24) * ribbonMaxPx;
+      const isExt = duckSourceIdx === 1;
+      const lastX = duckPts[duckPts.length - 1].x;
+      tCtx.beginPath();
+      tCtx.moveTo(duckPts[0].x, top);
+      for (let i = 0; i < duckPts.length; ++i)
+        tCtx.lineTo(duckPts[i].x, duckToY(duckPts[i].v));
+      tCtx.lineTo(lastX, top);
+      tCtx.closePath();
+      tCtx.fillStyle = isExt ? 'rgba(56, 189, 248, 0.24)' : 'rgba(245, 158, 11, 0.24)';
+      tCtx.fill();
+
+      tCtx.beginPath();
+      for (let i = 0; i < duckPts.length; ++i) {
+        const y = duckToY(duckPts[i].v);
+        i === 0 ? tCtx.moveTo(duckPts[i].x, y) : tCtx.lineTo(duckPts[i].x, y);
+      }
+      tCtx.strokeStyle = isExt ? '#38bdf8' : '#f59e0b';
+      tCtx.lineWidth = 1.65;
+      tCtx.lineJoin = 'round';
+      tCtx.stroke();
+    }
+
+    // 3. External Key input trace when Ext Duck Key is selected & active
+    if (duckSourceIdx === 1) {
+      const hasKeySignal = beaconSelected ? beaconReceiving : scActive;
+      const scPts = hasKeySignal ? collectVisiblePoints(histSc, false, tRef, span, xForAge) : [];
+      if (scPts.length > 1) {
+        tCtx.beginPath();
+        for (let i = 0; i < scPts.length; ++i) {
+          const y = yForDb(scPts[i].v);
+          i === 0 ? tCtx.moveTo(scPts[i].x, y) : tCtx.lineTo(scPts[i].x, y);
+        }
+        tCtx.strokeStyle = 'rgba(56, 189, 248, 0.65)';
+        tCtx.setLineDash([3, 3]);
+        tCtx.lineWidth = 1.3;
+        tCtx.stroke();
+        tCtx.setLineDash([]);
+      }
+    }
+
+    // 4. Dry Input Trace (crisp ghosted cream transients scrolling right -> left)
+    const inPts = collectVisiblePoints(histIn, false, tRef, span, xForAge);
+    if (inPts.length > 1 && inPts.some(p => p.v > DB_FLOOR + 0.2)) {
+      tCtx.beginPath();
+      for (let i = 0; i < inPts.length; ++i) {
+        const y = yForDb(inPts[i].v);
+        i === 0 ? tCtx.moveTo(inPts[i].x, y) : tCtx.lineTo(inPts[i].x, y);
+      }
+      tCtx.strokeStyle = ink(0.46);
+      tCtx.lineWidth = 1.35;
+      tCtx.lineJoin = 'round';
+      tCtx.stroke();
+
+      tCtx.lineTo(inPts[inPts.length - 1].x, bot);
+      tCtx.lineTo(inPts[0].x, bot);
+      tCtx.closePath();
+      tCtx.fillStyle = ink(0.06);
+      tCtx.fill();
+    }
+
+    // 5. Wet Tail Plume (luminous iris/violet reverb envelope scrolling right -> left)
+    const wetPts = collectVisiblePoints(histWet, false, tRef, span, xForAge);
+    if (wetPts.length > 1 && wetPts.some(p => p.v > DB_FLOOR + 0.2)) {
+      tCtx.beginPath();
+      for (let i = 0; i < wetPts.length; ++i) {
+        const y = yForDb(wetPts[i].v);
+        i === 0 ? tCtx.moveTo(wetPts[i].x, y) : tCtx.lineTo(wetPts[i].x, y);
+      }
+      const wetGrad = tCtx.createLinearGradient(0, top, 0, bot);
+      wetGrad.addColorStop(0.0, 'rgba(196, 174, 248, 0.44)');
+      wetGrad.addColorStop(0.65, 'rgba(138, 108, 196, 0.18)');
+      wetGrad.addColorStop(1.0, 'rgba(81, 58, 134, 0.02)');
+
+      tCtx.strokeStyle = COL.accentLit;
+      tCtx.lineWidth = 2.4;
+      tCtx.lineJoin = 'round';
+      tCtx.stroke();
+
+      tCtx.lineTo(wetPts[wetPts.length - 1].x, bot);
+      tCtx.lineTo(wetPts[0].x, bot);
+      tCtx.closePath();
+      tCtx.fillStyle = wetGrad;
+      tCtx.fill();
+    }
+    tCtx.restore();
+
+    // Live Wet Tail tip dot on the right-edge `NOW` line
+    if (histCount > 0 && (tRef - histTime[histHead]) < 0.25 && histWet[histHead] > DB_FLOOR + 0.5) {
+      tCtx.fillStyle = COL.cream;
+      tCtx.beginPath();
+      tCtx.arc(xNow, yForDb(histWet[histHead]), 3.5, 0, Math.PI * 2);
+      tCtx.fill();
+    }
+
+    // 6. Setting Envelope (Pre-Delay gap + Decay RT60 slope anchored from `NOW` right edge)
+    tCtx.save();
+    tCtx.strokeStyle = ink(0.55);
+    tCtx.lineWidth = 1.6;
+    tCtx.setLineDash([5, 4]);
+    tCtx.lineJoin = 'round';
+    tCtx.beginPath();
+    const yEnvTop = yForDb(-3);
+    tCtx.moveTo(xNow, yEnvTop);
+    if (frozen) {
+      tCtx.lineTo(0, yEnvTop);
+    } else {
+      tCtx.lineTo(g.xPreRaw, yEnvTop);
+      tCtx.lineTo(g.xDecRaw, bot);
+    }
+    tCtx.stroke();
+    tCtx.setLineDash([]);
+
+    // Vertical guide lines at Pre-Delay and Decay boundaries
+    const drawGuide = (x, active) => {
+      tCtx.strokeStyle = active ? COL.accentLit : ink(0.28);
+      tCtx.lineWidth = active ? 1.5 : 1.0;
+      tCtx.setLineDash([3, 3]);
+      tCtx.beginPath();
+      tCtx.moveTo(x, top);
+      tCtx.lineTo(x, bot);
+      tCtx.stroke();
+      tCtx.setLineDash([]);
+    };
+    drawGuide(g.xPreRaw, tailDragHandle === 'predelay' || tailHoverHandle === 'predelay');
+    if (!frozen)
+      drawGuide(g.xDecRaw, tailDragHandle === 'decay' || tailHoverHandle === 'decay');
+    tCtx.restore();
+
+    // 7. On-Canvas Draggable Handle Pills (`Pre-Delay` and `Decay`)
+    const drawHandlePill = (hx, hy, anchorX, textStr, active) => {
+      tCtx.font = '700 9.5px ' + cssVar('--font');
+      const pw = tCtx.measureText(textStr).width + 14;
+      const ph = 18;
+      if (Math.abs(hx - anchorX) > pw * 0.45) {
+        tCtx.strokeStyle = active ? COL.accentLit : ink(0.38);
+        tCtx.lineWidth = 1;
+        tCtx.beginPath();
+        tCtx.moveTo(hx, hy);
+        tCtx.lineTo(anchorX, hy);
+        tCtx.stroke();
+      }
+      tCtx.fillStyle = active ? COL.accentLit : COL.cream;
+      tCtx.beginPath();
+      if (tCtx.roundRect) tCtx.roundRect(hx - pw / 2, hy - ph / 2, pw, ph, 9);
+      else tCtx.rect(hx - pw / 2, hy - ph / 2, pw, ph);
+      tCtx.fill();
+
+      tCtx.fillStyle = COL.well;
+      tCtx.textAlign = 'center';
+      tCtx.textBaseline = 'middle';
+      tCtx.fillText(textStr, hx, hy + 0.5);
+      tCtx.textBaseline = 'alphabetic';
+    };
+
+    if (!frozen) {
+      drawHandlePill(g.hxDec, g.hyDec, g.xDecRaw, g.decLabel,
+        tailDragHandle === 'decay' || tailHoverHandle === 'decay');
+    }
+    drawHandlePill(g.hxPre, g.hyPre, g.xPreRaw, g.preLabel,
+      tailDragHandle === 'predelay' || tailHoverHandle === 'predelay');
+
+    // 8. Top strip micro-legend (Dry · Wet · Duck) + ellipsis-truncated External Key badge
+    const narrowLegend = tW < 252 && duckSourceIdx === 1;
+    const chipGap = narrowLegend ? 5 : 9;
+    tCtx.font = '700 8.5px ' + cssVar('--font');
+    tCtx.textAlign = 'left';
+    tCtx.textBaseline = 'middle';
+    let lx = 6;
+    const ly = 11;
+    const drawLegendChip = (dotCol, labelText) => {
+      tCtx.fillStyle = dotCol;
+      tCtx.beginPath();
+      tCtx.arc(lx + 3, ly, 2.8, 0, Math.PI * 2);
+      tCtx.fill();
+      tCtx.fillStyle = ink(0.58);
+      tCtx.fillText(labelText, lx + 7.5, ly + 0.5);
+      lx += 7.5 + tCtx.measureText(labelText).width + chipGap;
+    };
+    drawLegendChip(ink(0.62), 'DRY');
+    drawLegendChip(COL.accentLit, 'WET');
+    const duckChipText = liveDuckDb <= -0.05
+      ? (narrowLegend ? (liveDuckDb.toFixed(1) + 'dB') : ('DUCK ' + liveDuckDb.toFixed(1) + 'dB'))
+      : 'DUCK';
+    drawLegendChip(duckSourceIdx === 1 ? '#38bdf8' : '#f59e0b', duckChipText);
+
+    if (duckSourceIdx === 1) {
+      const hasKeySignal = beaconSelected ? beaconReceiving : scActive;
+      const rawKeyLabel = beaconSelected ? ('KEY · ' + beaconSelected) : 'KEY';
+      tCtx.font = '700 8.5px ' + cssVar('--font');
+      const availW = xNow - lx - 2;
+      if (availW >= 32) {
+        const fittedText = truncateTextWithEllipsis(tCtx, rawKeyLabel, availW - 10) || 'KEY';
+        const pw = Math.min(availW, tCtx.measureText(fittedText).width + 10);
+        const px = xNow - pw;
+        const py = 3;
+        tCtx.fillStyle = hasKeySignal ? 'rgba(56, 189, 248, 0.18)' : 'rgba(56, 189, 248, 0.08)';
+        tCtx.strokeStyle = hasKeySignal ? 'rgba(56, 189, 248, 0.62)' : 'rgba(56, 189, 248, 0.28)';
+        tCtx.lineWidth = 1;
+        tCtx.beginPath();
+        if (tCtx.roundRect) tCtx.roundRect(px, py, pw, 16, 8);
+        else tCtx.rect(px, py, pw, 16);
+        tCtx.fill();
+        tCtx.stroke();
+        tCtx.fillStyle = hasKeySignal ? '#38bdf8' : 'rgba(56, 189, 248, 0.72)';
+        tCtx.textAlign = 'center';
+        tCtx.fillText(fittedText, px + pw * 0.5, py + 8.5);
+      }
+    }
+    tCtx.textBaseline = 'alphabetic';
+  }
+
+  // Continuous C^1-smooth mapping for #tailCanvas Decay handle drag:
+  // tracks cursor 1:1 linearly across the visible span, and splices with matched
+  // value AND derivative into exponential scaling outside [uNeg, uPos] so dragging
+  // 0.1 s <-> 120 s is strictly monotonic with zero step discontinuities.
+  function computeSmoothDraggedDecay(d0, span, u) {
+    const uPos = 0.50;
+    const uNeg = -Math.min(0.65, (0.5 * d0) / Math.max(0.1, span));
+    if (u >= uNeg && u <= uPos)
+      return d0 + u * span;
+    if (u > uPos) {
+      const yPos = d0 + uPos * span;
+      const du = u - uPos;
+      return yPos * Math.exp((span / yPos) * du + 5.2 * du * du);
+    }
+    const yNeg = Math.max(0.05, d0 + uNeg * span);
+    const du = u - uNeg; // negative
+    return yNeg * Math.exp((span / yNeg) * du - 2.2 * du * du);
+  }
+
+  tailCanvas.addEventListener('pointerdown', ev => {
+    if ((ev.button ?? 0) !== 0 || tW < 40 || tH < 60) return;
+    const r = tailCanvas.getBoundingClientRect();
+    const mx = ev.clientX - r.left, my = ev.clientY - r.top;
+    const hit = hitTestTailHandle(mx, my);
+    if (!hit) return;
+
+    tailDragHandle = hit;
+    tailDragStart = {
+      x: ev.clientX,
+      preMs: predelayMs,
+      decaySec: globalDecay,
+      span: tailSpanSeconds()
+    };
+    const s = sl(hit);
+    if (s) s.sliderDragStarted();
+    selectPage('space');
+    tailCanvas.setPointerCapture(ev.pointerId);
+    tailCanvas.style.cursor = 'ew-resize';
+    ev.preventDefault();
+    drawTail();
+  });
+
+  tailCanvas.addEventListener('pointermove', ev => {
+    if (tW < 40 || tH < 60) return;
+    const r = tailCanvas.getBoundingClientRect();
+    const mx = ev.clientX - r.left, my = ev.clientY - r.top;
+    if (!tailDragHandle || !tailDragStart) {
+      const near = hitTestTailHandle(mx, my);
+      if (near !== tailHoverHandle) {
+        tailHoverHandle = near;
+        tailCanvas.style.cursor = near ? 'ew-resize' : 'default';
+        drawTail();
+      }
+      return;
+    }
+
+    // `NOW` sits on the right edge: dragging left (away from NOW) lengthens time.
+    const fine = ev.shiftKey ? 0.1 : 1.0;
+    const dxLeft = (tailDragStart.x - ev.clientX) * fine;
+    const plotW = Math.max(32, tW - RIGHT_PAD - 4);
+    if (tailDragHandle === 'predelay') {
+      const msPerPx = Math.min((tailDragStart.span * 1000.0) / plotW, 1.25);
+      const nextPre = clamp(tailDragStart.preMs + dxLeft * msPerPx, 0.0, 200.0);
+      setParamScaled('predelay', nextPre);
+    } else if (tailDragHandle === 'decay') {
+      const nextDec = clamp(
+        computeSmoothDraggedDecay(tailDragStart.decaySec, tailDragStart.span, dxLeft / plotW),
+        0.1, 120.0);
+      setParamScaled('decay', nextDec);
+    }
+    updateTailHint();
+    updateDecayHint();
+    drawTail();
+  });
+
+  const stopTailDrag = ev => {
+    if (!tailDragHandle) return;
+    const s = sl(tailDragHandle);
+    if (s) s.sliderDragEnded();
+    tailDragHandle = null;
+    tailDragStart = null;
+    if (ev && ev.pointerId !== undefined) {
+      try { tailCanvas.releasePointerCapture(ev.pointerId); } catch (_) {}
+    }
+    drawTail();
+  };
+  tailCanvas.addEventListener('pointerup', stopTailDrag);
+  tailCanvas.addEventListener('pointercancel', stopTailDrag);
+  window.addEventListener('blur', stopTailDrag);
+  tailCanvas.addEventListener('pointerleave', () => {
+    if (!tailDragHandle && tailHoverHandle !== null) {
+      tailHoverHandle = null;
+      tailCanvas.style.cursor = 'default';
+      drawTail();
+    }
+  });
+  tailCanvas.addEventListener('dblclick', ev => {
+    if (tW < 40 || tH < 60) return;
+    const r = tailCanvas.getBoundingClientRect();
+    const hit = hitTestTailHandle(ev.clientX - r.left, ev.clientY - r.top);
+    if (!hit) return;
+    resetParamDefault(hit);
+    drawTail();
+  });
+
+  drawDecayFn = drawDecay;
+  drawTailFn = drawTail;
+
+  function updateTailHint() {
+    $('tailHint').textContent = frozen ? 'Frozen'
+      : (predelayMs >= 1 ? fmtMsShort(predelayMs) + ' + ' : '') + fmtSec(globalDecay);
+  }
+
+  // --------------------------------------------------------------- pages
+  let currentPage = 'space';
+  let currentEqBand = 1;
+  const EQ_BAND_NAMES = ['Low shelf', 'Bell', 'Bell', 'High shelf'];
+  function selectPage(p) {
+    currentPage = p;
+    document.querySelectorAll('#page-selector button').forEach(b => b.classList.toggle('on', b.dataset.page === p));
+    $('pane_space').classList.toggle('active', p === 'space');
+    $('pane_tone').classList.toggle('active', p === 'tone');
+    $('pane_blend').classList.toggle('active', p === 'blend');
+    $('pane_ratios').classList.toggle('active', p === 'decay' && !decayEqOn);
+    $('pane_eq').classList.toggle('active', p === 'decay' && decayEqOn);
+    for (let b = 1; b <= 4; ++b) $('eqrow_' + b).classList.toggle('active', b === currentEqBand);
+    document.querySelectorAll('#eq-band-selector button').forEach(b => b.classList.toggle('on', parseInt(b.dataset.band, 10) === currentEqBand));
+    const t = $('page_title');
+    if (p === 'space') t.textContent = MODE_CHOICES[comboIndex('mode', MODE_CHOICES.length)] || 'Hall';
+    else if (p === 'tone') t.textContent = 'Damping & diffusion';
+    else if (p === 'blend') t.textContent = 'Reflections & width';
+    else t.textContent = decayEqOn ? ('Band ' + currentEqBand + ' · ' + EQ_BAND_NAMES[currentEqBand - 1]) : 'Passive ratios';
+  }
+  function selectEqBand(b) {
+    currentEqBand = b;
+    selectPage(currentPage);
+    drawDecay();
+  }
+  document.querySelectorAll('#page-selector button').forEach(b => {
+    b.addEventListener('click', () => selectPage(b.dataset.page));
+  });
+  document.querySelectorAll('#eq-band-selector button').forEach(b => {
+    b.addEventListener('click', () => selectEqBand(parseInt(b.dataset.band, 10)));
+  });
+
+  // ----------------------------------------------------------- formatting
+  const fmtMsShort = v => v < 10.0 ? v.toFixed(1) + ' ms' : Math.round(v) + ' ms';
+  const fmtPct = v => Math.round(v) + '%';
+  const fmtHz = v => v >= 1000 ? (v / 1000).toFixed(2) + ' kHz' : Math.round(v) + ' Hz';
+  const fmtMult = v => v.toFixed(2) + '×';
+
+  // ------------------------------------------------------------------- init
+  function initAll() {
+    document.querySelectorAll('.knob').forEach(mountKnob);
+
+    // Space
+    bindSlider($('param_decay'), 'decay', fmtSec, v => { globalDecay = v; updateTailHint(); drawTail(); updateDecayHint(); });
+    bindSlider($('param_predelay'), 'predelay', fmtMsShort, v => { predelayMs = v; updateTailHint(); drawTail(); });
+    bindSlider($('param_size'), 'size', fmtPct);
+    bindSlider($('param_diffusion'), 'diffusion', fmtPct);
+    bindChoicePills($('mode-group'), 'mode', MODE_CHOICES, idx => {
+      currentModeIdx = idx;
+      if (currentPage === 'space') selectPage('space');
+      drawDecay();
+    });
+
+    // Tone
+    bindSlider($('param_balance'), 'balance', fmtPct);
+    bindSlider($('param_width'), 'width', fmtPct);
+    bindSlider($('param_dampingHf'), 'dampingHf', fmtHz, v => { dampingHfHz = v; drawDecay(); });
+    bindSlider($('param_dampingLf'), 'dampingLf', fmtHz, v => { dampingLfHz = v; drawDecay(); });
+
+    // Decay curve: passive ratios and four EQ bands
+    bindSlider($('param_lfDecayRatio'), 'lfDecayRatio', fmtMult, v => { lfDecayRatio = v; drawDecay(); });
+    bindSlider($('param_hfDecayRatio'), 'hfDecayRatio', fmtMult, v => { hfDecayRatio = v; drawDecay(); });
+    for (let b = 1; b <= 4; ++b) {
+      bindSlider($('param_eqFreq' + b), 'eqFreq' + b, fmtHz, v => { eqBands[b - 1].freq = v; drawDecay(); });
+      bindSlider($('param_eqMult' + b), 'eqMult' + b, fmtMult, v => { eqBands[b - 1].mult = v; drawDecay(); });
+    }
+
+    // Modulation and ducking strip
+    bindSlider($('param_modrate'), 'modrate', v => v.toFixed(v < 1 ? 2 : 1) + ' Hz', updateModState);
+    bindSlider($('param_moddepth'), 'moddepth', fmtPct, updateModState);
+    bindSlider($('param_duckthresh'), 'duckthresh', v => Math.round(v) + ' dB', updateDuckState);
+    bindSlider($('param_duckdepth'), 'duckdepth', v => v.toFixed(1) + ' dB', updateDuckState);
+    bindSlider($('param_duckrelease'), 'duckrelease', fmtMsShort, updateDuckState);
+    {
+      const updateDuckPills = bindChoicePills($('ducksource-group'), 'ducksource', DUCKSOURCE_CHOICES, idx => {
+        duckSourceIdx = idx;
+        updateBeaconLed();
+        updateDuckState();
+        drawTail();
+      });
+      syncDuckSourcePills = idx => {
+        const grp = $('ducksource-group');
+        if (grp) {
+          grp.querySelectorAll('button').forEach(b =>
+            b.classList.toggle('on', parseInt(b.dataset.index, 10) === idx));
+        }
+        duckSourceIdx = idx;
+        updateBeaconLed();
+        updateDuckState();
+      };
+      if (typeof updateDuckPills === 'function' && host) updateDuckPills();
+    }
+
+    // Master
+    bindSlider($('param_mix'), 'mix', fmtPct);
+    bindToggle($('param_freeze'), 'freeze', v => {
+      if (v && tailDragHandle === 'decay') stopTailDrag();
+      frozen = v;
+      updateTailHint();
+      drawTail();
+    });
+    bindToggle($('param_delta'), 'delta');
+    bindToggle($('param_power'), 'power', v => {
+      const b = $('param_power');
+      if (b) b.lastChild.textContent = v ? 'Engaged' : 'Bypassed';
+    });
+    bindToggle($('param_decayEqEnable'), 'decayEqEnable', v => {
+      decayEqOn = v;
+      updateDecayTitle();
+      selectPage(currentPage);
+      drawDecay();
+    });
+
+    if (window.WDKit && WDKit.enhanceAllKnobs) WDKit.enhanceAllKnobs(sl);
+    selectPage('space');
+    updateDecayTitle();
+    updateTailHint();
+    updateDuckState();
+  }
+
+  function renderSelfTrackChip() {
+    const chip = $('selfTrackChip');
+    const lbl = $('selfTrackName');
+    if (!chip || !lbl || selfEditing) return;
+    lbl.textContent = selfMeta.name || 'Verb 1';
+    const pub = selfMeta.publishing && selfMeta.publishedName
+      ? ' · broadcasting on WD Beacon as "' + selfMeta.publishedName + '"'
+      : '';
+    chip.title = 'Instance name' + pub + ' — click to rename';
+  }
+
+  function startSelfRename() {
+    const chip = $('selfTrackChip');
+    const lbl = $('selfTrackName');
+    if (!chip || !lbl || selfEditing) return;
+    selfEditing = true;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'track-name-input';
+    input.maxLength = 47;
+    input.value = selfMeta.customName || selfMeta.name || '';
+    lbl.style.display = 'none';
+    chip.insertBefore(input, lbl);
+    input.focus();
+    input.select();
+
+    let finished = false;
+    const finish = async (save) => {
+      if (finished) return;
+      finished = true;
+      const next = save ? input.value.trim() : null;
+      if (input.parentNode) input.parentNode.removeChild(input);
+      lbl.style.display = '';
+      selfEditing = false;
+      if (save) {
+        selfMeta.customName = next;
+        if (next) selfMeta.name = next;
+        if (host) {
+          try {
+            const res = await host.call('setInstanceName', next);
+            if (res && typeof res.name === 'string') selfMeta.name = res.name;
+            if (res && typeof res.customName === 'string') selfMeta.customName = res.customName;
+            if (res && typeof res.beaconPublishedName === 'string') selfMeta.publishedName = res.beaconPublishedName;
+            if (res && typeof res.beaconPublishing === 'boolean') selfMeta.publishing = res.beaconPublishing;
+          } catch (e) {}
+        }
+      }
+      renderSelfTrackChip();
+    };
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+      else if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+      e.stopPropagation();
+    });
+    input.addEventListener('blur', () => finish(true));
+  }
+
+  {
+    const chip = $('selfTrackChip');
+    if (chip) chip.addEventListener('click', startSelfRename);
+  }
+
+  function updateDuckKeyHint() {
+    const hint = $('duckKeyHint');
+    if (!hint) return;
+    hint.classList.remove('warn');
+    if (duckSourceIdx !== 1) {
+      hint.hidden = true;
+    } else if (beaconSelected && beaconSrMismatch) {
+      hint.textContent = 'Beacon SR mismatch';
+      hint.classList.add('warn');
+      hint.hidden = false;
+    } else if (beaconSelected && !beaconReceiving) {
+      hint.textContent = 'Waiting for Beacon';
+      hint.hidden = false;
+    } else if (!beaconSelected && !scActive) {
+      hint.textContent = 'No key connected';
+      hint.hidden = false;
+    } else {
+      hint.hidden = true;
+    }
+  }
+
+  function updateBeaconLed() {
+    const wrap = $('beaconPickerWrap');
+    if (wrap) {
+      const extOn = duckSourceIdx === 1;
+      const baseTip = 'Select an active Werewolf Digital Beacon track for external reverb ducking key. Wireless cross-track key — for sample-exact timing at large DAW buffer sizes (1024+), use Off (Host Bus) with a DAW sidechain send.';
+      wrap.classList.remove('receiving', 'waiting', 'mismatch');
+      if (beaconSelected) {
+        if (beaconSrMismatch) {
+          wrap.classList.add('mismatch');
+          wrap.title = 'Sample rate mismatch between this track and the selected WD Beacon track.';
+        } else {
+          wrap.classList.add(extOn && beaconReceiving ? 'receiving' : 'waiting');
+          wrap.title = extOn ? baseTip : (baseTip + ' (Duck Key is currently Int.)');
+        }
+      } else if (extOn) {
+        wrap.classList.add(scActive ? 'receiving' : 'waiting');
+        wrap.title = scActive
+          ? 'Receiving external ducking key from Host Bus 1.'
+          : baseTip;
+      } else {
+        wrap.title = baseTip;
+      }
+    }
+    updateDuckKeyHint();
+  }
+
+  function renderBeaconSources(res) {
+    const sel = $('beaconSourceSelect');
+    if (!sel || !res || typeof res !== 'object') return;
+    const sources = Array.isArray(res.sources) ? res.sources : [];
+    if (typeof res.selected === 'string') beaconSelected = res.selected;
+    if (!beaconMetersSeen && typeof res.receiving === 'boolean') beaconReceiving = res.receiving;
+    if (!beaconMetersSeen && typeof res.scActive === 'boolean') scActive = res.scActive;
+    if (typeof res.srMismatch === 'boolean') beaconSrMismatch = res.srMismatch;
+
+    const sig = sources.map(s => `${s.name}:${s.sr}:${s.ch}`).join('|') + '#' + beaconSelected;
+    updateBeaconLed();
+    updateDuckState();
+    if (document.activeElement === sel || sig === lastBeaconSig) return;
+    lastBeaconSig = sig;
+
+    sel.textContent = '';
+    const off = document.createElement('option');
+    off.value = '';
+    off.textContent = 'Off (Host Bus)';
+    sel.appendChild(off);
+
+    let found = (beaconSelected === '');
+    for (const s of sources) {
+      const opt = document.createElement('option');
+      opt.value = s.name;
+      const sr = s.sr ? (s.sr / 1000).toFixed(s.sr % 1000 === 0 ? 0 : 1) + 'k' : '?';
+      const ch = s.ch === 1 ? 'Mono' : s.ch === 2 ? 'St' : (s.ch + 'ch');
+      opt.textContent = `${s.name} (${sr} · ${ch})`;
+      if (s.name === beaconSelected) found = true;
+      sel.appendChild(opt);
+    }
+    if (!found && beaconSelected) {
+      const offline = document.createElement('option');
+      offline.value = beaconSelected;
+      offline.textContent = `${beaconSelected} (waiting…)`;
+      sel.appendChild(offline);
+    }
+    sel.value = beaconSelected;
+  }
+
+  async function refreshBeaconSources() {
+    if (!host) return;
+    try {
+      const res = await host.call('getBeaconSources');
+      renderBeaconSources(res);
+    } catch (e) {}
+  }
+
+  {
+    const sel = $('beaconSourceSelect');
+    if (sel) {
+      sel.addEventListener('pointerdown', refreshBeaconSources);
+      sel.addEventListener('focus', refreshBeaconSources);
+      sel.addEventListener('change', async () => {
+        beaconSelected = sel.value || '';
+        beaconSrMismatch = false;
+        if (beaconSelected && duckSourceIdx !== 1) {
+          duckSourceIdx = 1;
+          setComboIndex('ducksource', 1);
+          if (syncDuckSourcePills) syncDuckSourcePills(1);
+        }
+        updateBeaconLed();
+        updateDuckState();
+        drawTail();
+        if (host) {
+          beaconRpcInFlight = true;
+          try {
+            const res = await host.call('setBeaconSource', beaconSelected);
+            if (res && typeof res.receiving === 'boolean') beaconReceiving = res.receiving;
+            if (res && typeof res.scActive === 'boolean') scActive = res.scActive;
+            if (res && typeof res.srMismatch === 'boolean') beaconSrMismatch = res.srMismatch;
+            updateBeaconLed();
+            updateDuckState();
+          } catch (e) {}
+          beaconRpcInFlight = false;
+        }
+      });
+    }
+  }
+
+  function updateModState() {
+    const d = sl('moddepth'), r = sl('modrate');
+    if (!d || !r) return;
+    const depth = d.getScaledValue();
+    $('modState').textContent = depth < 0.5 ? 'Still' : (Math.round(depth) + '% at ' + r.getScaledValue().toFixed(2) + ' Hz');
+  }
+  function updateDuckState() {
+    const el = $('duckState');
+    if (!el) return;
+    const d = sl('duckdepth'), t = sl('duckthresh');
+    const depth = d ? d.getScaledValue() : 6.0;
+    const thresh = t ? t.getScaledValue() : -18.0;
+
+    if (duckSourceIdx === 1) {
+      const hasKeySignal = beaconSelected ? beaconReceiving : scActive;
+      el.textContent = '';
+      const badge = document.createElement('span');
+      badge.className = 'duck-badge' + (hasKeySignal ? '' : ' idle');
+      badge.textContent = beaconSelected ? ('Key · ' + beaconSelected) : 'Key';
+      el.appendChild(badge);
+
+      const txt = document.createElement('span');
+      if (liveDuckDb <= -0.05) txt.textContent = liveDuckDb.toFixed(1) + ' dB';
+      else if (depth < 0.05) txt.textContent = 'Off';
+      else txt.textContent = depth.toFixed(1) + ' dB over ' + thresh.toFixed(0) + ' dB';
+      el.appendChild(txt);
+      return;
+    }
+
+    if (liveDuckDb <= -0.05) {
+      el.textContent = liveDuckDb.toFixed(1) + ' dB';
+      return;
+    }
+    if (!d || !t) {
+      el.textContent = '—';
+      return;
+    }
+    el.textContent = depth < 0.05 ? 'Off' : (depth.toFixed(1) + ' dB over ' + thresh.toFixed(0) + ' dB');
+  }
+
+  const beaconEpochWatch = (window.WDKit && WDKit.createBeaconEpochWatcher)
+    ? WDKit.createBeaconEpochWatcher(refreshBeaconSources)
+    : null;
+
+  if (window.WDKit && WDKit.mountHeaderKit) {
+    WDKit.mountHeaderKit({ host });
+  }
+  if (window.WDKit && WDKit.syncGlobalTheme) {
+    WDKit.syncGlobalTheme(host, t => applyTheme(t));
+  }
+
+  setTimeout(async () => {
+    initAll();
+    fitDecayCanvas();
+    fitTailCanvas();
+
+    if (host) {
+      try {
+        const uiState = await host.call('getUiState');
+        if (uiState) {
+          if (uiState.build) $('buildTag').textContent = uiState.build;
+          if (uiState.sampleRate) $('srTag').textContent = (uiState.sampleRate / 1000).toFixed(1) + ' kHz';
+          if (window.WDKit && WDKit.bindBrandDiagnostics) {
+            WDKit.bindBrandDiagnostics(document.querySelector('.brand'), {
+              plugin: 'Werewolf Digital Reverb',
+              sampleRate: uiState.sampleRate ? (uiState.sampleRate / 1000).toFixed(1) + ' kHz' : '—',
+              build: uiState.build || '—'
+            });
+          }
+          if (uiState.selfName) selfMeta.name = uiState.selfName;
+          if (typeof uiState.selfCustomName === 'string') selfMeta.customName = uiState.selfCustomName;
+          if (typeof uiState.beaconPublishedName === 'string') selfMeta.publishedName = uiState.beaconPublishedName;
+          if (typeof uiState.beaconPublishing === 'boolean') selfMeta.publishing = uiState.beaconPublishing;
+          if (typeof uiState.beaconSource === 'string') beaconSelected = uiState.beaconSource;
+          if (typeof uiState.beaconReceiving === 'boolean') beaconReceiving = uiState.beaconReceiving;
+          if (typeof uiState.scActive === 'boolean') scActive = uiState.scActive;
+          if (typeof uiState.beaconSrMismatch === 'boolean') beaconSrMismatch = uiState.beaconSrMismatch;
+          renderSelfTrackChip();
+          updateBeaconLed();
+          updateDuckState();
+        }
+      } catch (e) { console.warn('getUiState call failed', e); }
+      await refreshBeaconSources();
+    } else {
+      renderSelfTrackChip();
+      updateBeaconLed();
+      updateDuckState();
+    }
+  }, 120);
+
+  // ------------------------------------------------------------ live meters
+  let mIn = -120, mOut = -120;
+  let binaryActive = false;
+
+  function applyPeakMeters(inL, inR, outL, outR) {
+    const inMax = Math.max(Number.isFinite(inL) ? inL : -120, Number.isFinite(inR) ? inR : -120);
+    const outMax = Math.max(Number.isFinite(outL) ? outL : -120, Number.isFinite(outR) ? outR : -120);
+    mIn += (inMax - mIn) * (inMax > mIn ? 0.8 : 0.15);
+    mOut += (outMax - mOut) * (outMax > mOut ? 0.8 : 0.15);
+
+    const text = db => db <= DB_FLOOR + 0.5 ? '—' : db.toFixed(1) + ' dB';
+    $('inVal').textContent = text(mIn);
+    $('outVal').textContent = text(mOut);
+    const pct = db => (clamp((db - DB_FLOOR) / -DB_FLOOR, 0, 1) * 100).toFixed(1) + '%';
+    $('inBar').style.setProperty('--fill', pct(mIn));
+    $('outBar').style.setProperty('--fill', pct(mOut));
+    return { inMax, outMax };
+  }
+
+  const tailScrollLoop = (window.WDKit && typeof WDKit.createRenderLoop === 'function')
+    ? WDKit.createRenderLoop(() => {
+        if (histCount === 0) return false;
+        drawTail();
+        return (nowSec() - newestAudibleSec) <= (activeTailSpan() + 0.12);
+      })
+    : null;
+
+  function appendHistSample(t, inVal, wetVal, duckVal, keyVal) {
+    histHead = histCount === 0 ? 0 : ((histHead + 1) % HIST_CAP);
+    if (histCount < HIST_CAP) ++histCount;
+    histTime[histHead] = t;
+    histIn[histHead]   = inVal;
+    histWet[histHead]  = wetVal;
+    histDuck[histHead] = duckVal;
+    histSc[histHead]   = keyVal;
+    if (inVal > DB_FLOOR + 0.2 || wetVal > DB_FLOOR + 0.2 || duckVal < -0.05 || keyVal > DB_FLOOR + 0.2)
+      newestAudibleSec = Math.max(newestAudibleSec, t);
+  }
+
+  function pushTailHistory(inMax, wetDb, duckDb, keyDb) {
+    const t = nowSec();
+    const inVal   = Number.isFinite(inMax) ? inMax : -120;
+    const wetVal  = Number.isFinite(wetDb) ? wetDb : -120;
+    const duckVal = Number.isFinite(duckDb) ? duckDb : 0;
+    const keyVal  = Number.isFinite(keyDb) ? keyDb : -120;
+
+    if (histCount > 0) {
+      const prevT = histTime[histHead];
+      if (t - prevT > 0.35) {
+        appendHistSample(prevT + 0.02, -120, -120, 0, -120);
+        appendHistSample(t - 0.02, -120, -120, 0, -120);
+      }
+    }
+    appendHistSample(t, inVal, wetVal, duckVal, keyVal);
+    drawTail();
+    if (tailScrollLoop && (t - newestAudibleSec) <= (activeTailSpan() + 0.12))
+      tailScrollLoop.wake();
+  }
+
+  function updateMeters(meters) {
+    beaconMetersSeen = true;
+    if (beaconEpochWatch) beaconEpochWatch(meters);
+    if (typeof meters.beaconReceiving === 'boolean') beaconReceiving = meters.beaconReceiving;
+    if (typeof meters.scActive === 'boolean') scActive = meters.scActive;
+    if (typeof meters.beaconSrMismatch === 'boolean') beaconSrMismatch = meters.beaconSrMismatch;
+    if (Number.isFinite(meters.sc)) scPeakDb = meters.sc;
+    if (Number.isFinite(meters.duckDb)) liveDuckDb = meters.duckDb;
+    if (typeof meters.beaconSource === 'string' && !beaconRpcInFlight) {
+      if (beaconSelected !== meters.beaconSource) {
+        beaconSelected = meters.beaconSource;
+        lastBeaconSig = '';
+        refreshBeaconSources();
+      }
+    }
+    if (typeof meters.selfName === 'string' && !selfEditing) {
+      const changed = (selfMeta.name !== meters.selfName
+        || selfMeta.publishedName !== (meters.beaconPublishedName || '')
+        || selfMeta.publishing !== !!meters.beaconPublishing);
+      selfMeta.name = meters.selfName;
+      if (typeof meters.selfCustomName === 'string') selfMeta.customName = meters.selfCustomName;
+      if (typeof meters.beaconPublishedName === 'string') selfMeta.publishedName = meters.beaconPublishedName;
+      if (typeof meters.beaconPublishing === 'boolean') selfMeta.publishing = meters.beaconPublishing;
+      if (changed) renderSelfTrackChip();
+    }
+    updateBeaconLed();
+    updateDuckState();
+
+    if (!binaryActive || (meters.inL === 0 && meters.outL === 0)) {
+      const { inMax, outMax } = applyPeakMeters(meters.inL, meters.inR, meters.outL, meters.outR);
+      if (!binaryActive) {
+        const wetVal = Number.isFinite(meters.wet) ? meters.wet : outMax;
+        pushTailHistory(inMax, wetVal, liveDuckDb, scPeakDb);
+        if (Array.isArray(meters.wetSpec) && meters.wetSpec.length >= SPEC_BINS)
+          pushWetSpectrum(meters.wetSpec);
+      }
+    }
+  }
+
+  if (host) {
+    host.on('meters', data => { if (data) updateMeters(data); });
+    if (window.WDKit && WDKit.createTelemetryPoller) {
+      const binPoller = WDKit.createTelemetryPoller(pkt => {
+        if (pkt.kind !== 2 || pkt.floats.length < 7 + SPEC_BINS) return;
+        binaryActive = true;
+        const f = pkt.floats;
+        scActive = !!(pkt.flags & 1);
+        beaconReceiving = !!(pkt.flags & 2);
+        beaconSrMismatch = !!(pkt.flags & 4);
+        liveDuckDb = f[5];
+        scPeakDb = f[6];
+        updateBeaconLed();
+        updateDuckState();
+        const { inMax } = applyPeakMeters(f[0], f[1], f[2], f[3]);
+        pushTailHistory(inMax, f[4], f[5], f[6]);
+        pushWetSpectrum(f.subarray(7, 7 + SPEC_BINS));
+      }, 12);
+      binPoller.start();
+    }
+  } else {
+    const demoSpec = new Float32Array(SPEC_BINS);
+    setInterval(() => {
+      const t = Date.now() * 0.001;
+      const beat = t % 2.4;
+      const dry = beat < 0.14 ? -6 - beat * 160 : (beat > 1.1 && beat < 1.24 ? -11 - (beat - 1.1) * 180 : -120);
+      const hitAge = beat < 1.1 ? beat : (beat - 1.1);
+      const preSec = predelayMs * 0.001;
+      const keyLvl = (t % 0.8) < 0.18 ? -7 - 40 * (t % 0.18) : -54;
+      const duckVal = duckSourceIdx === 1
+        ? ((t % 0.8) < 0.22 ? -6.2 : -0.3)
+        : (dry > -30 ? -4.8 : 0);
+      const wetBase = hitAge < preSec
+        ? -58
+        : (frozen ? -14 : -13 - ((hitAge - preSec) * 60 / Math.max(0.25, globalDecay)));
+      const wetLvl = wetBase + duckVal;
+      for (let i = 0; i < SPEC_BINS; ++i) {
+        const hz = FMIN * Math.pow(FMAX / FMIN, i / (SPEC_BINS - 1));
+        const mult = Math.max(0.2, multiplierAt(hz));
+        const bandAgeSlope = ((Math.max(0, hitAge - preSec)) * 60) / Math.max(0.2, globalDecay * mult);
+        const modal = 3.2 * Math.sin(i * 0.24 + t * 2.1) + 1.8 * Math.cos(i * 0.61 - t * 1.3);
+        const tilt = -7.5 * Math.log10(Math.max(1, hz / 180));
+        demoSpec[i] = frozen
+          ? (-22 + tilt + modal)
+          : (-18 + tilt - bandAgeSlope + duckVal + modal);
+      }
+      updateMeters({
+        inL: dry, inR: dry,
+        outL: Math.max(dry, wetLvl), outR: Math.max(dry, wetLvl),
+        wet: wetLvl,
+        wetSpec: Array.from(demoSpec),
+        sc: keyLvl,
+        scActive: true,
+        duckDb: duckVal
+      });
+    }, 1000 / HIST_HZ);
+  }
+
+})();
+</script>
+</body>
+</html>

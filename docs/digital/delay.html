@@ -1,0 +1,2591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Werewolf Digital Delay</title>
+<link rel="stylesheet" href="./wd/tokens.css">
+<script src="./demo-bar.js"></script>
+<script src="./modules/delay.js"></script>
+<script src="./wd-plugin-host.js"></script>
+<script src="./wd/kit.js"></script>
+<style>
+  /* ══════════════════════════════════════════════════════════════════════
+     Instrument Panel — the Werewolf Digital chassis.
+
+     This :root block is the WHOLE design language. To bring another plugin
+     onto it, copy this block verbatim and change --accent / --accent-lit only
+     (the fourteen hues are listed in docs/UI_LANGUAGE.md).
+     ════════════════════════════════════════════════════════════════════ */
+  :root {
+    --bg:      #0b0d12;   /* deep studio obsidian chassis */
+    --panel:   #151922;   /* machined slate control bays  */
+    --panel-hi:#1d2330;   /* elevated cap / active surface */
+    --track:   #0d0f15;   /* recessed tracks & beds       */
+    --line:    rgba(255, 255, 255, 0.08);
+    --line-hi: rgba(255, 255, 255, 0.15);
+    --hover-bg:rgba(255, 255, 255, 0.06);
+    --text:    #f2f5fa;
+    --label:   #8b96a8;
+    --muted:   #586274;
+    --well:    #06070a;   /* pure OLED signal surface     */
+    --cream:   #f2f5fa;   /* live plot, on well           */
+
+    --accent:     #4a90a8;
+    --accent-lit: #83c2d6;
+    --accent-deep:#1f5a6e;
+
+    --sage:      #34d399;
+    --sage-tint: rgba(52, 211, 153, 0.14);
+    --sage-deep: #6ee7b7;
+
+    --r-window: 0px;
+    --r-panel: 8px;
+    --r-pill: 5px;
+
+    --font: "Figtree", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    --font-display: "Figtree", "Segoe UI Variable Display", "Segoe UI Semibold", system-ui, sans-serif;
+  }
+  :root[data-theme="japandi-dark"] {
+    --bg:      #121316;
+    --panel:   #1b1d21;
+    --panel-hi:#24272d;
+    --track:   #0d0e10;
+    --line:    rgba(242, 237, 228, 0.08);
+    --line-hi: rgba(242, 237, 228, 0.15);
+    --hover-bg:rgba(242, 237, 228, 0.06);
+    --text:    #f2ede4;
+    --label:   #9e978c;
+    --muted:   #666057;
+    --well:    #090a0c;
+    --cream:   #f2ede4;
+    --accent-deep:#286c84;
+    --sage:      #7a9171;
+    --sage-tint: rgba(122, 145, 113, 0.18);
+    --sage-deep: #b8cfb0;
+  }
+  :root[data-theme="japandi-light"] {
+    --bg:      #e6e1d8;
+    --panel:   #dbd5c9;
+    --panel-hi:#e4dfd5;
+    --track:   #ccc5b8;
+    --line:    rgba(24, 25, 28, 0.11);
+    --line-hi: rgba(24, 25, 28, 0.20);
+    --hover-bg:rgba(24, 25, 28, 0.06);
+    --text:    #18191c;
+    --label:   #635f58;
+    --muted:   #8c867c;
+    --well:    #17181b;
+    --cream:   #f2ede4;
+    --accent-deep:#1f5a6e;
+    --sage:      #4d6b47;
+    --sage-tint: rgba(77, 107, 71, 0.16);
+    --sage-deep: #2d4229;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 400 13px/1.45 var(--font);
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  :focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- header ---------- */
+  header {
+    flex: 0 0 auto;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand svg { display: block; }
+  .brand .stack { display: flex; flex-direction: column; gap: 1px; }
+  .brand .line { font: 700 8.5px/1 var(--font); letter-spacing: 0.22em; text-transform: uppercase; color: var(--label); }
+  .brand .name { font-family: var(--font-display); font-size: 19px; line-height: 1; letter-spacing: -0.01em; }
+  .headsep { width: 1px; height: 26px; background: var(--line); }
+  .spacer { flex: 1; }
+  .stat { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  .stat .k { font: 600 9px/1 var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  .stat .v { font: 700 11.5px/1 var(--font); font-variant-numeric: tabular-nums; }
+  #buildTag { font: 500 10px/1.3 var(--font); color: var(--muted); text-align: right; max-width: 150px; }
+
+  /* ---------- frame ---------- */
+  .body {
+    flex: 1 1 auto;
+    display: flex;
+    gap: 12px;
+    padding: 14px;
+    min-height: 0;
+  }
+  .col { flex: 1 1 auto; display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; }
+
+  /* ---------- wells: the only dark surfaces ---------- */
+  .wells { flex: 1 1 auto; display: flex; gap: 8px; min-height: 118px; min-width: 0; }
+  .well-group { flex: 1 1 0; min-width: 176px; display: flex; flex-direction: column; gap: 6px; }
+  .well-group.wide { flex: 2 1 0; min-width: 0; }
+  .well-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 0 2px;
+    min-height: 22px;
+  }
+  .well-title { font: 700 11px/1 var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--label); }
+  .well-hint { font: 500 11.5px/1 var(--font); color: var(--muted); white-space: nowrap; }
+  .well-hint.accent { color: var(--accent-deep); font-weight: 600; }
+  .well {
+    flex: 1;
+    min-height: 0;
+    border-radius: var(--r-panel);
+    overflow: hidden;
+    background: var(--well);
+    position: relative;
+  }
+  .well canvas { width: 100%; height: 100%; display: block; }
+  .well-readout {
+    position: absolute; left: 12px; bottom: 10px;
+    display: flex; flex-direction: column; gap: 3px; pointer-events: none;
+    background: rgba(18, 17, 14, 0.78); border-radius: 12px; padding: 7px 10px 8px;
+  }
+  .well-readout .k { font: 600 9.5px/1 var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  .well-readout .v { font: 700 22px/1 var(--font); font-variant-numeric: tabular-nums; color: #f9f4ed; }
+
+  /* ---------- panels ---------- */
+  .panel {
+    background: var(--panel);
+    border-radius: var(--r-panel);
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .panel.rail { flex: 0 0 auto; min-height: 0; }
+  .rail-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .rail-range { font: 500 11.5px/1 var(--font); color: var(--label); }
+
+  /* ---------- pills: every choice and toggle ---------- */
+  .pill {
+    height: 32px;
+    padding: 0 14px;
+    border-radius: var(--r-pill);
+    border: 1px solid var(--line);
+    background: transparent;
+    font: 600 12px/1 var(--font);
+    color: var(--label);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background-color 0.12s, color 0.12s;
+    white-space: nowrap;
+  }
+  .pill:hover { background: var(--hover-bg); }
+  .pill:active { background: var(--track); }
+  .pill.on { border-color: transparent; background: var(--accent); color: #f9f4ed; font-weight: 700; }
+  .pill.on:hover { background: var(--accent-deep); }
+  .pill:disabled { opacity: 0.45; cursor: default; }
+  .pill.sm { height: 28px; padding: 0 13px; font-size: 11.5px; }
+  .pill.wide { width: 100%; }
+  .pill.dashed { border-style: dashed; border-color: var(--muted); color: var(--label); }
+  .pill.power { background: var(--well); border-color: transparent; color: #f9f4ed; font-weight: 700; height: 36px; }
+  .pill.power .led {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--muted); transition: background-color 0.12s, box-shadow 0.12s;
+  }
+  .pill.power.on { background: var(--well); color: #f9f4ed; }
+  .pill.power.on .led { background: #34d399; box-shadow: 0 0 7px #34d399; }
+
+  /* exclusive groups sit in a track-coloured bed */
+  .pillbed { display: flex; gap: 4px; padding: 3px; border-radius: var(--r-pill); background: var(--track); }
+  .pillbed button {
+    height: 26px; padding: 0 14px; border-radius: var(--r-pill); border: 0;
+    background-color: transparent; color: var(--label); font: 600 11.5px/1 var(--font); cursor: pointer;
+    transition: background-color 0.12s, color 0.12s; white-space: nowrap;
+  }
+  .pillbed button:hover:not(:disabled):not(.on) { background-color: var(--hover-bg); }
+  .pillbed.accent > button.on { background-color: var(--accent); color: #f9f4ed; font-weight: 700; }
+  .pillbed.sage > button.on { background-color: var(--sage); color: #f9f4ed; font-weight: 700; }
+  #band-selector > button.on { background-color: var(--accent); color: #f9f4ed; font-weight: 700; }
+  .pillbed > button:disabled { opacity: 0.45; cursor: default; }
+
+  .charset { display: flex; flex-wrap: wrap; gap: 5px; }
+  .fieldlabel { font: 600 10.5px/1 var(--font); color: var(--label); }
+
+  /* ---------- knob: every continuous parameter ---------- */
+  .knob {
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    width: 78px; cursor: ns-resize; touch-action: none;
+    border-radius: 12px; padding: 2px 0;
+  }
+  .knob:hover { background: var(--hover-bg); }
+  .knob .klabel { font: 600 10.5px/1 var(--font); color: var(--label); pointer-events: none; }
+  .knob .v { font: 700 14px/1 var(--font); font-variant-numeric: tabular-nums; pointer-events: none; }
+  .knob svg { display: block; pointer-events: none; }
+  .knob.dragging .v { color: var(--accent-deep); }
+  .knob.lg { width: 92px; }
+  .knob.sm { width: auto; flex-direction: row; align-items: center; gap: 7px; padding: 0 4px; }
+  .knob.sm .kstack { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; }
+  .knob.sm .klabel { font-size: 10px; }
+  .knob.sm .v { font-size: 12.5px; }
+
+  /* ---------- meters are wells too ---------- */
+  .meter-row { display: flex; align-items: center; gap: 10px; }
+  .meter-row .k { font: 600 10px/1 var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--label); }
+  .meter {
+    flex: 1; min-width: 90px; height: 9px; border-radius: var(--r-pill);
+    background: var(--track); overflow: hidden; position: relative;
+  }
+  .meter i { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: var(--accent); border-radius: var(--r-pill); }
+  .meter-row .v { font: 700 12px/1 var(--font); font-variant-numeric: tabular-nums; min-width: 52px; text-align: right; }
+
+  /* the master strip's activity read — a well, like every other meter */
+  .vmeter-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .vmeter {
+    flex: 1; min-height: 40px; width: 16px; border-radius: var(--r-pill);
+    background: var(--well); overflow: hidden; position: relative;
+  }
+  .vmeter i {
+    position: absolute; left: 0; right: 0; bottom: 0; height: var(--fill, 0%);
+    background: linear-gradient(0deg, var(--sage), var(--accent-lit));
+    border-radius: var(--r-pill);
+  }
+  .vmeter-wrap .k { font: 600 9.5px/1 var(--font); letter-spacing: 0.1em; text-transform: uppercase; color: var(--label); }
+  .vmeter-wrap .v { font: 700 11.5px/1 var(--font); font-variant-numeric: tabular-nums; }
+
+  /* ---------- master strip: identical in all fourteen ---------- */
+  .master {
+    flex: 0 0 132px;
+    background: var(--panel);
+    border-radius: var(--r-panel);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .master .fill { flex: 1; min-height: 0; }
+  .master .stack { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+
+  /* ---------- band panes ---------- */
+  #band_panes_container { flex: 1 1 auto; min-height: 0; display: flex; }
+  .pane { display: none; }
+  .pane.active { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; flex: 1; min-width: 0; }
+  .vsep { width: 1px; align-self: stretch; min-height: 46px; background: var(--line); }
+  .knobs { display: flex; gap: 6px; }
+  .charcol { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 7px; }
+  .bandacts { display: flex; flex-direction: column; gap: 6px; width: 116px; }
+
+  /* ---------- modulation strip ---------- */
+  .mod { flex: 0 0 auto; }
+  .mod-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .mod-title { display: flex; flex-direction: column; gap: 3px; }
+  .mod-title .t { font: 700 10.5px/1 var(--font); letter-spacing: 0.12em; text-transform: uppercase; color: var(--label); }
+  .mod-title .s { font: 500 11px/1 var(--font); color: var(--muted); }
+  .route {
+    display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px;
+    border-radius: var(--r-pill); background: var(--sage-tint); color: var(--sage-deep);
+    font: 600 11.5px/1 var(--font); white-space: nowrap; flex: 0 0 auto;
+  }
+  .route .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--sage); flex: none; }
+  .routes { display: flex; gap: 6px; flex: 1; min-width: 0; justify-content: flex-end; }
+
+  .lfoset { display: none; }
+  .lfoset.active { display: contents; }
+  .matrix { display: none; flex-direction: column; gap: 6px; max-height: 168px; overflow-y: auto; padding-top: 6px; }
+  .slot {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-pill);
+    padding: 0 12px; height: 32px;
+  }
+  .slot.active { border-color: var(--sage); background: var(--sage-tint); }
+  .slot input[type="checkbox"] { accent-color: var(--sage); cursor: pointer; }
+  .slot select {
+    background: transparent; color: var(--text); border: 0;
+    font: 600 11.5px/1 var(--font); cursor: pointer; outline: none;
+  }
+  .slot .arrow { color: var(--muted); font-size: 11px; }
+  .slot input[type="range"] { flex: 1; accent-color: var(--sage); height: 4px; cursor: pointer; }
+  .slot .val { font: 700 11px/1 var(--font); font-variant-numeric: tabular-nums; width: 34px; text-align: right; color: var(--label); }
+
+  /* Division header alignment */
+  .divhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+  @media (max-width: 820px) {
+    .well-group { min-width: 146px; }
+    .knob { width: 66px; }
+    .charcol { min-width: 168px; }
+  }
+
+  /* ── Precision Instrument Structural & Hardware Refinements ── */
+  header {
+    height: 46px;
+    padding: 0 14px;
+    gap: 10px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent), var(--panel);
+    border-bottom: 1px solid var(--line-hi);
+  }
+  .brand svg { filter: drop-shadow(0 0 5px var(--accent)); }
+  .brand .name { font-size: 16.5px; font-weight: 700; letter-spacing: -0.01em; }
+  .headsep { height: 20px; }
+  #buildTag { font: 500 9.5px/1.2 var(--font); color: var(--muted); max-width: 135px; opacity: 0.75; }
+
+  .track-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 26px;
+    padding: 0 8px;
+    border-radius: var(--r-pill);
+    background: var(--track);
+    border: 1px solid var(--line);
+    cursor: pointer;
+    flex: 0 1 118px;
+    min-width: 72px;
+    max-width: 128px;
+    transition: border-color 0.12s, background-color 0.12s;
+  }
+  .track-chip:hover { border-color: var(--line-hi); background: var(--panel-hi); }
+  .track-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-lit); flex: 0 0 auto; }
+  .track-name { flex: 1 1 auto; min-width: 0; font: 700 11px/1 var(--font); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .track-edit-ico { font-size: 10px; color: var(--muted); opacity: 0.65; flex: 0 0 auto; }
+  .track-chip:hover .track-edit-ico { opacity: 1; color: var(--text); }
+  .track-name-input {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    height: 20px;
+    background: var(--well);
+    color: var(--cream);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    font: 600 11px/1 var(--font);
+    padding: 0 5px;
+    outline: none;
+  }
+
+  .beacon-picker {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 6px 0 8px;
+    border-radius: var(--r-pill);
+    background: var(--track);
+    border: 1px solid var(--line);
+    flex: 0 0 auto;
+  }
+  .beacon-led {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--muted);
+    transition: background-color 0.15s, box-shadow 0.15s;
+  }
+  .beacon-picker.receiving .beacon-led { background: #34d399; box-shadow: 0 0 7px #34d399; }
+  .beacon-picker.waiting .beacon-led { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; }
+  .beacon-picker.mismatch { border-color: #f59e0b; }
+  .beacon-picker.mismatch .beacon-led { background: #ef4444; box-shadow: 0 0 7px #ef4444; }
+  .beacon-lbl {
+    font: 700 9px/1 var(--font);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--label);
+    white-space: nowrap;
+  }
+  .beacon-select {
+    height: 22px;
+    max-width: 122px;
+    min-width: 88px;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font: 600 11px/1 var(--font);
+    cursor: pointer;
+    outline: none;
+  }
+  .beacon-select option { background: var(--panel); color: var(--text); }
+  .beacon-select:disabled { opacity: 0.55; cursor: default; }
+
+  .pill.ext-key.on {
+    border-color: rgba(56, 189, 248, 0.50);
+    background: rgba(56, 189, 248, 0.16);
+    color: #38bdf8;
+    box-shadow: 0 1px 8px rgba(2, 132, 199, 0.22);
+  }
+  .pill.ext-key.on:hover {
+    background: rgba(56, 189, 248, 0.24);
+    filter: none;
+  }
+  :root[data-theme="japandi-light"] .pill.ext-key.on {
+    border-color: rgba(2, 132, 199, 0.45);
+    background: rgba(2, 132, 199, 0.14);
+    color: #0284c7;
+  }
+
+  .theme-strip {
+    display: inline-flex;
+    background: var(--track);
+    border: 1px solid var(--line);
+    border-radius: var(--r-pill);
+    padding: 2px;
+    gap: 2px;
+  }
+  .theme-btn {
+    height: 22px;
+    padding: 0 8px;
+    border: 0;
+    border-radius: calc(var(--r-pill) - 1px);
+    background: transparent;
+    color: var(--label);
+    font: 600 10px/1 var(--font);
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: background-color 0.12s, color 0.12s;
+  }
+  .theme-btn:hover:not(.on) { color: var(--text); background: var(--hover-bg); }
+  .theme-btn.on { background: var(--panel-hi); color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35); }
+
+  .body { gap: 8px; padding: 8px 10px 10px; }
+  .col { gap: 8px; }
+  .wells { gap: 8px; }
+  .well {
+    border: 1px solid var(--line-hi);
+    box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.65);
+  }
+  .well-readout {
+    background: rgba(9, 11, 16, 0.84);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 6px;
+    backdrop-filter: blur(6px);
+  }
+  .panel, .master {
+    border: 1px solid var(--line);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+  .pill {
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--label);
+    border: 1px solid var(--line);
+  }
+  .pill:hover:not(:disabled):not(.on) { background: var(--hover-bg); color: var(--text); }
+  .pill.on { border-color: transparent; background: var(--accent); color: #ffffff; box-shadow: 0 1px 8px rgba(0, 0, 0, 0.35); }
+  .pill.on:hover { filter: brightness(1.1); background: var(--accent); }
+  .pillbed { border: 1px solid var(--line); background: var(--track); }
+  .pillbed button { color: var(--label); }
+  .pillbed button:hover:not(:disabled):not(.on) { background-color: var(--hover-bg); color: var(--text); }
+
+  .vmeter {
+    width: 14px;
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.75);
+  }
+  .vmeter i { border-radius: 2px; }
+
+  .knob .karc { filter: drop-shadow(0 0 3px var(--accent)); }
+  .knob .v {
+    pointer-events: auto;
+    cursor: text;
+    padding: 1px 4px;
+    border-radius: 3px;
+    transition: background-color 0.12s, color 0.12s;
+  }
+  .knob .v:hover { background: var(--hover-bg); }
+  .knob input.v,
+  .knob input.v-edit {
+    width: 58px;
+    background: var(--well);
+    color: var(--text);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    font: 700 12px/1 var(--font);
+    text-align: center;
+    padding: 2px 3px;
+    outline: none;
+  }
+  .knob.is-modulated .klabel::after {
+    content: "";
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #38bdf8;
+    margin-left: 4px;
+    vertical-align: middle;
+    box-shadow: 0 0 6px rgba(56, 189, 248, 0.7);
+  }
+  .wd-src-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px;
+  }
+  .wd-src-pill {
+    height: 22px;
+    padding: 0 8px;
+    border-radius: var(--r-pill);
+    border: 1px solid var(--line);
+    background: var(--track);
+    color: var(--label);
+    font: 600 10px/1 var(--font);
+    letter-spacing: 0.04em;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    cursor: grab;
+    transition: background-color 0.12s, color 0.12s, border-color 0.12s;
+  }
+  .wd-src-pill:hover { color: var(--text); border-color: var(--line-hi); background: var(--hover-bg); }
+  .wd-src-pill.on { border-color: var(--line-hi); color: var(--text); background: var(--panel-hi); }
+  .wd-src-pill:active { cursor: grabbing; }
+  .wd-src-dot { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; pointer-events: none; }
+  .wd-xlfo-deck {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .wd-xlfo-well {
+    flex: 1 1 220px;
+    height: 54px;
+    min-width: 180px;
+    border-radius: 6px;
+    background: var(--well);
+    border: 1px solid var(--line-hi);
+    box-shadow: inset 0 1px 8px rgba(0, 0, 0, 0.65);
+    overflow: hidden;
+    position: relative;
+  }
+  #xlfoCanvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
+  .wd-xlfo-sep {
+    width: 1px;
+    height: 14px;
+    background: var(--line);
+    margin: 0 2px;
+  }
+
+</style>
+</head>
+<body>
+  <header>
+    <button class="pill power header-power-btn" id="param_power" title="Bypass the whole plugin. Crossfades over 30 ms so it never clicks."><span class="led"></span><span>Engaged</span></button>
+    <div class="brand">
+      <svg width="20" height="18" viewBox="0 0 20 18">
+        <path d="M2 16.5 L10 1.5 L18 16.5 Z" fill="none" stroke="#4a90a8" stroke-width="2.2" stroke-linejoin="round"/>
+      </svg>
+      <div class="stack">
+        <div class="line">Werewolf Digital</div>
+        <div class="name">Delay</div>
+      </div>
+    </div>
+    <div class="track-chip" id="selfTrackChip" title="Click to rename this Delay track for Beacon broadcasting">
+      <span class="track-dot" id="selfTrackDot"></span>
+      <span class="track-name" id="selfTrackName">Delay 1</span>
+      <span class="track-edit-ico">✎</span>
+    </div>
+    <div class="beacon-picker" id="beaconPickerWrap" title="Select an active Werewolf Digital Beacon track for external ducking or Envelope Follower keying. Wireless cross-track key — for sample-exact timing at large DAW buffer sizes (1024+), use Off (Host Bus) with a DAW sidechain send.">
+      <span class="beacon-led" id="beaconLed"></span>
+      <span class="beacon-lbl">Beacon</span>
+      <select class="beacon-select" id="beaconSourceSelect" aria-label="External WD Beacon source">
+        <option value="">Off (Host Bus)</option>
+      </select>
+    </div>
+    <div class="spacer"></div>
+    <button class="pill sm header-audition-pill" id="param_delta" title="Monitor only what the delay is adding — the taps and feedback on their own, without the dry signal.">Delta</button>
+    <div class="stat"><div class="k">Sample rate</div><div class="v" id="srTag">&mdash;</div></div>
+    <div class="theme-strip" id="themeSwitcher" title="Switch instrument chassis finish">
+      <button class="theme-btn on" data-theme="studio">Studio</button>
+      <button class="theme-btn" data-theme="japandi-dark">Sumi</button>
+      <button class="theme-btn" data-theme="japandi-light">Washi</button>
+    </div>
+    <div id="buildTag">&mdash;</div>
+  </header>
+
+  <div class="body">
+    <div class="col">
+
+      <div class="stage-row">
+        <div class="wells">
+          <div class="well-group" id="loopContainer">
+            <div class="well-head">
+              <div class="well-title">Loop tone</div>
+              <div class="well-hint" id="loopHint">Normal</div>
+            </div>
+            <div class="well"><canvas id="loopCanvas"></canvas></div>
+          </div>
+
+          <div class="well-group wide" id="timeContainer">
+            <div class="well-head">
+              <div class="well-title">Time</div>
+              <div class="well-hint accent" id="timeHint">Drag a tap</div>
+            </div>
+            <div class="well">
+              <canvas id="timeCanvas"></canvas>
+              <div class="well-readout"><div class="k">ducked</div><div class="v" id="duckVal">&mdash;</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="meter-bridge">
+          <div class="vmeter-wrap">
+            <div class="vmeter"><i id="outBar"></i></div>
+            <div class="k">Out</div>
+            <div class="v" id="outVal">&mdash;</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel rail">
+        <div class="rail-head">
+          <div class="pillbed accent" id="band-selector">
+            <button id="sel_tapa">Tap A</button>
+            <button id="sel_tapb">Tap B</button>
+            <button id="sel_loop">Loop</button>
+            <button id="sel_tone">Tone</button>
+            <button id="sel_duck">Duck</button>
+            <button id="sel_mix">Mix</button>
+          </div>
+          <div class="rail-range" id="active_band_title">Tap A</div>
+        </div>
+
+        <div id="band_panes_container">
+          <div class="pane" id="pane_tapa">
+            <div class="knobs">
+              <div class="knob" id="param_tapa_time" data-param-id="tapa_time" data-dest-id="1" data-label="Time" title="Tap A delay time — how long after the dry sound this echo arrives. Ignored when Sync is on; use the division instead."></div>
+              <div class="knob" id="param_tapa_level" data-label="Level" title="How loud tap A's echo is relative to the dry signal."></div>
+              <div class="knob" id="param_tapa_pan" data-label="Pan" data-bipolar="1" title="Where tap A's echo sits in the stereo image. Pan the two taps apart for a ping-pong feel."></div>
+            </div>
+            <div class="vsep"></div>
+            <div class="charcol">
+              <div class="divhead">
+                <div class="fieldlabel">Division</div>
+                <div class="charset" id="div-feels-a" title="Dotted is 1.5x the note; triplet is 2/3 of it. Neither lit means straight."></div>
+              </div>
+              <div class="charset" id="div-notes-a" title="The note value tap A locks to when Sync is on — 1/4 is one beat, 1/8 is half a beat."></div>
+            </div>
+            <div class="vsep"></div>
+            <div class="bandacts">
+              <button class="pill" id="param_tapa_sync" title="Lock tap A to the host tempo. On: the delay time follows the division and tracks tempo changes. Off: the Time knob sets it in milliseconds.">Sync</button>
+              <button class="pill" id="param_tapa_invert" title="Flip the polarity of tap A's echo. Useful when two taps sit close together and thin each other out.">Invert</button>
+            </div>
+          </div>
+
+          <div class="pane" id="pane_tapb">
+            <div class="knobs">
+              <div class="knob" id="param_tapb_time" data-param-id="tapb_time" data-dest-id="2" data-label="Time" title="Tap B delay time — the second echo. Set it to a different value than tap A for rhythmic patterns."></div>
+              <div class="knob" id="param_tapb_level" data-label="Level" title="How loud tap B's echo is relative to the dry signal."></div>
+              <div class="knob" id="param_tapb_pan" data-label="Pan" data-bipolar="1" title="Where tap B's echo sits in the stereo image."></div>
+            </div>
+            <div class="vsep"></div>
+            <div class="charcol">
+              <div class="divhead">
+                <div class="fieldlabel">Division</div>
+                <div class="charset" id="div-feels-b" title="Dotted is 1.5x the note; triplet is 2/3 of it. Neither lit means straight."></div>
+              </div>
+              <div class="charset" id="div-notes-b" title="The note value tap B locks to when Sync is on. Set it different from tap A for cross-rhythms."></div>
+            </div>
+            <div class="vsep"></div>
+            <div class="bandacts">
+              <button class="pill" id="param_tapb_sync" title="Lock tap B to the host tempo, same as tap A.">Sync</button>
+              <button class="pill" id="param_tapb_invert" title="Flip the polarity of tap B's echo.">Invert</button>
+            </div>
+          </div>
+
+          <div class="pane" id="pane_loop">
+            <div class="knobs">
+              <div class="knob" id="param_feedback" data-param-id="feedback" data-dest-id="3" data-label="Feedback" title="How much of the echo is fed back in to repeat. 0% is a single repeat; higher values give more repeats. Near 100% repeats almost forever."></div>
+              <div class="knob" id="param_cross" data-label="Cross" title="Feed the left echo back into the right channel and vice versa. Turns two taps into a bouncing ping-pong delay."></div>
+              <div class="knob" id="param_drive" data-label="Drive" title="Saturation inside the feedback loop. Each repeat gets a little more colored and compressed, like tape."></div>
+            </div>
+            <div class="vsep"></div>
+            <div class="charcol">
+              <div class="fieldlabel">Routing</div>
+              <div class="charset" id="routing-group" title="Normal: each tap feeds itself back. Ping-Pong: repeats bounce left and right. Cross: each tap feeds the other."></div>
+              <div class="fieldlabel">Mode</div>
+              <div class="charset" id="tapemode-group" title="Digital: changing delay time re-times cleanly. Tape: the time slides, bending pitch as it moves, like a tape machine."></div>
+            </div>
+            <div class="vsep"></div>
+            <div class="bandacts">
+              <button class="pill" id="param_freeze" title="Hold whatever is currently in the delay buffer and loop it forever, ignoring new input. Great for stutters and drones.">Freeze</button>
+            </div>
+          </div>
+
+          <div class="pane" id="pane_tone">
+            <div class="knobs">
+              <div class="knob" id="param_hp" data-param-id="hp" data-dest-id="4" data-label="Loop HP" title="Removes low end from each repeat, so echoes thin out as they decay instead of building up mud."></div>
+              <div class="knob" id="param_lp" data-param-id="lp" data-dest-id="5" data-label="Loop LP" title="Removes top end from each repeat, so echoes get darker as they fade — the classic tape/analog delay sound."></div>
+              <div class="knob" id="param_diffusion" data-label="Diffusion" title="Smears each repeat slightly, blurring it toward reverb. Low values stay as distinct echoes; high values wash together."></div>
+            </div>
+          </div>
+
+          <div class="pane" id="pane_duck">
+            <div class="knobs">
+              <div class="knob" id="param_duckthresh" data-label="Threshold" title="How loud the key signal must be before it pushes the echoes down. Ducking keeps repeats out of the way of the dry or sidechain track."></div>
+              <div class="knob" id="param_duckdepth" data-label="Depth" title="How far the echoes are pushed down while the key signal is playing."></div>
+              <div class="knob" id="param_duckrelease" data-label="Release" title="How quickly the echoes come back up after the key signal stops."></div>
+            </div>
+            <div class="vsep"></div>
+            <div class="charcol">
+              <div class="fieldlabel">Duck Key</div>
+              <div class="charset" id="ducksource-group" title="Detector key source for echo ducking: Internal (dry input) or External (WD Beacon or Host Sidechain Bus 1)."></div>
+            </div>
+          </div>
+
+          <div class="pane" id="pane_mix">
+            <div class="knobs">
+              <div class="knob" id="param_mix" data-param-id="mix" data-dest-id="6" data-label="Mix" title="Balance between the dry signal and the echoes. 0% is dry only, 100% is echoes only."></div>
+              <div class="knob" id="param_inputtrim" data-label="Input trim" data-bipolar="1" title="Level going into the delay, before anything else."></div>
+            </div>
+            <div class="vsep"></div>
+            <div class="charcol">
+              <div class="fieldlabel">Input</div>
+              <div class="meter-row"><div class="meter"><i id="inBar"></i></div><div class="v" id="inVal">&mdash;</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel mod">
+        <div class="mod-head">
+          <div class="mod-title">
+            <div class="t">Modulation</div>
+            <div class="s" id="routeCount">no routes live</div>
+          </div>
+          <div class="pillbed sage" id="xlfo-tabs">
+            <button class="on" data-xlfo="1">LFO 1</button>
+            <button data-xlfo="2">LFO 2</button>
+            <button data-xlfo="3">LFO 3</button>
+          </div>
+          <div class="vsep"></div>
+          <span class="lfoset active" data-lfo="1">
+            <div class="knob sm" id="param_xlfo1rate" data-label="Rate" data-size="38" title="How fast LFO 1 cycles. On its own it does nothing until a slot points it at a control."></div>
+            <div class="knob sm" id="param_xlfo1phase" data-label="Phase" data-size="38" title="Where in its cycle LFO 1 starts. Offset two LFOs so they don't move in lockstep."></div>
+            <div class="knob sm" id="param_xlfo1snap" data-label="Snap" data-size="38" title="Quantise LFO 1 into steps instead of a smooth sweep."></div>
+            <button class="pill sm" id="param_xlfo1balance" title="Bipolar: LFO 1 swings both above and below center.">Bipolar</button>
+          </span>
+          <span class="lfoset" data-lfo="2">
+            <div class="knob sm" id="param_xlfo2rate" data-label="Rate" data-size="38" title="How fast LFO 2 cycles."></div>
+            <div class="knob sm" id="param_xlfo2phase" data-label="Phase" data-size="38" title="Where in its cycle LFO 2 starts."></div>
+            <div class="knob sm" id="param_xlfo2snap" data-label="Snap" data-size="38" title="Quantise LFO 2 into steps."></div>
+            <button class="pill sm" id="param_xlfo2balance" title="Bipolar: LFO 2 swings both above and below center.">Bipolar</button>
+          </span>
+          <span class="lfoset" data-lfo="3">
+            <div class="knob sm" id="param_xlfo3rate" data-label="Rate" data-size="38" title="How fast LFO 3 cycles."></div>
+            <div class="knob sm" id="param_xlfo3phase" data-label="Phase" data-size="38" title="Where in its cycle LFO 3 starts."></div>
+            <div class="knob sm" id="param_xlfo3snap" data-label="Snap" data-size="38" title="Quantise LFO 3 into steps."></div>
+            <button class="pill sm" id="param_xlfo3balance" title="Bipolar: LFO 3 swings both above and below center.">Bipolar</button>
+          </span>
+          <div class="vsep"></div>
+          <button class="pill sm ext-key" id="btn_followerExtSc" title="Key the Modulation Envelope Follower from the External sidechain (WD Beacon or Host Sidechain Bus 1) instead of main input.">Env Key: Int</button>
+          <div class="routes" id="routeChips"></div>
+          <button class="pill sm dashed" id="matrixToggle">Routes</button>
+          <div class="deck-master-bay">
+            <div class="knob sm" id="param_outputtrim" data-size="40" data-label="Output" data-bipolar="1" title="Final output level, after the wet/dry mix."></div>
+          </div>
+        </div>
+        <div class="wd-xlfo-deck">
+          <div class="wd-src-bar" id="sourceBar" aria-label="Modulation sources — drag onto a knob or tap handle">
+            <div class="wd-src-pill on" data-source-id="0" role="button" tabindex="0" title="Drag onto a knob or tap handle to route LFO 1"><span class="wd-src-dot" style="background:#38bdf8"></span>LFO 1</div>
+            <div class="wd-src-pill" data-source-id="1" role="button" tabindex="0" title="Drag onto a knob or tap handle to route LFO 2"><span class="wd-src-dot" style="background:#a78bfa"></span>LFO 2</div>
+            <div class="wd-src-pill" data-source-id="2" role="button" tabindex="0" title="Drag onto a knob or tap handle to route LFO 3"><span class="wd-src-dot" style="background:#34d399"></span>LFO 3</div>
+            <div class="wd-src-pill" data-source-id="4" role="button" tabindex="0" title="Drag onto a knob or tap handle to route Envelope Follower"><span class="wd-src-dot" style="background:#f59e0b"></span>Env</div>
+            <div class="wd-src-pill" data-source-id="5" role="button" tabindex="0" title="Drag onto a knob or tap handle to route MIDI Note"><span class="wd-src-dot" style="background:#f472b6"></span>Note</div>
+            <div class="wd-src-pill" data-source-id="6" role="button" tabindex="0" title="Drag onto a knob or tap handle to route MIDI Velocity"><span class="wd-src-dot" style="background:#fb7185"></span>Vel</div>
+            <div class="wd-src-pill" data-source-id="7" role="button" tabindex="0" title="Drag onto a knob or tap handle to route Mod Wheel"><span class="wd-src-dot" style="background:#60a5fa"></span>Wheel</div>
+          </div>
+          <div class="wd-xlfo-well"><canvas id="xlfoCanvas"></canvas></div>
+          <div class="wd-xlfo-presets" id="xlfoPresetBar" aria-label="XLFO shape presets and transforms">
+            <button type="button" class="wd-xlfo-preset-btn" data-xlfo-preset="Sine">Sine</button>
+            <button type="button" class="wd-xlfo-preset-btn" data-xlfo-preset="Triangle">Triangle</button>
+            <button type="button" class="wd-xlfo-preset-btn" data-xlfo-preset="Saw">Saw</button>
+            <button type="button" class="wd-xlfo-preset-btn" data-xlfo-preset="Ramp">Ramp</button>
+            <button type="button" class="wd-xlfo-preset-btn" data-xlfo-preset="Square">Square</button>
+            <button type="button" class="wd-xlfo-preset-btn" data-xlfo-preset="S&amp;H">S&amp;H</button>
+            <button type="button" class="wd-xlfo-preset-btn" data-xlfo-preset="Sidechain Pump">Sidechain Pump</button>
+            <button type="button" class="wd-xlfo-preset-btn" data-xlfo-preset="Euclidean">Euclidean</button>
+            <span class="wd-xlfo-sep" aria-hidden="true"></span>
+            <button type="button" class="wd-xlfo-preset-btn" data-xlfo-op="invert">Invert</button>
+            <button type="button" class="wd-xlfo-preset-btn" data-xlfo-op="shift">Phase Shift</button>
+            <button type="button" class="wd-xlfo-preset-btn" data-xlfo-op="smooth">Smooth</button>
+          </div>
+        </div>
+        <div class="matrix" id="matrixContainer"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  window.addEventListener('error', e => {
+    if (e.message && (e.message.includes('ResizeObserver') || e.message.includes('loop completed with undelivered notifications'))) return;
+    let el = document.getElementById('errBanner');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'errBanner';
+      el.style.cssText = 'position:fixed;left:0;right:0;bottom:0;background:#1f5a6e;'
+        + 'color:#f2f5fa;font:11px monospace;padding:4px 10px;z-index:99;';
+      document.body.appendChild(el);
+    }
+    el.textContent = 'UI error: ' + e.message + ' @' + (e.lineno || '?');
+  });
+</script>
+
+<script type="module">
+(async () => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+
+  // Canvas 2D Theme Literals
+  const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const COL = {
+    accent:    cssVar('--accent')     || '#4a90a8',
+    accentLit: cssVar('--accent-lit') || '#83c2d6',
+    accentDeep:cssVar('--accent-deep')|| '#1f5a6e',
+    well:      cssVar('--well')       || '#06070a',
+    cream:     cssVar('--cream')      || '#f2f5fa',
+  };
+  let uiReady = false;
+  function applyTheme(theme) {
+    const t = theme || 'studio';
+    if (t === 'studio') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', t);
+    COL.accent = cssVar('--accent') || COL.accent;
+    COL.accentLit = cssVar('--accent-lit') || COL.accentLit;
+    COL.accentDeep = cssVar('--accent-deep') || COL.accentDeep;
+    COL.well = cssVar('--well') || '#06070a';
+    COL.cream = cssVar('--cream') || '#f2f5fa';
+    const sw = document.getElementById('themeSwitcher');
+    if (sw) {
+      sw.querySelectorAll('.theme-btn').forEach(b => {
+        b.classList.toggle('on', b.dataset.theme === t);
+      });
+    }
+    try { localStorage.setItem('wd_theme', t); } catch (e) {}
+    if (uiReady) { drawTime(); drawLoop(); drawXlfoCurve(); }
+  }
+  {
+    let saved = 'studio';
+    try { saved = localStorage.getItem('wd_theme') || 'studio'; } catch (e) {}
+    applyTheme(saved);
+    const sw = document.getElementById('themeSwitcher');
+    if (sw) {
+      sw.addEventListener('click', e => {
+        const btn = e.target.closest('.theme-btn');
+        if (btn && btn.dataset.theme) applyTheme(btn.dataset.theme);
+      });
+    }
+  }
+  const ink = a => 'rgba(242, 245, 250, ' + a + ')';
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+  // ------------------------------------------------------------------ host
+  let host = null;
+  if (window.__JUCE__ && window.__JUCE__.backend) {
+    try {
+      const lib = await import('./juce/index.js');
+      const be = window.__JUCE__.backend;
+      host = {
+        slider: id => lib.getSliderState(id),
+        combo:  id => lib.getComboBoxState(id),
+        toggle: id => lib.getToggleState(id),
+        call:   (name, ...args) => lib.getNativeFunction(name)(...args),
+        on:     (event, cb) => be.addEventListener(event, cb),
+      };
+    } catch (e) { console.warn('JUCE frontend unavailable:', e); }
+  }
+
+  const sliders = {}, combos = {}, toggles = {};
+  const sl = id => { if (!host) return null; if (!sliders[id]) sliders[id] = host.slider(id); return sliders[id]; };
+  const cb = id => { if (!host) return null; if (!combos[id]) combos[id] = host.combo(id); return combos[id]; };
+  const tg = id => { if (!host) return null; if (!toggles[id]) toggles[id] = host.toggle(id); return toggles[id]; };
+
+  const comboIndex = (id, n) => { const s = cb(id); return s ? Math.round((s.value || 0) * (n - 1)) : 0; };
+  const setComboIndex = (id, i) => { const s = cb(id); if (s && s.setChoiceIndex) s.setChoiceIndex(i); };
+
+  // Choice lists in DSP order (DelayProcessor.cpp).
+  const SYNC_DIVS = [
+    "1/64", "1/64t", "1/64d",
+    "1/32", "1/32t", "1/32d",
+    "1/16", "1/16t", "1/16d",
+    "1/8",  "1/8t",  "1/8d",
+    "1/4",  "1/4t",  "1/4d",
+    "1/2",  "1/2t",  "1/2d",
+    "1/1",  "1/1t",  "1/1d"
+  ];
+  const ROUTING = ["Normal", "Ping-Pong", "Cross"];
+  const TAPEMODE = ["Digital", "Tape"];
+
+  // --------------------------------------------------- slider / toggle binds
+  function bindToggle(el, id, onValueChange = null) {
+    const t = tg(id);
+    if (!el || !t) return;
+    if (el._wdToggleAbort) el._wdToggleAbort.abort();
+    const ac = typeof AbortController === 'function' ? new AbortController() : null;
+    el._wdToggleAbort = ac;
+    const evOpts = ac ? { signal: ac.signal } : undefined;
+
+    const updateDisplay = () => {
+      const v = !!t.getValue();
+      el.classList.toggle('on', v);
+      if (onValueChange) onValueChange(v);
+    };
+
+    if (t.customListener) t.valueChangedEvent.removeListener(t.customListener);
+    t.customListener = updateDisplay;
+    t.valueChangedEvent.addListener(updateDisplay);
+    updateDisplay();
+
+    el.addEventListener('click', () => {
+      t.setValue(!t.getValue());
+      updateDisplay();
+    }, evOpts);
+  }
+
+  function bindChoiceToggle(el, id, onValueChange = null) {
+    if (!el) return;
+    if (el._wdToggleAbort) el._wdToggleAbort.abort();
+    const ac = typeof AbortController === 'function' ? new AbortController() : null;
+    el._wdToggleAbort = ac;
+    const evOpts = ac ? { signal: ac.signal } : undefined;
+
+    const updateDisplay = () => {
+      const v = comboIndex(id, 2) === 1;
+      el.classList.toggle('on', v);
+      if (onValueChange) onValueChange(v);
+    };
+    const s = cb(id);
+    if (s) {
+      if (s.customListener) s.valueChangedEvent.removeListener(s.customListener);
+      s.customListener = updateDisplay;
+      s.valueChangedEvent.addListener(updateDisplay);
+    }
+    updateDisplay();
+
+    el.addEventListener('click', () => {
+      setComboIndex(id, comboIndex(id, 2) === 1 ? 0 : 1);
+      updateDisplay();
+    }, evOpts);
+  }
+
+  function bindChoicePills(groupEl, id, choices, onChange = null) {
+    if (!groupEl) return;
+    groupEl.innerHTML = '';
+    choices.forEach((name, i) => {
+      const b = document.createElement('button');
+      b.className = 'pill sm';
+      b.dataset.index = String(i);
+      b.textContent = name;
+      groupEl.appendChild(b);
+    });
+    const buttons = groupEl.querySelectorAll('button');
+
+    const updateDisplay = () => {
+      const idx = comboIndex(id, choices.length);
+      buttons.forEach(btn => btn.classList.toggle('on', parseInt(btn.dataset.index, 10) === idx));
+      if (onChange) onChange(idx);
+    };
+
+    const s = cb(id);
+    if (s) {
+      if (s.customListener) s.valueChangedEvent.removeListener(s.customListener);
+      s.customListener = updateDisplay;
+      s.valueChangedEvent.addListener(updateDisplay);
+    }
+    updateDisplay();
+
+    buttons.forEach(btn => btn.addEventListener('click', () => {
+      setComboIndex(id, parseInt(btn.dataset.index, 10));
+      updateDisplay();
+    }));
+  }
+
+  const DIV_NOTES = ["1/64", "1/32", "1/16", "1/8", "1/4", "1/2", "1/1"];
+  const DIV_FEELS = ["Triplet", "Dotted"];
+  function bindDivisionPills(notesEl, feelsEl, id) {
+    if (!notesEl || !feelsEl) return;
+    const mk = (groupEl, names, cls) => {
+      groupEl.innerHTML = '';
+      names.forEach((name, i) => {
+        const b = document.createElement('button');
+        b.className = 'pill sm ' + cls;
+        b.dataset.index = String(i);
+        b.textContent = name;
+        groupEl.appendChild(b);
+      });
+      return groupEl.querySelectorAll('button');
+    };
+    const notes = mk(notesEl, DIV_NOTES, 'note');
+    const feels = mk(feelsEl, DIV_FEELS, 'feel');
+    const current = () => {
+      const idx = comboIndex(id, SYNC_DIVS.length);
+      return { note: Math.floor(idx / 3), feel: idx % 3 };
+    };
+    const updateDisplay = () => {
+      const c = current();
+      notes.forEach(b => b.classList.toggle('on', parseInt(b.dataset.index, 10) === c.note));
+      feels.forEach(b => b.classList.toggle('on', parseInt(b.dataset.index, 10) + 1 === c.feel));
+      redrawTaps();
+    };
+    const s = cb(id);
+    if (s) {
+      if (s.customListener) s.valueChangedEvent.removeListener(s.customListener);
+      s.customListener = updateDisplay;
+      s.valueChangedEvent.addListener(updateDisplay);
+    }
+    updateDisplay();
+    notes.forEach(b => b.addEventListener('click', () => {
+      setComboIndex(id, parseInt(b.dataset.index, 10) * 3 + current().feel);
+      updateDisplay();
+    }));
+    feels.forEach(b => b.addEventListener('click', () => {
+      const feel = parseInt(b.dataset.index, 10) + 1;
+      const c = current();
+      setComboIndex(id, c.note * 3 + (c.feel === feel ? 0 : feel));
+      updateDisplay();
+    }));
+  }
+
+  // ------------------------------------------------------------ live state
+  let liveDuckDb = 0;
+  let liveInDb = -120, liveOutDb = -120, liveScDb = -120;
+  const scTrace = [];
+  const selfMeta = { name: 'Delay 1', customName: '', publishedName: '', publishing: false };
+  let beaconSelected = '';
+  let beaconReceiving = false;
+  let scActive = false;
+  let beaconSrMismatch = false;
+  let beaconMetersSeen = false;
+  let lastBeaconSig = '';
+  let followerExtSc = false;
+  let activeSlots = [];
+  let xlfosState = [];
+  let liveSourceVals = new Array(10).fill(0);
+  let liveXlfoPhases = new Array(3).fill(0);
+  let liveSlotVals = new Array(24).fill(0);
+  let liveDestOffsets = [];
+  const ringGestureOpen = {};
+  let patchCords = null;
+
+  for (let s = 0; s < 24; ++s)
+    activeSlots.push({ index: s, source: -1, dest: -1, curve: 0, on: false, depth: 0.0 });
+
+  for (let i = 0; i < 3; ++i) {
+    const steps = [];
+    for (let step = 0; step < 32; ++step)
+      steps.push({ index: step, value: 0.5 - 0.5 * Math.cos(2 * Math.PI * ((step + 1) / 16)), glide: 100.0, slope: 0.0 });
+    xlfosState.push({ index: i, numSteps: 16, isSynced: false, syncRateBeats: 1.0, retriggerMode: 0, steps });
+  }
+
+  const SRC_META = {
+    0: { label: 'LFO 1', color: '#38bdf8' },
+    1: { label: 'LFO 2', color: '#a78bfa' },
+    2: { label: 'LFO 3', color: '#34d399' },
+    4: { label: 'Env',   color: '#f59e0b' },
+    5: { label: 'Note',  color: '#f472b6' },
+    6: { label: 'Vel',   color: '#fb7185' },
+    7: { label: 'Wheel', color: '#60a5fa' },
+  };
+
+  const DEST_OPTIONS = [
+    { val: -1, label: "None" },
+    { val: 1, label: "Tap A Time" },
+    { val: 2, label: "Tap B Time" },
+    { val: 3, label: "Feedback" },
+    { val: 4, label: "Loop HP" },
+    { val: 5, label: "Loop LP" },
+    { val: 6, label: "Mix" },
+    { val: 1000, label: "LFO 1 Rate" },
+    { val: 1001, label: "LFO 2 Rate" },
+    { val: 1002, label: "LFO 3 Rate" },
+  ];
+  for (let s = 0; s < 24; ++s)
+    DEST_OPTIONS.push({ val: 2000 + s, label: 'Slot ' + (s + 1) + ' Depth' });
+
+  const SRC_OPTIONS = [
+    { val: -1, label: "None" },
+    { val: 0, label: "LFO 1" },
+    { val: 1, label: "LFO 2" },
+    { val: 2, label: "LFO 3" },
+    { val: 4, label: "Envelope" },
+    { val: 5, label: "MIDI Note" },
+    { val: 6, label: "Velocity" },
+    { val: 7, label: "Mod Wheel" },
+  ];
+
+  function readTaps() {
+    const taps = {
+      a: { time: 500, modTime: 500, modOffset: 0, level: 100, pan: -100, sync: 0, div: 12, inv: 0 },
+      b: { time: 500, modTime: 500, modOffset: 0, level: 100, pan: 100,  sync: 0, div: 12, inv: 0 },
+    };
+    let feedback = 40, cross = 0;
+    if (host) {
+      for (const k of ['a', 'b']) {
+        const t = taps[k], p = 'tap' + k + '_';
+        const st = sl(p + 'time'), sv = sl(p + 'level'), sp = sl(p + 'pan');
+        if (st) t.time = st.getScaledValue();
+        if (sv) t.level = sv.getScaledValue();
+        if (sp) t.pan = sp.getScaledValue();
+        t.sync = comboIndex(p + 'sync', 2);
+        t.div = comboIndex(p + 'syncdiv', SYNC_DIVS.length);
+        t.inv = comboIndex(p + 'invert', 2);
+      }
+      const fb = sl('feedback'); if (fb) feedback = fb.getScaledValue();
+      const cr = sl('cross');    if (cr) cross = cr.getScaledValue();
+    }
+    taps.a.modOffset = liveDestOffsets[1] || 0;
+    taps.b.modOffset = liveDestOffsets[2] || 0;
+    taps.a.modTime = taps.a.sync ? taps.a.time : clamp(taps.a.time + taps.a.modOffset, 1.0, 4000.0);
+    taps.b.modTime = taps.b.sync ? taps.b.time : clamp(taps.b.time + taps.b.modOffset, 1.0, 4000.0);
+    return { taps, feedback, cross };
+  }
+
+  // ---------------------------------------------------------- time well
+  const timeCanvas = $('timeCanvas');
+  const timeCtx = timeCanvas.getContext('2d');
+  let tW = 0, tH = 0, tDpr = 1;
+
+  function fitTimeCanvas() {
+    tDpr = window.devicePixelRatio || 1;
+    const r = timeCanvas.getBoundingClientRect();
+    tW = r.width; tH = r.height;
+    timeCanvas.width = Math.round(tW * tDpr);
+    timeCanvas.height = Math.round(tH * tDpr);
+    timeCtx.setTransform(tDpr, 0, 0, tDpr, 0, 0);
+    drawTime();
+  }
+  new ResizeObserver(fitTimeCanvas).observe(timeCanvas);
+
+  const T_PAD = 24, T_AXIS = 20, T_HEAD = 30;
+  const MS_MIN = 1.0, MS_MAX = 4000.0;
+  const msToX = ms => T_PAD + (Math.log(clamp(ms, MS_MIN, MS_MAX) / MS_MIN) / Math.log(MS_MAX / MS_MIN)) * (tW - T_PAD * 2);
+  const xToMs = x => MS_MIN * Math.pow(MS_MAX / MS_MIN, clamp((x - T_PAD) / (tW - T_PAD * 2), 0, 1));
+  const divToX = idx => T_PAD + clamp(idx / (SYNC_DIVS.length - 1), 0, 1) * (tW - T_PAD * 2);
+  const xToDiv = x => Math.round(clamp((x - T_PAD) / (tW - T_PAD * 2), 0, 1) * (SYNC_DIVS.length - 1));
+
+  const tapX = t => t.sync ? divToX(t.div) : msToX(t.time);
+  const fmtMsShort = ms => ms >= 1000 ? (ms / 1000).toFixed(2).replace(/0+$/, '').replace(/\.$/, '') + ' s'
+                                      : (ms < 10 ? ms.toFixed(1) : Math.round(ms)) + ' ms';
+
+  let dragTap = null;
+
+  function drawTime() {
+    timeCtx.clearRect(0, 0, tW, tH);
+    if (tW < 60 || tH < 60) return;
+
+    const foot = tH - T_AXIS;
+    const plotH = foot - T_HEAD;
+    const levelY = lvl => foot - clamp(lvl / 100, 0, 1) * plotH;
+    const { taps, feedback } = readTaps();
+    const fb = clamp(feedback / 100, 0, 1.2);
+
+    // Repeat train in cream alpha (follows modulated tap time when active)
+    for (const k of ['a', 'b']) {
+      const t = taps[k];
+      if (t.sync || fb < 0.02) continue;
+      let lvl = t.level;
+      const baseMs = t.modTime;
+      for (let n = 2; n <= 12; ++n) {
+        lvl *= fb;
+        const ms = baseMs * n;
+        if (ms > MS_MAX || lvl < 1) break;
+        const x = msToX(ms);
+        timeCtx.fillStyle = ink(0.16);
+        timeCtx.fillRect(x - 2.5, levelY(lvl), 5, foot - levelY(lvl));
+      }
+    }
+
+    // Axis marks in cream 34%
+    timeCtx.font = '600 10px ' + cssVar('--font');
+    timeCtx.fillStyle = ink(0.34);
+    timeCtx.textAlign = 'center';
+    timeCtx.textBaseline = 'alphabetic';
+    [1, 10, 100, 1000, 4000].forEach(ms => {
+      timeCtx.fillText(ms >= 1000 ? (ms / 1000) + ' s' : ms + ' ms', msToX(ms), tH - 6);
+    });
+
+    // Tap guides & handles
+    for (const k of ['a', 'b']) {
+      const t = taps[k];
+      const x = tapX(t);
+      const modActive = !t.sync && Math.abs(t.modOffset) > 0.1;
+      const modX = modActive ? msToX(t.modTime) : x;
+      const dragging = dragTap === k;
+      const setY = levelY(t.level);
+
+      // Setting guide line in accent-lit (2.6px)
+      timeCtx.fillStyle = COL.accentLit;
+      timeCtx.fillRect(x - 1.3, setY, 2.6, foot - setY);
+
+      // Live modulated tap bar & tip dot when modulation moves tap time
+      if (modActive && t.level > 0.5) {
+        const modLvl = liveDuckDb > 0.05 ? t.level * Math.pow(10, -liveDuckDb / 20) : t.level;
+        const my = levelY(modLvl);
+        timeCtx.fillStyle = ink(0.92);
+        timeCtx.fillRect(modX - 1.7, my, 3.4, foot - my);
+        timeCtx.beginPath();
+        timeCtx.arc(modX, my, 4, 0, Math.PI * 2);
+        timeCtx.fillStyle = COL.cream;
+        timeCtx.fill();
+      } else if (liveDuckDb > 0.05 && t.level > 0.5) {
+        // Live ducked level in cream 92% (3.4px) with dot tip
+        const liveLvl = t.level * Math.pow(10, -liveDuckDb / 20);
+        const ly = levelY(liveLvl);
+        timeCtx.fillStyle = ink(0.92);
+        timeCtx.fillRect(x - 1.7, ly, 3.4, foot - ly);
+        timeCtx.beginPath();
+        timeCtx.arc(x, ly, 4, 0, Math.PI * 2);
+        timeCtx.fillStyle = COL.cream;
+        timeCtx.fill();
+      }
+
+      // Handle pill in cream
+      const { bx, tw, label } = tapPillBounds(k, t, tW);
+      timeCtx.fillStyle = COL.cream;
+      timeCtx.beginPath();
+      if (timeCtx.roundRect) timeCtx.roundRect(bx, 2, tw, 20, 10);
+      else timeCtx.rect(bx, 2, tw, 20);
+      timeCtx.fill();
+
+      timeCtx.fillStyle = dragging ? COL.accentDeep : COL.well;
+      timeCtx.textAlign = 'center';
+      timeCtx.textBaseline = 'middle';
+      timeCtx.fillText(label, bx + tw / 2, 12);
+      timeCtx.textBaseline = 'alphabetic';
+    }
+
+    // External Duck Key live cyan trace & badge when Duck Key = External
+    if (comboIndex('ducksource', 2) === 1) {
+      const scBarW = Math.min(180, Math.max(100, tW * 0.28));
+      const scNorm = clamp((liveScDb + 60) / 60, 0, 1);
+
+      if (scTrace.length > 1) {
+        const traceH = Math.max(18, plotH * 0.42);
+        timeCtx.beginPath();
+        for (let i = 0; i < scTrace.length; ++i) {
+          const tx = T_PAD + (i / Math.max(1, scTrace.length - 1)) * (tW - T_PAD * 2);
+          const ty = foot - clamp((scTrace[i] + 60) / 60, 0, 1) * traceH;
+          if (i === 0) timeCtx.moveTo(tx, ty);
+          else timeCtx.lineTo(tx, ty);
+        }
+        timeCtx.strokeStyle = 'rgba(56, 189, 248, 0.72)';
+        timeCtx.lineWidth = 1.6;
+        timeCtx.stroke();
+
+        timeCtx.lineTo(tW - T_PAD, foot);
+        timeCtx.lineTo(T_PAD, foot);
+        timeCtx.closePath();
+        timeCtx.fillStyle = 'rgba(2, 132, 199, 0.14)';
+        timeCtx.fill();
+      }
+
+      const keySource = beaconSelected || 'Host Bus 1';
+      const keyStatus = beaconSelected
+        ? (beaconSrMismatch ? 'SR Mismatch' : (beaconReceiving ? (liveScDb > -118 ? liveScDb.toFixed(1) + ' dB' : 'Ready') : 'Waiting'))
+        : (scActive ? liveScDb.toFixed(1) + ' dB' : 'Silent');
+      const badgeText = 'KEY · ' + keySource + ' · ' + keyStatus;
+      timeCtx.font = '700 10px ' + cssVar('--font');
+      const bw = Math.min(tW - 16, Math.max(scBarW, timeCtx.measureText(badgeText).width + 24));
+      const bx = tW - bw - 8;
+      const by = Math.max(T_HEAD + 2, foot - 26);
+
+      timeCtx.fillStyle = 'rgba(6, 12, 20, 0.86)';
+      timeCtx.strokeStyle = beaconSrMismatch ? '#ef4444' : 'rgba(56, 189, 248, 0.55)';
+      timeCtx.lineWidth = 1;
+      timeCtx.beginPath();
+      if (timeCtx.roundRect) timeCtx.roundRect(bx, by, bw, 20, 6);
+      else timeCtx.rect(bx, by, bw, 20);
+      timeCtx.fill();
+      timeCtx.stroke();
+
+      if (scNorm > 0.01) {
+        timeCtx.fillStyle = 'rgba(2, 132, 199, 0.34)';
+        timeCtx.beginPath();
+        if (timeCtx.roundRect) timeCtx.roundRect(bx + 1, by + 1, Math.max(4, (bw - 2) * scNorm), 18, 5);
+        else timeCtx.rect(bx + 1, by + 1, Math.max(4, (bw - 2) * scNorm), 18);
+        timeCtx.fill();
+      }
+
+      timeCtx.fillStyle = '#38bdf8';
+      timeCtx.beginPath();
+      timeCtx.arc(bx + 10, by + 10, 3, 0, Math.PI * 2);
+      timeCtx.fill();
+
+      timeCtx.textAlign = 'left';
+      timeCtx.textBaseline = 'middle';
+      timeCtx.fillText(badgeText, bx + 17, by + 10.5, bw - 22);
+      timeCtx.textBaseline = 'alphabetic';
+    }
+  }
+
+  function tapPillBounds(k, t, w) {
+    const width = w || tW || timeCanvas.getBoundingClientRect().width || 0;
+    const x = tapX(t);
+    const label = k.toUpperCase() + '  ' + (t.sync ? SYNC_DIVS[t.div] : fmtMsShort(t.time))
+                + (t.inv ? '  −' : '');
+    timeCtx.font = '700 11px ' + cssVar('--font');
+    const measured = timeCtx.measureText(label);
+    const rawTw = (measured && Number.isFinite(measured.width) ? measured.width : 0) + 16;
+    const tw = Math.max(65, rawTw);
+    const bx = clamp(x - tw / 2, 2, Math.max(2, width - tw - 2));
+    return { x, bx, tw, label };
+  }
+
+  function tapNear(mx) {
+    const { taps } = readTaps();
+    const w = tW || timeCanvas.getBoundingClientRect().width || 0;
+    const pA = tapPillBounds('a', taps.a, w);
+    const pB = tapPillBounds('b', taps.b, w);
+    const da = Math.abs(mx - pA.x), db = Math.abs(mx - pB.x);
+    const hitA = da <= 24 || (mx >= pA.bx && mx <= pA.bx + pA.tw);
+    const hitB = db <= 24 || (mx >= pB.bx && mx <= pB.bx + pB.tw);
+    if (!hitA && !hitB) return null;
+    if (hitA && hitB) {
+      if (Math.abs(da - db) < 6) return currentPane === 'tapb' ? 'b' : 'a';
+      return da < db ? 'a' : 'b';
+    }
+    return hitA ? 'a' : 'b';
+  }
+
+  timeCanvas.addEventListener('pointerdown', ev => {
+    if ((ev.button ?? 0) !== 0) return;
+    const r = timeCanvas.getBoundingClientRect();
+    const k = tapNear(ev.clientX - r.left);
+    if (!k) return;
+    dragTap = k;
+    timeCanvas.setPointerCapture(ev.pointerId);
+    if (host) {
+      const st = sl('tap' + k + '_time'), sv = sl('tap' + k + '_level');
+      if (st) st.sliderDragStarted();
+      if (sv) sv.sliderDragStarted();
+    }
+    ev.preventDefault();
+    drawTime();
+  });
+
+  timeCanvas.addEventListener('pointermove', ev => {
+    const r = timeCanvas.getBoundingClientRect();
+    const mx = ev.clientX - r.left, my = ev.clientY - r.top;
+    if (!dragTap) {
+      timeCanvas.style.cursor = tapNear(mx) ? 'move' : 'default';
+      return;
+    }
+    const k = dragTap, p = 'tap' + k + '_';
+    if (host) {
+      if (comboIndex(p + 'sync', 2)) {
+        setComboIndex(p + 'syncdiv', xToDiv(mx));
+      } else {
+        const s = sl(p + 'time');
+        if (s) {
+          const pr = s.properties || { start: 1, end: 4000, skew: 1 };
+          const lin = clamp((xToMs(mx) - pr.start) / (pr.end - pr.start), 0, 1);
+          s.setNormalisedValue(Math.pow(lin, pr.skew || 1));
+        }
+      }
+      const sv = sl(p + 'level');
+      if (sv) {
+        const foot = tH - T_AXIS, plotH = foot - T_HEAD;
+        const lvl = clamp((foot - my) / plotH, 0, 1);
+        sv.setNormalisedValue(lvl);
+      }
+    }
+    drawTime();
+  });
+
+  function endTimeDrag(ev) {
+    if (dragTap) {
+      if (host) {
+        const st = sl('tap' + dragTap + '_time'), sv = sl('tap' + dragTap + '_level');
+        if (st) st.sliderDragEnded();
+        if (sv) sv.sliderDragEnded();
+      }
+      dragTap = null;
+      drawTime();
+    }
+    try { timeCanvas.releasePointerCapture(ev.pointerId); } catch (e) {}
+  }
+  timeCanvas.addEventListener('pointerup', endTimeDrag);
+  timeCanvas.addEventListener('pointercancel', endTimeDrag);
+
+  // ---------------------------------------------------------- loop well
+  const loopCanvas = $('loopCanvas');
+  const loopCtx = loopCanvas.getContext('2d');
+  let lW = 0, lH = 0, lDpr = 1;
+
+  function fitLoopCanvas() {
+    lDpr = window.devicePixelRatio || 1;
+    const r = loopCanvas.getBoundingClientRect();
+    lW = r.width; lH = r.height;
+    loopCanvas.width = Math.round(lW * lDpr);
+    loopCanvas.height = Math.round(lH * lDpr);
+    loopCtx.setTransform(lDpr, 0, 0, lDpr, 0, 0);
+    drawLoop();
+  }
+  new ResizeObserver(fitLoopCanvas).observe(loopCanvas);
+
+  const FMIN = 10.0, FMAX = 20000.0;
+  const hzToX = hz => clamp((Math.log(hz / FMIN) / Math.log(FMAX / FMIN)) * lW, 0, lW);
+
+  function drawLoop() {
+    loopCtx.clearRect(0, 0, lW, lH);
+    if (lW < 40 || lH < 40) return;
+
+    const axis = 20;
+    const plotH = lH - axis;
+    let hpHz = 10, lpHz = 20000, driveDb = 0;
+    if (host) {
+      const hp = sl('hp'), lp = sl('lp'), dr = sl('drive');
+      if (hp) hpHz = hp.getScaledValue();
+      if (lp) lpHz = lp.getScaledValue();
+      if (dr) driveDb = dr.getScaledValue();
+    }
+
+    // Passband wash in cream alpha
+    loopCtx.fillStyle = ink(0.055);
+    loopCtx.fillRect(hzToX(hpHz), 0, hzToX(lpHz) - hzToX(hpHz), plotH);
+
+    // Decade marks in cream 34%
+    loopCtx.font = '600 10px ' + cssVar('--font');
+    loopCtx.fillStyle = ink(0.34);
+    loopCtx.textAlign = 'center';
+    loopCtx.textBaseline = 'alphabetic';
+    [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000].forEach(hz => {
+      loopCtx.fillText(hz >= 1000 ? (hz / 1000) + 'k' : String(hz), hzToX(hz), lH - 6);
+    });
+
+    // Setting response in accent-lit 2.6px
+    const top = 12, bottom = plotH - 8;
+    const dbToY = db => top + (1 - clamp((db + 36) / 42, 0, 1)) * (bottom - top);
+    loopCtx.strokeStyle = COL.accentLit;
+    loopCtx.lineWidth = 2.6;
+    loopCtx.lineJoin = 'round';
+    loopCtx.lineCap = 'round';
+    loopCtx.beginPath();
+    for (let px = 0; px <= lW; ++px) {
+      const f = FMIN * Math.pow(FMAX / FMIN, px / lW);
+      const hp = f / Math.sqrt(f * f + hpHz * hpHz);
+      const lp = lpHz / Math.sqrt(f * f + lpHz * lpHz);
+      const db = 20 * Math.log10(Math.max(1e-6, hp * lp)) + driveDb * 0.25;
+      const y = dbToY(db);
+      px ? loopCtx.lineTo(px, y) : loopCtx.moveTo(px, y);
+    }
+    loopCtx.stroke();
+  }
+
+  // -------------------------------------------------------------- panes
+  const PANES = ['tapa', 'tapb', 'loop', 'tone', 'duck', 'mix'];
+  let currentPane = 'tapa';
+
+  function paneTitle(p) {
+    const { taps, feedback } = readTaps();
+    const tapText = (k) => {
+      const t = taps[k];
+      const where = t.pan === 0 ? 'centre' : (t.pan < 0 ? 'left ' + Math.abs(Math.round(t.pan)) : 'right ' + Math.round(t.pan));
+      return (t.sync ? SYNC_DIVS[t.div] + ' synced' : fmtMsShort(t.time)) + ' · ' + where;
+    };
+    switch (p) {
+      case 'tapa': return 'Tap A · ' + tapText('a');
+      case 'tapb': return 'Tap B · ' + tapText('b');
+      case 'loop': return Math.round(feedback) + '% feedback';
+      case 'tone': return 'What each repeat keeps';
+      case 'duck': return comboIndex('ducksource', 2) === 1
+        ? ('Repeats duck under ' + (beaconSelected || 'Host Sidechain Bus 1'))
+        : 'Repeats duck under the dry signal';
+      case 'mix':  return 'Dry against wet';
+    }
+    return '';
+  }
+
+  function selectPane(p) {
+    currentPane = p;
+    PANES.forEach(q => {
+      const btn = $('sel_' + q);
+      if (btn) btn.classList.toggle('on', q === p);
+      const pane = $('pane_' + q);
+      if (pane) pane.classList.toggle('active', q === p);
+    });
+    refreshTitle();
+  }
+
+  function refreshTitle() {
+    const t = $('active_band_title');
+    if (t) t.textContent = paneTitle(currentPane);
+  }
+
+  PANES.forEach(p => {
+    const btn = $('sel_' + p);
+    if (btn) btn.addEventListener('click', () => selectPane(p));
+  });
+
+  // ------------------------------------------------------------- modulation
+  let currentXlfoIdx = 0;
+  const xlfoTabs = document.querySelectorAll('#xlfo-tabs button');
+  function selectXlfoTab(idx) {
+    currentXlfoIdx = clamp(idx, 0, 2);
+    xlfoTabs.forEach((t, i) => t.classList.toggle('on', i === currentXlfoIdx));
+    document.querySelectorAll('.lfoset').forEach(s =>
+      s.classList.toggle('active', s.dataset.lfo === String(currentXlfoIdx + 1)));
+    document.querySelectorAll('#sourceBar .wd-src-pill').forEach(p => {
+      p.classList.toggle('on', parseInt(p.dataset.sourceId, 10) === currentXlfoIdx);
+    });
+    drawXlfoCurve();
+  }
+
+  xlfoTabs.forEach((tab, idx) => {
+    tab.addEventListener('click', () => selectXlfoTab(idx));
+  });
+
+  document.querySelectorAll('#sourceBar .wd-src-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      const sid = parseInt(pill.dataset.sourceId, 10);
+      document.querySelectorAll('#sourceBar .wd-src-pill').forEach(p => p.classList.toggle('on', p === pill));
+      if (sid >= 0 && sid <= 2) selectXlfoTab(sid);
+    });
+  });
+
+  // ------------------------------------------------------------ XLFO canvas
+  const xCanvas = $('xlfoCanvas');
+  const xCtx = xCanvas.getContext('2d');
+  let xW = 0, xH = 0, xDpr = 1;
+  let dragHandleIdx = -1;
+  let dragStartPos = null;
+  const X_AXIS = 10, X_PAD_TOP = 6;
+
+  function fitXCanvas() {
+    xDpr = window.devicePixelRatio || 1;
+    const r = xCanvas.getBoundingClientRect();
+    xW = r.width; xH = r.height;
+    xCanvas.width = Math.round(xW * xDpr);
+    xCanvas.height = Math.round(xH * xDpr);
+    xCtx.setTransform(xDpr, 0, 0, xDpr, 0, 0);
+    drawXlfoCurve();
+  }
+  new ResizeObserver(fitXCanvas).observe(xCanvas);
+
+  function xBent(u, slope) {
+    if (Math.abs(slope) <= 1e-6) return u;
+    return slope > 0 ? Math.pow(u, 1.0 - slope * 0.95) : Math.pow(u, 1.0 - slope * 19.0);
+  }
+
+  function xPatternAt(xlfo, u) {
+    const n = xlfo.numSteps || 16;
+    const i = clamp(Math.floor(u * n), 0, n - 1);
+    const local = u * n - i;
+    const prev = xlfo.steps[(i - 1 + n) % n].value;
+    const curr = xlfo.steps[i].value;
+    const g = xlfo.steps[i].glide / 100.0;
+    if (g > 0 && local < g) return prev + xBent(local / g, xlfo.steps[i].slope) * (curr - prev);
+    return curr;
+  }
+
+  const xPlotH = () => Math.max(12, xH - X_AXIS - X_PAD_TOP);
+  const xYFor = v => X_PAD_TOP + (1.0 - v) * xPlotH();
+
+  function drawXlfoCurve() {
+    xCtx.clearRect(0, 0, xW, xH);
+    if (xW < 40 || xH < 24) return;
+    const xlfo = xlfosState[currentXlfoIdx];
+    if (!xlfo) return;
+    const n = xlfo.numSteps || 16;
+    const stepW = xW / n;
+
+    xCtx.strokeStyle = ink(0.07);
+    xCtx.lineWidth = 1;
+    for (let i = 1; i < n; ++i) {
+      const bx = Math.round(i * stepW);
+      xCtx.beginPath(); xCtx.moveTo(bx, X_PAD_TOP); xCtx.lineTo(bx, xH - X_AXIS); xCtx.stroke();
+    }
+
+    const trace = (from, to) => {
+      xCtx.beginPath();
+      let first = true;
+      for (let px = from; px <= to; ++px) {
+        const y = xYFor(xPatternAt(xlfo, clamp(px / xW, 0, 0.999999)));
+        first ? xCtx.moveTo(px, y) : xCtx.lineTo(px, y);
+        first = false;
+      }
+      xCtx.stroke();
+    };
+    xCtx.lineWidth = 2.2;
+    xCtx.lineJoin = 'round';
+    xCtx.lineCap = 'round';
+    xCtx.strokeStyle = COL.accentLit;
+    trace(0, Math.round(xW));
+
+    const phase = liveXlfoPhases[currentXlfoIdx];
+    if (typeof phase === 'number' && phase > 0) {
+      const px = clamp(Math.round(phase * xW), 0, xW);
+      xCtx.lineWidth = 2.8;
+      xCtx.strokeStyle = ink(0.92);
+      trace(0, px);
+      const tipY = xYFor(xPatternAt(xlfo, clamp(phase, 0, 0.999999)));
+      xCtx.fillStyle = COL.cream;
+      xCtx.beginPath();
+      xCtx.arc(px, tipY, 3.2, 0, Math.PI * 2);
+      xCtx.fill();
+    }
+
+    for (let i = 0; i < n; ++i) {
+      const hx = (i + 1) * stepW;
+      const hy = xYFor(xlfo.steps[i].value);
+      xCtx.fillStyle = dragHandleIdx === i ? COL.accentLit : COL.cream;
+      xCtx.beginPath();
+      if (xCtx.roundRect) xCtx.roundRect(hx - 3.5, hy - 3.5, 7, 7, 2);
+      else xCtx.rect(hx - 3.5, hy - 3.5, 7, 7);
+      xCtx.fill();
+    }
+  }
+
+  async function saveStep(xlfoIdx, stepIdx) {
+    const xlfo = xlfosState[xlfoIdx];
+    if (!xlfo) return;
+    const step = xlfo.steps[stepIdx];
+    if (host) {
+      try {
+        await host.call('setXlfoStep', xlfoIdx, stepIdx, step.value, step.glide, step.slope);
+      } catch (e) { console.error('Error saving step:', e); }
+    }
+  }
+
+  async function saveXlfoConfig(xlfoIdx) {
+    const xlfo = xlfosState[xlfoIdx];
+    if (!xlfo) return;
+    if (host) {
+      try {
+        await host.call('setXlfoConfig', xlfoIdx, xlfo.numSteps, xlfo.isSynced, xlfo.syncRateBeats, xlfo.retriggerMode);
+      } catch (e) { console.error('Error saving XLFO config:', e); }
+    }
+  }
+
+  xCanvas.addEventListener('pointerdown', ev => {
+    if ((ev.button ?? 0) !== 0) return;
+    const r = xCanvas.getBoundingClientRect();
+    const mx = ev.clientX - r.left;
+    const my = ev.clientY - r.top;
+    const xlfo = xlfosState[currentXlfoIdx];
+    if (!xlfo) return;
+    const n = xlfo.numSteps || 16;
+    const stepW = xW / n;
+
+    dragHandleIdx = -1;
+    for (let i = 0; i < n; ++i) {
+      const hx = (i + 1) * stepW;
+      const hy = xYFor(xlfo.steps[i].value);
+      if (Math.hypot(mx - hx, my - hy) < 12) {
+        dragHandleIdx = i;
+        dragStartPos = { x: mx, y: my, val: xlfo.steps[i].value, glide: xlfo.steps[i].glide };
+        try { xCanvas.setPointerCapture(ev.pointerId); } catch (_) {}
+        break;
+      }
+    }
+    if (dragHandleIdx === -1) {
+      const idx = clamp(Math.floor(mx / Math.max(1, stepW)), 0, n - 1);
+      dragHandleIdx = idx;
+      dragStartPos = { x: mx, y: my, val: xlfo.steps[idx].value, glide: xlfo.steps[idx].glide };
+      try { xCanvas.setPointerCapture(ev.pointerId); } catch (_) {}
+    }
+    drawXlfoCurve();
+  });
+
+  xCanvas.addEventListener('pointermove', ev => {
+    if (dragHandleIdx === -1 || !dragStartPos) return;
+    const r = xCanvas.getBoundingClientRect();
+    const mx = clamp(ev.clientX - r.left, 0, xW);
+    const my = clamp(ev.clientY - r.top, X_PAD_TOP, xH - X_AXIS);
+    const xlfo = xlfosState[currentXlfoIdx];
+    if (!xlfo) return;
+    const n = xlfo.numSteps || 16;
+    const stepIdx = clamp(dragHandleIdx, 0, n - 1);
+    const step = xlfo.steps[stepIdx];
+    let newVal = 1.0 - (my - X_PAD_TOP) / xPlotH();
+    if (!ev.shiftKey) newVal = Math.round(newVal * 8) / 8;
+    step.value = clamp(newVal, 0.0, 1.0);
+    const stepW = xW / n;
+    const localX = clamp(mx - stepIdx * stepW, 0, stepW);
+    let newGlide = (localX / stepW) * 100;
+    if (!ev.shiftKey) newGlide = Math.round(newGlide / 25) * 25;
+    step.glide = clamp(newGlide, 0.0, 100.0);
+    saveStep(currentXlfoIdx, stepIdx);
+    drawXlfoCurve();
+  });
+
+  const endXDrag = ev => {
+    if (dragHandleIdx !== -1) {
+      try { xCanvas.releasePointerCapture(ev.pointerId); } catch (e) {}
+      dragHandleIdx = -1;
+      dragStartPos = null;
+      drawXlfoCurve();
+    }
+  };
+  xCanvas.addEventListener('pointerup', endXDrag);
+  xCanvas.addEventListener('pointercancel', endXDrag);
+
+  function applyXlfoPreset(presetName) {
+    const xlfo = xlfosState[currentXlfoIdx];
+    if (!xlfo || !window.WDKit || !WDKit.buildXlfoPresetSteps) return;
+    const numSteps = xlfo.numSteps || 16;
+    const built = WDKit.buildXlfoPresetSteps(presetName, numSteps);
+    const steps = Array.isArray(built) ? built : (built && built.steps ? built.steps : []);
+    for (let i = 0; i < 32 && i < steps.length; ++i) {
+      xlfo.steps[i] = {
+        index: i,
+        value: clamp(steps[i].value, 0, 1),
+        glide: clamp(steps[i].glide, 0, 100),
+        slope: clamp(steps[i].slope, -1, 1),
+      };
+    }
+    saveXlfoConfig(currentXlfoIdx);
+    for (let i = 0; i < numSteps; ++i) saveStep(currentXlfoIdx, i);
+    drawXlfoCurve();
+  }
+
+  function applyXlfoTransform(op) {
+    const xlfo = xlfosState[currentXlfoIdx];
+    if (!xlfo || !window.WDKit || !WDKit.transformXlfoSteps) return;
+    const numSteps = xlfo.numSteps || 16;
+    const arg = op === 'shift' ? 1 : (op === 'smooth' ? 35 : undefined);
+    const next = WDKit.transformXlfoSteps(xlfo.steps, op, arg, numSteps);
+    for (let i = 0; i < 32 && i < next.length; ++i) {
+      xlfo.steps[i] = {
+        index: i,
+        value: clamp(next[i].value, 0, 1),
+        glide: clamp(next[i].glide, 0, 100),
+        slope: clamp(next[i].slope, -1, 1),
+      };
+    }
+    for (let i = 0; i < numSteps; ++i) saveStep(currentXlfoIdx, i);
+    drawXlfoCurve();
+  }
+
+  {
+    const bar = $('xlfoPresetBar');
+    if (bar) {
+      bar.querySelectorAll('[data-xlfo-preset]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          bar.querySelectorAll('[data-xlfo-preset]').forEach(b => b.classList.toggle('on', b === btn));
+          applyXlfoPreset(btn.dataset.xlfoPreset);
+        });
+      });
+      bar.querySelectorAll('[data-xlfo-op]').forEach(btn => {
+        btn.addEventListener('click', () => applyXlfoTransform(btn.dataset.xlfoOp));
+      });
+    }
+  }
+
+  const matrixToggle = $('matrixToggle');
+  const matrixContainer = $('matrixContainer');
+  matrixToggle.addEventListener('click', () => {
+    const open = matrixContainer.style.display === 'flex';
+    matrixContainer.style.display = open ? 'none' : 'flex';
+    matrixToggle.classList.toggle('on', !open);
+    matrixToggle.textContent = open ? 'Routes' : 'Hide routes';
+  });
+
+  const labelOf = (list, val) => {
+    const hit = list.find(o => o.val === val);
+    return hit ? hit.label : '—';
+  };
+
+  function refreshRouteChips() {
+    const chips = $('routeChips');
+    const live = activeSlots.filter(s => s.on && s.source >= 0 && s.dest >= 0);
+    $('routeCount').textContent = live.length === 0 ? 'no routes live'
+      : (live.length + (live.length === 1 ? ' route live' : ' routes live'));
+    chips.innerHTML = '';
+    live.slice(0, 1).forEach(s => {
+      const isExtEnv = (s.source === 4 && followerExtSc);
+      const el = document.createElement('div');
+      el.className = isExtEnv ? 'route ext-key' : 'route';
+      const dot = document.createElement('span');
+      dot.className = 'dot';
+      el.appendChild(dot);
+      el.appendChild(document.createTextNode(
+        (isExtEnv ? 'Env (Ext)' : labelOf(SRC_OPTIONS, s.source))
+        + ' \u2192 ' + labelOf(DEST_OPTIONS, s.dest)
+        + ' ' + Math.round(Math.abs(s.depth) * 50) + '%'));
+      chips.appendChild(el);
+    });
+    if (live.length > 1) {
+      const more = document.createElement('button');
+      more.className = 'pill sm';
+      more.textContent = '+' + (live.length - 1);
+      more.addEventListener('click', () => matrixToggle.click());
+      chips.appendChild(more);
+    }
+    updateModCollars();
+  }
+
+  async function saveSlot(s) {
+    const slot = activeSlots[s];
+    if (host) {
+      try {
+        await host.call('setSlotConfig', s, slot.source, slot.dest, slot.curve, slot.on);
+      } catch (e) { console.error('Error saving slot config:', e); }
+    }
+  }
+
+  function rebuildSlotsGridUI() {
+    matrixContainer.innerHTML = '';
+    for (let s = 0; s < 24; ++s) {
+      const initSlot = activeSlots[s];
+      const row = document.createElement('div');
+      row.className = 'slot' + (initSlot.on ? ' active' : '');
+      row.dataset.slotIndex = s;
+
+      const chk = document.createElement('input');
+      chk.type = 'checkbox';
+      chk.checked = initSlot.on;
+      chk.addEventListener('change', () => {
+        const slot = activeSlots[s];
+        if (!slot) return;
+        slot.on = chk.checked;
+        row.classList.toggle('active', slot.on);
+        saveSlot(s);
+        refreshRouteChips();
+        if (patchCords) patchCords.refresh();
+      });
+      row.appendChild(chk);
+
+      const srcSel = document.createElement('select');
+      SRC_OPTIONS.forEach(opt => {
+        const o = document.createElement('option');
+        o.value = opt.val; o.textContent = opt.label;
+        if (initSlot.source === opt.val) o.selected = true;
+        srcSel.appendChild(o);
+      });
+      srcSel.addEventListener('change', () => {
+        const slot = activeSlots[s];
+        if (!slot) return;
+        slot.source = parseInt(srcSel.value, 10);
+        saveSlot(s);
+        refreshRouteChips();
+        if (patchCords) patchCords.refresh();
+      });
+      row.appendChild(srcSel);
+
+      const arr = document.createElement('span');
+      arr.className = 'arrow';
+      arr.textContent = '→';
+      row.appendChild(arr);
+
+      const destSel = document.createElement('select');
+      DEST_OPTIONS.forEach(opt => {
+        const o = document.createElement('option');
+        o.value = opt.val; o.textContent = opt.label;
+        if (initSlot.dest === opt.val) o.selected = true;
+        destSel.appendChild(o);
+      });
+      destSel.addEventListener('change', () => {
+        const slot = activeSlots[s];
+        if (!slot) return;
+        slot.dest = parseInt(destSel.value, 10);
+        saveSlot(s);
+        refreshRouteChips();
+        if (patchCords) patchCords.refresh();
+      });
+      row.appendChild(destSel);
+
+      const depthSlider = document.createElement('input');
+      depthSlider.type = 'range';
+      depthSlider.min = -2.0; depthSlider.max = 2.0; depthSlider.step = 0.01;
+      depthSlider.value = initSlot.depth;
+
+      const valSpan = document.createElement('span');
+      valSpan.className = 'val';
+      valSpan.textContent = initSlot.depth.toFixed(2);
+
+      let matrixDragOpen = false;
+      const updateMatrixDepth = isFinal => {
+        const slot = activeSlots[s];
+        if (!slot) return;
+        const dVal = clamp(parseFloat(depthSlider.value) || 0, -2.0, 2.0);
+        slot.depth = dVal;
+        valSpan.textContent = dVal.toFixed(2);
+        const pSl = sl('slot' + (s + 1) + 'depth');
+        if (pSl) {
+          if (!matrixDragOpen) {
+            matrixDragOpen = true;
+            pSl.sliderDragStarted();
+          }
+          pSl.setNormalisedValue((dVal + 2.0) / 4.0);
+          if (isFinal) {
+            matrixDragOpen = false;
+            pSl.sliderDragEnded();
+          }
+        }
+        refreshRouteChips();
+      };
+      depthSlider.addEventListener('pointerdown', ev => {
+        if ((ev.button ?? 0) !== 0) return;
+        updateMatrixDepth(false);
+      });
+      depthSlider.addEventListener('input', () => updateMatrixDepth(false));
+      depthSlider.addEventListener('pointerup', () => { if (matrixDragOpen) updateMatrixDepth(true); });
+      depthSlider.addEventListener('pointercancel', () => { if (matrixDragOpen) updateMatrixDepth(true); });
+      depthSlider.addEventListener('change', () => updateMatrixDepth(true));
+      row.appendChild(depthSlider);
+      row.appendChild(valSpan);
+
+      matrixContainer.appendChild(row);
+    }
+    refreshRouteChips();
+  }
+
+  function applySlotsToRows() {
+    for (let s = 0; s < 24; ++s) {
+      const slot = activeSlots[s];
+      const row = matrixContainer.querySelector('[data-slot-index="' + s + '"]');
+      if (!row) continue;
+      row.classList.toggle('active', slot.on);
+      row.querySelector('input[type="checkbox"]').checked = slot.on;
+      const sels = row.querySelectorAll('select');
+      sels[0].value = String(slot.source);
+      sels[1].value = String(slot.dest);
+      row.querySelector('input[type="range"]').value = slot.depth;
+      row.querySelector('span.val').textContent = slot.depth.toFixed(2);
+    }
+    refreshRouteChips();
+    if (patchCords) patchCords.refresh();
+  }
+
+  function handleRingChangeDepth(slotIndex, depth, isFinal) {
+    const slot = activeSlots[slotIndex];
+    if (!slot) return;
+    const clamped = clamp(depth, -2.0, 2.0);
+    slot.depth = clamped;
+    const pSl = sl('slot' + (slotIndex + 1) + 'depth');
+    if (pSl) {
+      if (!ringGestureOpen[slotIndex]) {
+        ringGestureOpen[slotIndex] = true;
+        pSl.sliderDragStarted();
+      }
+      pSl.setNormalisedValue((clamped + 2.0) / 4.0);
+      if (isFinal) {
+        ringGestureOpen[slotIndex] = false;
+        pSl.sliderDragEnded();
+      }
+    }
+    const r = matrixContainer.querySelector('[data-slot-index="' + slotIndex + '"]');
+    if (r) {
+      const rng = r.querySelector('input[type="range"]');
+      const valEl = r.querySelector('span.val');
+      if (rng) rng.value = clamped;
+      if (valEl) valEl.textContent = clamped.toFixed(2);
+    }
+    refreshRouteChips();
+  }
+
+  // ------------------------------------------------------------- formats
+  const fmtDb = v => (v > 0 ? '+' : '') + v.toFixed(1) + ' dB';
+  const fmtMs = v => v < 10.0 ? v.toFixed(1) + ' ms' : Math.round(v) + ' ms';
+  const fmtPct = v => Math.round(v) + '%';
+  const fmtHz = v => v < 1000 ? Math.round(v) + ' Hz' : (v / 1000).toFixed(1) + ' kHz';
+  const fmtPan = v => Math.abs(v) < 0.5 ? 'C' : (v < 0 ? 'L' + Math.abs(Math.round(v)) : 'R' + Math.round(v));
+  const fmtXlfoRate = v => v.toFixed(2) + ' Hz';
+  const fmtPhase = v => Math.round(v) + '°';
+
+  const redrawTaps = () => { drawTime(); refreshTitle(); };
+
+  // ------------------------------------------------------------------- init
+  function initAll() {
+    document.querySelectorAll('.knob').forEach(el => {
+      if (window.WDKit && WDKit.mountKnob) WDKit.mountKnob(el);
+    });
+
+    const bind = (el, id, fmt, onValueChange = null, unit = undefined) => {
+      if (window.WDKit && WDKit.bindSliderKnob) {
+        WDKit.bindSliderKnob(el, sl(id), { paramId: id, fmt, unit, onValueChange });
+      }
+    };
+
+    for (const k of ['a', 'b']) {
+      const p = 'tap' + k + '_';
+      bind($('param_' + p + 'time'), p + 'time', fmtMs, () => { redrawTaps(); updateModCollars(); }, 'ms');
+      bind($('param_' + p + 'level'), p + 'level', fmtPct, redrawTaps);
+      bind($('param_' + p + 'pan'), p + 'pan', fmtPan, refreshTitle);
+      bindDivisionPills($('div-notes-' + k), $('div-feels-' + k), p + 'syncdiv');
+      bindChoiceToggle($('param_' + p + 'sync'), p + 'sync', redrawTaps);
+      bindChoiceToggle($('param_' + p + 'invert'), p + 'invert', redrawTaps);
+    }
+
+    bind($('param_feedback'), 'feedback', fmtPct, () => { redrawTaps(); updateModCollars(); });
+    bind($('param_cross'), 'cross', fmtPct);
+    bind($('param_drive'), 'drive', fmtDb, drawLoop);
+    bindChoicePills($('routing-group'), 'routing', ROUTING, idx => {
+      $('loopHint').textContent = ROUTING[idx] || 'Normal';
+    });
+    bindChoicePills($('tapemode-group'), 'tapemode', TAPEMODE);
+    bindChoiceToggle($('param_freeze'), 'freeze', v => {
+      $('timeHint').textContent = v ? 'Frozen' : 'Drag a tap';
+    });
+
+    bind($('param_hp'), 'hp', fmtHz, () => { drawLoop(); updateModCollars(); }, 'Hz');
+    bind($('param_lp'), 'lp', fmtHz, () => { drawLoop(); updateModCollars(); }, 'Hz');
+    bind($('param_diffusion'), 'diffusion', fmtPct);
+
+    bind($('param_duckthresh'), 'duckthresh', fmtDb);
+    bind($('param_duckdepth'), 'duckdepth', fmtDb);
+    bind($('param_duckrelease'), 'duckrelease', fmtMs, null, 'ms');
+    bindChoicePills($('ducksource-group'), 'ducksource', ['Int', 'Ext'], () => {
+      updateBeaconLed();
+      refreshTitle();
+      drawTime();
+    });
+
+    bind($('param_mix'), 'mix', fmtPct, updateModCollars);
+    bind($('param_inputtrim'), 'inputtrim', fmtDb);
+    bind($('param_outputtrim'), 'outputtrim', fmtDb);
+
+    bindToggle($('param_delta'), 'delta');
+    bindChoiceToggle($('param_power'), 'power', v => {
+      const b = $('param_power');
+      if (b) b.lastChild.textContent = v ? 'Engaged' : 'Bypassed';
+    });
+
+    for (let i = 1; i <= 3; ++i) {
+      bind($('param_xlfo' + i + 'rate'), 'xlfo' + i + 'rate', fmtXlfoRate, null, 'Hz');
+      bind($('param_xlfo' + i + 'phase'), 'xlfo' + i + 'phase', fmtPhase);
+      bind($('param_xlfo' + i + 'snap'), 'xlfo' + i + 'snap', fmtPct);
+      bindToggle($('param_xlfo' + i + 'balance'), 'xlfo' + i + 'balance');
+    }
+
+    rebuildSlotsGridUI();
+
+    if (window.WDKit && WDKit.initPatchCords && !patchCords) {
+      const tapRectFor = k => {
+        const r = timeCanvas.getBoundingClientRect();
+        const { taps } = readTaps();
+        const p = tapPillBounds(k, taps[k], r.width);
+        const left = r.left + Math.min(p.x - 24, p.bx);
+        const right = r.left + Math.max(p.x + 24, p.bx + p.tw);
+        return { left, top: r.top + 2, right, bottom: r.bottom - 4, width: Math.max(48, right - left), height: Math.max(20, r.height - 6) };
+      };
+      patchCords = WDKit.initPatchCords({
+        sourceSelector: '#sourceBar .wd-src-pill[data-source-id]',
+        destSelector: '.knob[data-dest-id]',
+        canvasTargets: [
+          {
+            canvas: timeCanvas,
+            destId: 1,
+            hitTest(cx, cy) {
+              const r = timeCanvas.getBoundingClientRect();
+              if (cy < r.top || cy > r.bottom) return false;
+              return tapNear(cx - r.left) === 'a';
+            },
+            getRect: () => tapRectFor('a'),
+          },
+          {
+            canvas: timeCanvas,
+            destId: 2,
+            hitTest(cx, cy) {
+              const r = timeCanvas.getBoundingClientRect();
+              if (cy < r.top || cy > r.bottom) return false;
+              return tapNear(cx - r.left) === 'b';
+            },
+            getRect: () => tapRectFor('b'),
+          },
+        ],
+        getSourceColor: id => (SRC_META[id] && SRC_META[id].color) || '#38bdf8',
+        getSourceLabel: id => (id === 4 && followerExtSc) ? 'Env (Ext)' : ((SRC_META[id] && SRC_META[id].label) || ('Src ' + id)),
+        getDestLabel: did => labelOf(DEST_OPTIONS, did),
+        getSlotsForDest: did => activeSlots
+          .filter(s => s.dest === did && s.source >= 0)
+          .map(s => ({ index: s.index, source: s.source, dest: s.dest, depth: s.depth, on: s.on })),
+        onConnect(sourceId, destId) {
+          let idx = activeSlots.findIndex(s => s.on && s.source === sourceId && s.dest === destId);
+          if (idx === -1) idx = activeSlots.findIndex(s => !s.on || s.dest === -1);
+          if (idx === -1) {
+            $('routeCount').textContent = 'all 24 slots in use';
+            return;
+          }
+          const slot = activeSlots[idx];
+          const wasConnected = slot.on && slot.source === sourceId && slot.dest === destId;
+          slot.source = sourceId;
+          slot.dest = destId;
+          slot.on = true;
+          if (!wasConnected && Math.abs(slot.depth) < 0.05) {
+            slot.depth = 0.5;
+            const pSl = sl('slot' + (idx + 1) + 'depth');
+            if (pSl) {
+              pSl.sliderDragStarted();
+              pSl.setNormalisedValue((slot.depth + 2.0) / 4.0);
+              pSl.sliderDragEnded();
+            }
+          }
+          saveSlot(idx);
+          applySlotsToRows();
+        },
+        onChangeDepth: handleRingChangeDepth,
+        onToggleSlot(slotIndex, nextOn) {
+          const slot = activeSlots[slotIndex];
+          if (!slot) return;
+          slot.on = !!nextOn;
+          saveSlot(slotIndex);
+          applySlotsToRows();
+        },
+        onRemoveSlot(slotIndex) {
+          const slot = activeSlots[slotIndex];
+          if (!slot) return;
+          slot.source = -1;
+          slot.dest = -1;
+          slot.on = false;
+          slot.depth = 0.0;
+          const pSl = sl('slot' + (slotIndex + 1) + 'depth');
+          if (pSl) {
+            pSl.sliderDragStarted();
+            pSl.setNormalisedValue(0.5);
+            pSl.sliderDragEnded();
+          }
+          saveSlot(slotIndex);
+          applySlotsToRows();
+        },
+      });
+    }
+
+    const q = new URLSearchParams(location.search);
+    selectPane(PANES.includes(q.get('pane')) ? q.get('pane') : 'tapa');
+    if (q.has('depths')) matrixToggle.click();
+    refreshRouteChips();
+  }
+
+  function applyModCollar(knobEl, paramId, destId, totalOffsetScaled) {
+    const s = sl(paramId);
+    if (!knobEl || !s || !window.WDKit || !WDKit.scaledDeltaToNorm || !WDKit.setKnobModulationSources) return;
+    const baseScaled = s.getScaledValue();
+    const baseNorm = s.getNormalisedValue();
+    const routedSlots = activeSlots.filter(slSlot => slSlot.on && slSlot.dest === destId && slSlot.source >= 0);
+    knobEl.classList.toggle('is-modulated', routedSlots.length > 0);
+    const totalNorm = WDKit.scaledDeltaToNorm(s, baseScaled, totalOffsetScaled || 0);
+    if (Math.abs(totalNorm) < 0.001) {
+      WDKit.setKnobModulationSources(knobEl, baseNorm, []);
+      return;
+    }
+    if (routedSlots.length === 0) {
+      WDKit.setKnobModulationSources(knobEl, baseNorm, [{ sourceId: -1, color: '#38bdf8', offsetNorm: totalNorm }]);
+      return;
+    }
+    if (routedSlots.length === 1) {
+      const slot = routedSlots[0];
+      WDKit.setKnobModulationSources(knobEl, baseNorm, [{
+        sourceId: slot.source,
+        color: (SRC_META[slot.source] && SRC_META[slot.source].color) || '#38bdf8',
+        offsetNorm: totalNorm,
+      }]);
+      return;
+    }
+    let weights = routedSlots.map(slot => Math.abs((liveSlotVals[slot.index] || 0) * (slot.depth || 0)));
+    let sumW = weights.reduce((a, b) => a + b, 0);
+    if (sumW < 1e-6) {
+      weights = routedSlots.map(slot => Math.max(0.01, Math.abs(slot.depth || 0)));
+      sumW = weights.reduce((a, b) => a + b, 0);
+    }
+    const sources = routedSlots.map((slot, i) => ({
+      sourceId: slot.source,
+      color: (SRC_META[slot.source] && SRC_META[slot.source].color) || '#38bdf8',
+      offsetNorm: totalNorm * (weights[i] / sumW),
+    }));
+    WDKit.setKnobModulationSources(knobEl, baseNorm, sources);
+  }
+
+  function updateModCollars() {
+    applyModCollar($('param_tapa_time'), 'tapa_time', 1, liveDestOffsets[1] || 0);
+    applyModCollar($('param_tapb_time'), 'tapb_time', 2, liveDestOffsets[2] || 0);
+    applyModCollar($('param_feedback'), 'feedback', 3, liveDestOffsets[3] || 0);
+    applyModCollar($('param_hp'), 'hp', 4, liveDestOffsets[4] || 0);
+    applyModCollar($('param_lp'), 'lp', 5, liveDestOffsets[5] || 0);
+    applyModCollar($('param_mix'), 'mix', 6, liveDestOffsets[6] || 0);
+  }
+
+  const beaconEpochWatch = (window.WDKit && WDKit.createBeaconEpochWatcher)
+    ? WDKit.createBeaconEpochWatcher(refreshBeaconSources)
+    : null;
+
+  if (window.WDKit && WDKit.mountHeaderKit) {
+    WDKit.mountHeaderKit({ host });
+  }
+  if (window.WDKit && WDKit.syncGlobalTheme) {
+    WDKit.syncGlobalTheme(host, t => {
+      applyTheme(t);
+      drawXlfoCurve();
+    });
+  }
+
+  // --------------------------------------------------- track name + WD Beacon
+  function renderSelfTrackChip() {
+    const chip = $('selfTrackChip');
+    const nameEl = $('selfTrackName');
+    if (nameEl && nameEl.isConnected && !nameEl.querySelector('input'))
+      nameEl.textContent = selfMeta.name || 'Delay 1';
+    if (chip) {
+      const pubName = selfMeta.publishedName || selfMeta.name || 'Delay 1';
+      chip.title = 'Click to rename this Delay track · Broadcasting on Beacon as "' + pubName + '"';
+    }
+  }
+
+  function startInlineTrackRename(labelEl, currentText) {
+    if (!labelEl || labelEl.querySelector('input')) return;
+    const prev = currentText;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.maxLength = 47;
+    input.className = 'track-name-input';
+    input.value = prev;
+    let done = false;
+    const commit = async keep => {
+      if (done) return;
+      done = true;
+      const next = keep ? input.value.trim() : prev;
+      input.replaceWith(labelEl);
+      if (keep && host) {
+        try {
+          const res = await host.call('setInstanceName', next);
+          if (res && res.ok) {
+            selfMeta.name = res.name || selfMeta.name;
+            selfMeta.customName = res.customName || '';
+            if (typeof res.beaconPublishedName === 'string') selfMeta.publishedName = res.beaconPublishedName;
+            if (typeof res.beaconPublishing === 'boolean') selfMeta.publishing = res.beaconPublishing;
+            renderSelfTrackChip();
+          }
+        } catch (e) {}
+      }
+    };
+    input.addEventListener('keydown', ev => {
+      if (ev.key === 'Enter') { ev.preventDefault(); commit(true); }
+      else if (ev.key === 'Escape') { ev.preventDefault(); commit(false); }
+      ev.stopPropagation();
+    });
+    input.addEventListener('pointerdown', ev => ev.stopPropagation());
+    input.addEventListener('blur', () => commit(true));
+    labelEl.replaceWith(input);
+    input.focus({ preventScroll: true });
+    input.select();
+  }
+
+  {
+    const chip = $('selfTrackChip');
+    if (chip) {
+      chip.addEventListener('click', () => startInlineTrackRename($('selfTrackName'), selfMeta.customName || selfMeta.name));
+    }
+  }
+
+  function isExternalKeyActive() {
+    return comboIndex('ducksource', 2) === 1 || !!followerExtSc;
+  }
+
+  function renderFollowerExtBtn() {
+    const btn = $('btn_followerExtSc');
+    if (!btn) return;
+    btn.classList.toggle('on', !!followerExtSc);
+    btn.textContent = followerExtSc ? 'Env Key: Ext' : 'Env Key: Int';
+  }
+
+  {
+    const extBtn = $('btn_followerExtSc');
+    if (extBtn) {
+      extBtn.addEventListener('click', async () => {
+        followerExtSc = !followerExtSc;
+        renderFollowerExtBtn();
+        updateBeaconLed();
+        if (host) {
+          try { await host.call('setFollowerExtSc', followerExtSc); } catch (e) {}
+        }
+      });
+    }
+  }
+
+  function updateBeaconLed() {
+    const wrap = $('beaconPickerWrap');
+    if (!wrap) return;
+    const extOn = isExternalKeyActive();
+    wrap.classList.remove('receiving', 'waiting', 'mismatch');
+    if (!extOn) {
+      wrap.title = beaconSelected
+        ? `Internal key active — switch Duck Key or Env Key to Ext to receive WD Beacon "${beaconSelected}".`
+        : 'Select an active Werewolf Digital Beacon track for external ducking or Envelope Follower keying. Wireless cross-track key — for sample-exact timing at large DAW buffer sizes (1024+), use Off (Host Bus) with a DAW sidechain send.';
+      return;
+    }
+    if (beaconSelected) {
+      if (beaconSrMismatch) {
+        wrap.classList.add('mismatch');
+        wrap.title = `Sample rate mismatch between this track and WD Beacon "${beaconSelected}" — external key input is muted.`;
+      } else if (beaconReceiving) {
+        wrap.classList.add('receiving');
+        wrap.title = `Receiving external key audio from WD Beacon "${beaconSelected}". Wireless cross-track key — for sample-exact timing at large DAW buffer sizes (1024+), use Off (Host Bus) with a DAW sidechain send.`;
+      } else {
+        wrap.classList.add('waiting');
+        wrap.title = `Waiting for WD Beacon "${beaconSelected}" stream (active on Host Bus 1 only if Bus 1 is enabled). Wireless cross-track key — for sample-exact timing at large DAW buffer sizes (1024+), use Off (Host Bus) with a DAW sidechain send.`;
+      }
+    } else if (scActive) {
+      wrap.classList.add('receiving');
+      wrap.title = 'Receiving external sidechain audio from Host Sidechain Bus 1.';
+    } else {
+      wrap.classList.add('waiting');
+      wrap.title = 'External key set to Host Sidechain Bus 1 — waiting for incoming sidechain audio. For sample-exact timing at large DAW buffer sizes (1024+), keep Off (Host Bus) with a DAW sidechain send.';
+    }
+  }
+
+  function renderBeaconSources(res) {
+    const sel = $('beaconSourceSelect');
+    if (!sel || !res || typeof res !== 'object') return;
+    const sources = Array.isArray(res.sources) ? res.sources : [];
+    if (typeof res.selected === 'string') beaconSelected = res.selected;
+    if (!beaconMetersSeen) {
+      if (typeof res.receiving === 'boolean') beaconReceiving = res.receiving;
+      if (typeof res.scActive === 'boolean') scActive = res.scActive;
+    }
+    if (typeof res.srMismatch === 'boolean') beaconSrMismatch = res.srMismatch;
+
+    const sig = sources.map(s => `${s.name}:${s.sr}:${s.ch}`).join('|') + '#' + beaconSelected;
+    updateBeaconLed();
+    if (document.activeElement === sel || sig === lastBeaconSig) return;
+    lastBeaconSig = sig;
+
+    sel.textContent = '';
+    const off = document.createElement('option');
+    off.value = '';
+    off.textContent = 'Off (Host Bus)';
+    sel.appendChild(off);
+
+    let found = (beaconSelected === '');
+    for (const s of sources) {
+      if (!s || typeof s.name !== 'string') continue;
+      const opt = document.createElement('option');
+      opt.value = s.name;
+      const sr = s.sr ? (s.sr / 1000).toFixed(s.sr % 1000 === 0 ? 0 : 1) + 'k' : '?';
+      const ch = s.ch === 1 ? 'Mono' : s.ch === 2 ? 'St' : (s.ch + 'ch');
+      opt.textContent = `${s.name} (${sr} · ${ch})`;
+      if (s.name === beaconSelected) found = true;
+      sel.appendChild(opt);
+    }
+    if (!found && beaconSelected) {
+      const offline = document.createElement('option');
+      offline.value = beaconSelected;
+      offline.textContent = `${beaconSelected} (waiting…)`;
+      sel.appendChild(offline);
+    }
+    sel.value = beaconSelected;
+  }
+
+  async function refreshBeaconSources() {
+    if (!host) return;
+    try {
+      const res = await host.call('getBeaconSources');
+      renderBeaconSources(res);
+    } catch (e) {}
+  }
+
+  {
+    const sel = $('beaconSourceSelect');
+    if (sel) {
+      sel.addEventListener('pointerdown', refreshBeaconSources);
+      sel.addEventListener('focus', refreshBeaconSources);
+      sel.addEventListener('change', async () => {
+        beaconSelected = sel.value || '';
+        beaconSrMismatch = false;
+        if (beaconSelected && comboIndex('ducksource', 2) !== 1) {
+          setComboIndex('ducksource', 1);
+        }
+        updateBeaconLed();
+        refreshTitle();
+        drawTime();
+        if (host) {
+          try {
+            const res = await host.call('setBeaconSource', beaconSelected);
+            if (res && typeof res.receiving === 'boolean') beaconReceiving = res.receiving;
+            if (res && typeof res.scActive === 'boolean') scActive = res.scActive;
+            if (res && typeof res.srMismatch === 'boolean') beaconSrMismatch = res.srMismatch;
+            updateBeaconLed();
+            drawTime();
+          } catch (e) {}
+        }
+      });
+    }
+  }
+
+  // ------------------------------------------------------------- meters
+  let mIn = -120, mOut = -120, mDuck = 0;
+
+  function updateMeters(meters) {
+    const inMax = Math.max(meters.inL ?? -120, meters.inR ?? -120);
+    const outMax = Math.max(meters.outL ?? -120, meters.outR ?? -120);
+    const duckDb = Math.abs(meters.ducking || 0);
+
+    beaconMetersSeen = true;
+    if (beaconEpochWatch) beaconEpochWatch(meters);
+    if (typeof meters.beaconReceiving === 'boolean') beaconReceiving = meters.beaconReceiving;
+    if (typeof meters.scActive === 'boolean') scActive = meters.scActive;
+    if (typeof meters.beaconSrMismatch === 'boolean') beaconSrMismatch = meters.beaconSrMismatch;
+    if (typeof meters.beaconSource === 'string' && !beaconSelected) beaconSelected = meters.beaconSource;
+    if (typeof meters.sc === 'number' && isFinite(meters.sc)) {
+      liveScDb = meters.sc;
+      scTrace.push(liveScDb);
+      if (scTrace.length > 64) scTrace.shift();
+    }
+    if (typeof meters.selfName === 'string' && meters.selfName) {
+      selfMeta.name = meters.selfName;
+      if (typeof meters.selfCustomName === 'string') selfMeta.customName = meters.selfCustomName;
+      if (typeof meters.beaconPublishedName === 'string') selfMeta.publishedName = meters.beaconPublishedName;
+      if (typeof meters.beaconPublishing === 'boolean') selfMeta.publishing = meters.beaconPublishing;
+      renderSelfTrackChip();
+    }
+    updateBeaconLed();
+
+    mIn += (inMax - mIn) * (inMax > mIn ? 0.8 : 0.15);
+    mOut += (outMax - mOut) * (outMax > mOut ? 0.8 : 0.15);
+    mDuck += (duckDb - mDuck) * (duckDb > mDuck ? 0.85 : 0.1);
+    liveInDb = mIn; liveOutDb = mOut; liveDuckDb = mDuck;
+
+    const dbToPct = db => clamp((db + 80) / 80, 0, 1) * 100;
+    const inBar = $('inBar'), outBar = $('outBar');
+    if (inBar) inBar.style.width = dbToPct(mIn).toFixed(1) + '%';
+    if (outBar) outBar.style.setProperty('--fill', dbToPct(mOut).toFixed(1) + '%');
+    $('inVal').textContent = mIn <= -119.5 ? '—' : mIn.toFixed(1) + ' dB';
+    $('outVal').textContent = mOut <= -119.5 ? '—' : mOut.toFixed(1) + ' dB';
+    $('duckVal').textContent = mDuck < 0.05 ? '—' : '−' + mDuck.toFixed(1) + ' dB';
+
+    drawTime();
+  }
+
+  setTimeout(async () => {
+    initAll();
+    renderFollowerExtBtn();
+    fitTimeCanvas();
+    fitLoopCanvas();
+    fitXCanvas();
+    uiReady = true;
+
+    for (let s = 0; s < 24; ++s) {
+      const slider = sl('slot' + (s + 1) + 'depth');
+      if (slider) {
+        activeSlots[s].depth = slider.getNormalisedValue() * 4.0 - 2.0;
+        slider.valueChangedEvent.addListener(() => {
+          activeSlots[s].depth = slider.getNormalisedValue() * 4.0 - 2.0;
+          const r = matrixContainer.querySelector('[data-slot-index="' + s + '"]');
+          if (r) {
+            r.querySelector('input[type="range"]').value = activeSlots[s].depth;
+            r.querySelector('span.val').textContent = activeSlots[s].depth.toFixed(2);
+          }
+          refreshRouteChips();
+        });
+      }
+    }
+
+    if (host) {
+      try {
+        const modState = await Promise.race([
+          host.call('getModState'),
+          new Promise(res => setTimeout(() => res(null), 400))
+        ]);
+        if (modState) {
+          if (Array.isArray(modState.slots)) {
+            modState.slots.forEach(s => {
+              if (s.index >= 0 && s.index < 24) {
+                Object.assign(activeSlots[s.index], {
+                  index: s.index, source: s.source, dest: s.dest,
+                  curve: s.curve, on: s.on
+                });
+              }
+            });
+          }
+          if (Array.isArray(modState.xlfos)) {
+            modState.xlfos.forEach(x => {
+              if (x.index >= 0 && x.index < 3) {
+                const xlfo = xlfosState[x.index];
+                xlfo.numSteps = x.numSteps;
+                xlfo.isSynced = x.isSynced;
+                xlfo.syncRateBeats = x.syncRateBeats;
+                xlfo.retriggerMode = x.retriggerMode;
+                if (Array.isArray(x.steps)) {
+                  x.steps.forEach(st => {
+                    if (st.index >= 0 && st.index < 32)
+                      xlfo.steps[st.index] = { index: st.index, value: st.value, glide: st.glide, slope: st.slope };
+                  });
+                }
+              }
+            });
+          }
+          if (typeof modState.followerExtSc === 'boolean') {
+            followerExtSc = modState.followerExtSc;
+            renderFollowerExtBtn();
+            updateBeaconLed();
+          }
+        }
+      } catch (e) {}
+
+      applySlotsToRows();
+      drawXlfoCurve();
+
+      try {
+        const uiState = await host.call('getUiState');
+        if (uiState) {
+          if (uiState.build) $('buildTag').textContent = uiState.build;
+          if (uiState.sampleRate) $('srTag').textContent = (uiState.sampleRate / 1000).toFixed(1) + ' kHz';
+          if (typeof uiState.bpm === 'number' && window.WDKit && WDKit.setHostBpm) WDKit.setHostBpm(uiState.bpm);
+          if (window.WDKit && WDKit.bindBrandDiagnostics) {
+            WDKit.bindBrandDiagnostics(document.querySelector('.brand'), {
+              plugin: 'Werewolf Digital Delay',
+              sampleRate: uiState.sampleRate ? (uiState.sampleRate / 1000).toFixed(1) + ' kHz' : '—',
+              build: uiState.build || '—'
+            });
+          }
+          if (uiState.selfName) selfMeta.name = uiState.selfName;
+          if (typeof uiState.selfCustomName === 'string') selfMeta.customName = uiState.selfCustomName;
+          if (typeof uiState.beaconPublishedName === 'string') selfMeta.publishedName = uiState.beaconPublishedName;
+          if (typeof uiState.beaconPublishing === 'boolean') selfMeta.publishing = uiState.beaconPublishing;
+          if (typeof uiState.beaconSource === 'string') beaconSelected = uiState.beaconSource;
+          if (typeof uiState.beaconReceiving === 'boolean') beaconReceiving = uiState.beaconReceiving;
+          if (typeof uiState.scActive === 'boolean') scActive = uiState.scActive;
+          if (typeof uiState.beaconSrMismatch === 'boolean') beaconSrMismatch = uiState.beaconSrMismatch;
+          renderSelfTrackChip();
+          updateBeaconLed();
+        }
+      } catch (e) {}
+      await refreshBeaconSources();
+    } else {
+      applySlotsToRows();
+      drawXlfoCurve();
+      renderSelfTrackChip();
+      updateBeaconLed();
+    }
+  }, 120);
+
+  if (host) {
+    host.on('meters', data => { if (data) updateMeters(data); });
+    host.on('modState', data => {
+      if (!data) return;
+      liveSourceVals = Array.isArray(data.sourceVals) ? data.sourceVals : liveSourceVals;
+      liveXlfoPhases = Array.isArray(data.xlfoPhases) ? data.xlfoPhases : liveXlfoPhases;
+      liveSlotVals = Array.isArray(data.slotVals) ? data.slotVals : liveSlotVals;
+      if (data.destOffsets !== undefined) {
+        liveDestOffsets = Array.isArray(data.destOffsets) ? data.destOffsets : [];
+        updateModCollars();
+        drawTime();
+        drawLoop();
+      }
+      drawXlfoCurve();
+      if (typeof data.followerExtSc === 'boolean' && data.followerExtSc !== followerExtSc) {
+        followerExtSc = data.followerExtSc;
+        renderFollowerExtBtn();
+        updateBeaconLed();
+      }
+    });
+  } else {
+    setInterval(() => {
+      const t = Date.now() * 0.001;
+      const sig = -30 + 20 * Math.sin(t * 1.5) + 5 * Math.sin(t * 8);
+      const duck = sig > -35 ? -12 * Math.max(0, (sig + 35) / 25) : 0;
+      updateMeters({ inL: sig, inR: sig, outL: sig + duck - 3, outR: sig + duck - 3, ducking: duck });
+    }, 33);
+  }
+
+})();
+</script>
+</body>
+</html>

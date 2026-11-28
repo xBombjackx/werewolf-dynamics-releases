@@ -1,0 +1,752 @@
+/* ==========================================================================
+   Werewolf Digital — Shared Precision Instrument Design Tokens (/wd/tokens.css)
+   Embedded via WdSharedUIAssets and served across all 16 WebView2 editors.
+   ========================================================================== */
+
+@font-face {
+  font-family: 'Figtree';
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url('./Figtree.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('./JetBrainsMono.woff2') format('woff2');
+}
+
+:root {
+  --font: 'Figtree', 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-display: 'Figtree', 'Segoe UI Variable Display', 'Segoe UI Semibold', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Mono', 'Consolas', ui-monospace, monospace;
+}
+
+/* ── Unified 46px Precision Instrument Top Bar ── */
+header {
+  flex: 0 0 46px !important;
+  height: 46px !important;
+  min-height: 46px !important;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  overflow: visible !important;
+  position: relative;
+  z-index: 40;
+}
+
+header .brand {
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* ── Upper Stage Row + Slim Integrated Vertical Meter Bridge ── */
+.stage-row {
+  flex: 1 1 44%;
+  min-height: 124px;
+  min-width: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.stage-row > .wells {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.meter-bridge {
+  flex: 0 0 auto;
+  min-width: 54px;
+  padding: 6px 8px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r-panel, 7px);
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 7px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.meter-bridge .vmeters,
+.meter-bridge .meters2 {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: auto;
+  display: flex;
+  align-items: stretch;
+  gap: 7px;
+}
+
+.meter-bridge .vmeter-wrap {
+  flex: 0 0 auto;
+  min-width: 24px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.meter-bridge .vmeter {
+  flex: 1 1 auto;
+  min-height: 36px;
+  width: 11px;
+  border-radius: 3px;
+  background: var(--well, #06070a);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.72);
+  overflow: hidden;
+  position: relative;
+}
+
+.meter-bridge .vmeter i:not(.peak) {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--fill, 0%);
+  border-radius: 2px;
+}
+
+.meter-bridge .vmeter.down i:not(.peak) {
+  bottom: auto;
+  top: 0;
+}
+
+.meter-bridge .vmeter-wrap .k {
+  font: 700 8.5px/1 var(--font);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--label);
+}
+
+.meter-bridge .vmeter-wrap .v {
+  font: 700 9.5px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+/* ── Integrated Deck Output / Blend Bay (replaces 132px aside.master) ── */
+.deck-master-bay {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  padding-left: 10px;
+  border-left: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.header-power-btn {
+  flex-shrink: 0;
+  height: 28px !important;
+  padding: 0 10px !important;
+  width: auto !important;
+  min-width: 86px;
+  border-radius: 5px !important;
+  font: 700 10.5px/1 var(--font) !important;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.header-audition-pill {
+  flex-shrink: 0;
+  height: 26px !important;
+  padding: 0 9px !important;
+  width: auto !important;
+  font-size: 10.5px !important;
+}
+
+/* ── Shared Header Preset / A-B-C-D / XY Morph / Undo-Redo Strip ── */
+.wd-header-kit {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.wd-hgroup {
+  display: inline-flex;
+  align-items: center;
+  background: var(--track, #0d0f15);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.09));
+  border-radius: 5px;
+  padding: 1px;
+  gap: 1px;
+  height: 26px;
+}
+
+.wd-hbtn {
+  height: 22px;
+  min-width: 22px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--label);
+  font: 600 10.5px/1 var(--font);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  white-space: nowrap;
+  transition: background-color 0.1s ease, color 0.1s ease;
+}
+
+.wd-hbtn:hover:not(:disabled):not(.on) {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text);
+}
+
+.wd-hbtn:disabled {
+  opacity: 0.34;
+  cursor: default;
+}
+
+.wd-hbtn.on {
+  background: var(--accent);
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.wd-hbtn.preset-trigger {
+  max-width: 128px;
+  min-width: 78px;
+  justify-content: space-between;
+  padding: 0 7px;
+  color: var(--text);
+}
+
+.wd-hbtn.preset-trigger .pname {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 96px;
+}
+
+.wd-hbtn.lock-pill.active {
+  color: var(--amber, #f59e0b);
+  background: rgba(245, 158, 11, 0.14);
+}
+
+.wd-finish-btn {
+  flex: 0 0 24px;
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+  background: var(--track, #0d0f15);
+  border-radius: 5px;
+  font-size: 12px;
+}
+
+header #selfTrackChip,
+header .beacon-picker,
+header #linkPickerWrap,
+header #presetSelect {
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+@media (max-width: 1160px) {
+  header { gap: 6px !important; padding: 0 10px !important; }
+  header .headsep,
+  header > .sep,
+  header .chain-hud,
+  header .meter-readouts { display: none !important; }
+  header .beacon-picker .beacon-lbl,
+  header #linkPickerWrap .beacon-lbl,
+  header #linkPickerWrap > label { display: none !important; }
+  header .beacon-picker,
+  header #linkPickerWrap { max-width: 128px !important; }
+  header .beacon-select,
+  header #linkPickerWrap select { max-width: 104px !important; min-width: 0 !important; }
+  header #selfTrackChip { max-width: 96px !important; overflow: hidden; }
+  .wd-hbtn.preset-trigger { min-width: 68px; max-width: 100px; }
+}
+
+@media (max-width: 860px) {
+  header { gap: 4px !important; padding: 0 8px !important; }
+  header .brand .stack .line,
+  header .brand .suite,
+  header .brand .sub,
+  header .brand .subtitle,
+  header .brand small,
+  header .brand .k { display: none !important; }
+  header .meter-readouts,
+  header > .stat { display: none !important; }
+  .header-power-btn,
+  header #param_power,
+  header #param_enable { min-width: 0 !important; padding: 0 7px !important; font-size: 9.5px !important; }
+  .header-audition-pill,
+  header #param_delta,
+  header #param_autogain,
+  header #sessionBtn { padding: 0 6px !important; font-size: 9.5px !important; min-width: 0 !important; }
+  header #sessionBtn .sess-dots { display: none !important; }
+  header #selfTrackChip { max-width: 58px !important; padding: 0 5px !important; }
+  header .beacon-picker,
+  header #linkPickerWrap { max-width: 82px !important; padding: 0 4px !important; }
+  header .beacon-select,
+  header #linkPickerWrap select { max-width: 62px !important; min-width: 0 !important; padding-right: 12px !important; font-size: 9.5px !important; }
+  header #presetSelect { max-width: 112px !important; }
+  .wd-header-kit { gap: 3px; }
+  .wd-hbtn.preset-step { display: none !important; }
+  .wd-hbtn.preset-trigger { min-width: 52px; max-width: 68px; padding: 0 5px; }
+  .wd-hbtn.preset-trigger .pname { max-width: 48px; }
+  .wd-hbtn { min-width: 18px; padding: 0 4px; font-size: 9.5px; }
+}
+
+/* ── Floating Popovers (Presets, XY Morph Pad, Locks, About) ── */
+.wd-popover {
+  position: fixed;
+  top: 48px;
+  min-width: 230px;
+  background: var(--panel, #151922);
+  border: 1px solid var(--line-hi, rgba(255, 255, 255, 0.16));
+  border-radius: 8px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.62);
+  padding: 10px;
+  z-index: 950;
+  color: var(--text);
+  font: 500 11.5px/1.35 var(--font);
+}
+
+.wd-popover[hidden] { display: none !important; }
+
+.wd-pop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 7px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--line);
+  font: 700 10px/1 var(--font);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--label);
+}
+
+.wd-preset-list {
+  max-height: 210px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.wd-preset-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 5px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: 600 11.5px/1.2 var(--font);
+  text-align: left;
+  cursor: pointer;
+}
+
+.wd-preset-item:hover { background: rgba(255, 255, 255, 0.07); }
+.wd-preset-item.on { background: var(--accent); color: #ffffff; }
+.wd-preset-item .ptag {
+  font: 700 8.5px/1 var(--font-mono);
+  text-transform: uppercase;
+  opacity: 0.68;
+}
+
+.wd-preset-save-row {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.wd-preset-save-row input.preset-name-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 26px;
+  padding: 0 7px;
+  border-radius: 4px;
+  border: 1px solid var(--line-hi, rgba(255, 255, 255, 0.18));
+  background: var(--well, #06070a);
+  color: var(--text);
+  font: 600 11px/1 var(--font);
+}
+
+.wd-morph-canvas {
+  width: 176px;
+  height: 176px;
+  display: block;
+  border-radius: 6px;
+  background: var(--well, #06070a);
+  border: 1px solid var(--line-hi, rgba(255, 255, 255, 0.16));
+  cursor: crosshair;
+  touch-action: none;
+  margin: 0 auto 8px;
+}
+
+.wd-morph-copy-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+/* ── Knob Machined Depth, Tabular Readout, Mod Collars & Lock Badge ── */
+.knob {
+  position: relative;
+}
+
+.knob .v {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.knob .kmod-arc {
+  pointer-events: none;
+  opacity: 0.92;
+  filter: drop-shadow(0 0 3px var(--cyan, #00d2ff));
+}
+
+.knob .kmod-dot {
+  pointer-events: none;
+}
+
+.knob .klock-badge {
+  position: absolute;
+  top: 1px;
+  right: 3px;
+  font: 700 8.5px/1 var(--font-mono);
+  color: var(--amber, #f59e0b);
+  background: rgba(9, 11, 16, 0.86);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  border-radius: 3px;
+  padding: 1px 3px;
+  pointer-events: none;
+  display: none;
+}
+
+.knob.wd-locked .klock-badge {
+  display: inline-block;
+}
+
+/* ── Universal Right-Click Parameter Context Menu ── */
+.wd-ctx-menu {
+  position: fixed;
+  min-width: 184px;
+  background: var(--panel, #151922);
+  border: 1px solid var(--line-hi, rgba(255, 255, 255, 0.18));
+  border-radius: 7px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.65);
+  padding: 4px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.wd-ctx-menu button {
+  height: 26px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text);
+  font: 600 11px/1 var(--font);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  text-align: left;
+}
+
+.wd-ctx-menu button:hover:not(:disabled) {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.wd-ctx-menu button:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.wd-ctx-sep {
+  height: 1px;
+  background: var(--line);
+  margin: 3px 4px;
+}
+
+/* ── Multi-Source Modulation Collars, SVG Patch-Cords & Inline Hover Ring ── */
+.knob .kmod-multi,
+.knob .kmod-live-dot {
+  pointer-events: none;
+}
+
+.knob .kmod-multi path {
+  opacity: 0.92;
+}
+
+.knob.wd-cord-target {
+  outline: 1.5px solid var(--cyan, #22d3ee);
+  outline-offset: 3px;
+  border-radius: 6px;
+  box-shadow: 0 0 12px rgba(34, 211, 238, 0.28);
+}
+
+.wd-patch-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 900;
+}
+
+.wd-mod-ring-pop {
+  position: fixed;
+  min-width: 238px;
+  max-width: 300px;
+  background: var(--panel, #151922);
+  border: 1px solid var(--line-hi, rgba(255, 255, 255, 0.18));
+  border-radius: 7px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.65);
+  padding: 7px 8px;
+  z-index: 960;
+  color: var(--text);
+  font: 500 10.5px/1.25 var(--font);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.wd-mod-ring-pop[hidden] {
+  display: none !important;
+}
+
+.wd-mod-ring-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+  font: 700 9.5px/1 var(--font);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--label);
+}
+
+.wd-mod-ring-count {
+  font-family: var(--font-mono);
+  opacity: 0.78;
+}
+
+.wd-mod-ring-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.wd-mod-ring-row.bypassed {
+  opacity: 0.48;
+}
+
+.wd-mod-ring-dot {
+  flex: 0 0 7px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.wd-mod-ring-src {
+  flex: 0 0 46px;
+  font: 600 10px/1 var(--font);
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wd-mod-ring-depth {
+  flex: 1 1 76px;
+  min-width: 64px;
+  accent-color: var(--accent, #6684b8);
+  cursor: pointer;
+}
+
+.wd-mod-ring-val {
+  flex: 0 0 36px;
+  text-align: right;
+  font: 700 9.5px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.wd-mod-ring-btn {
+  height: 19px;
+  min-width: 21px;
+  padding: 0 4px;
+  border-radius: 3px;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+  background: var(--track, #0d0f15);
+  color: var(--label);
+  font: 700 9px/1 var(--font-mono);
+  cursor: pointer;
+}
+
+.wd-mod-ring-btn:hover {
+  color: var(--text);
+  border-color: var(--line-hi, rgba(255, 255, 255, 0.24));
+}
+
+.wd-mod-ring-btn.on {
+  background: var(--accent);
+  color: #ffffff;
+  border-color: transparent;
+}
+
+.wd-mod-ring-btn.rm:hover {
+  background: rgba(239, 68, 68, 0.22);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.45);
+}
+
+/* ── XLFO Shape Presets & Step Transform Bar ── */
+.wd-xlfo-presets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+}
+
+.wd-xlfo-preset-btn {
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 4px;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+  background: var(--track, #0d0f15);
+  color: var(--label);
+  font: 600 9.5px/1 var(--font);
+  cursor: pointer;
+  transition: background-color 0.1s ease, color 0.1s ease, border-color 0.1s ease;
+}
+
+.wd-xlfo-preset-btn:hover {
+  color: var(--text);
+  border-color: var(--line-hi, rgba(255, 255, 255, 0.24));
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.wd-xlfo-preset-btn.on {
+  background: var(--accent);
+  color: #ffffff;
+  border-color: transparent;
+}
+
+/* ── 10-Second Retroactive Freeze & Scrub Timeline ── */
+.wd-scrub-bar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 24px;
+  padding: 0 8px;
+  background: var(--panel, #151922);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.09));
+  border-radius: 5px;
+}
+
+.wd-scrub-hold {
+  flex: 0 0 auto;
+  height: 18px;
+  padding: 0 7px;
+  border-radius: 3px;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.14));
+  background: var(--track, #0d0f15);
+  color: var(--label);
+  font: 700 9px/1 var(--font);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.wd-scrub-hold.on {
+  background: var(--amber, #f59e0b);
+  color: #111318;
+  border-color: transparent;
+}
+
+.wd-scrub-track {
+  position: relative;
+  flex: 1 1 auto;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--well, #06070a);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.08));
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.wd-scrub-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+  border-radius: 2px;
+  background: var(--accent, #6684b8);
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.wd-scrub-bar.frozen .wd-scrub-fill {
+  background: var(--amber, #f59e0b);
+}
+
+.wd-scrub-thumb {
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  width: 9px;
+  height: 12px;
+  border-radius: 2px;
+  transform: translate(-50%, -50%);
+  background: var(--text, #eef2f7);
+  border: 1px solid var(--well, #06070a);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+
+.wd-scrub-age {
+  flex: 0 0 54px;
+  text-align: right;
+  font: 700 9.5px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--label);
+  white-space: nowrap;
+}
+
+.wd-scrub-bar.frozen .wd-scrub-age {
+  color: var(--amber, #f59e0b);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.001ms !important;
+    animation-duration: 0.001ms !important;
+  }
+}

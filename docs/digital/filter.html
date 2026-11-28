@@ -1,0 +1,2681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Werewolf Digital Filter</title>
+<link rel="stylesheet" href="./wd/tokens.css">
+<script src="./demo-bar.js"></script>
+<script src="./modules/filter.js"></script>
+<script src="./wd-plugin-host.js"></script>
+<script src="./wd/kit.js"></script>
+<style>
+  /* ══════════════════════════════════════════════════════════════════════
+     Instrument Panel — the Werewolf Digital chassis.
+
+     This :root block is the WHOLE design language.
+     Values are hex, not oklch(), on purpose: canvas 2D fillStyle takes these
+     literals through cssVar() below.
+     ════════════════════════════════════════════════════════════════════ */
+  :root {
+    --bg:      #0b0d12;   /* deep studio obsidian chassis */
+    --panel:   #151922;   /* machined slate control bays  */
+    --panel-hi:#1d2330;   /* elevated cap / active surface */
+    --track:   #0d0f15;   /* recessed tracks & beds       */
+    --line:    rgba(255, 255, 255, 0.08);
+    --line-hi: rgba(255, 255, 255, 0.15);
+    --hover-bg:rgba(255, 255, 255, 0.06);
+    --text:    #f2f5fa;
+    --label:   #8b96a8;
+    --muted:   #586274;
+    --well:    #06070a;   /* pure OLED signal surface     */
+    --cream:   #f2f5fa;   /* live plot, on well           */
+
+    --accent:     #3d9391;
+    --accent-lit: #78c4c1;
+    --accent-deep:#12605e;
+
+    --sage:      #34d399;
+    --sage-tint: rgba(52, 211, 153, 0.14);
+    --sage-deep: #6ee7b7;
+
+    --r-window: 0px;
+    --r-panel: 8px;
+    --r-pill: 5px;
+
+    --font: "Figtree", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    --font-display: "Figtree", "Segoe UI Variable Display", "Segoe UI Semibold", system-ui, sans-serif;
+  }
+  :root[data-theme="japandi-dark"] {
+    --bg:      #121316;
+    --panel:   #1b1d21;
+    --panel-hi:#24272d;
+    --track:   #0d0e10;
+    --line:    rgba(242, 237, 228, 0.08);
+    --line-hi: rgba(242, 237, 228, 0.15);
+    --hover-bg:rgba(242, 237, 228, 0.06);
+    --text:    #f2ede4;
+    --label:   #9e978c;
+    --muted:   #666057;
+    --well:    #090a0c;
+    --cream:   #f2ede4;
+    --accent-deep:#1c7472;
+    --sage:      #7a9171;
+    --sage-tint: rgba(122, 145, 113, 0.18);
+    --sage-deep: #b8cfb0;
+  }
+  :root[data-theme="japandi-light"] {
+    --bg:      #e6e1d8;
+    --panel:   #dbd5c9;
+    --panel-hi:#e4dfd5;
+    --track:   #ccc5b8;
+    --line:    rgba(24, 25, 28, 0.11);
+    --line-hi: rgba(24, 25, 28, 0.20);
+    --hover-bg:rgba(24, 25, 28, 0.06);
+    --text:    #18191c;
+    --label:   #635f58;
+    --muted:   #8c867c;
+    --well:    #17181b;
+    --cream:   #f2ede4;
+    --accent-deep:#12605e;
+    --sage:      #4d6b47;
+    --sage-tint: rgba(77, 107, 71, 0.16);
+    --sage-deep: #2d4229;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 400 13px/1.45 var(--font);
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  :focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- header ---------- */
+  header {
+    flex: 0 0 auto;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand svg { display: block; }
+  .brand .stack { display: flex; flex-direction: column; gap: 1px; }
+  .brand .line { font: 700 8.5px/1 var(--font); letter-spacing: 0.22em; text-transform: uppercase; color: var(--label); }
+  .brand .name { font-family: var(--font-display); font-size: 19px; line-height: 1; letter-spacing: -0.01em; }
+  .headsep { width: 1px; height: 26px; background: var(--line); }
+  .spacer { flex: 1; }
+  .stat { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  .stat .k { font: 600 9px/1 var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  .stat .v { font: 700 11.5px/1 var(--font); font-variant-numeric: tabular-nums; }
+  #buildTag { font: 500 10px/1.3 var(--font); color: var(--muted); text-align: right; max-width: 150px; }
+
+  /* ---------- frame ---------- */
+  .body {
+    flex: 1 1 auto;
+    display: flex;
+    gap: 12px;
+    padding: 14px;
+    min-height: 0;
+  }
+  .col { flex: 1 1 auto; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+
+  /* ---------- wells: the only dark surfaces ---------- */
+  .wells { flex: 1 1 auto; display: flex; gap: 8px; min-height: 118px; min-width: 0; }
+  .well-group { flex: 2 1 0; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .well-group.narrow { flex: 1 1 0; min-width: 176px; }
+  .well-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 0 2px;
+    min-height: 22px;
+  }
+  .well-title { font: 700 11px/1 var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--label); }
+  .well-hint { font: 500 11.5px/1 var(--font); color: var(--muted); white-space: nowrap; }
+  .well-hint.accent { color: var(--accent-deep); font-weight: 600; }
+  .well {
+    flex: 1;
+    min-height: 0;
+    border-radius: var(--r-panel);
+    overflow: hidden;
+    background: var(--well);
+    position: relative;
+  }
+  .well canvas { width: 100%; height: 100%; display: block; }
+  .well-readout {
+    position: absolute; left: 12px; bottom: 10px;
+    display: flex; flex-direction: column; gap: 3px; pointer-events: none;
+    background: rgba(18, 17, 14, 0.78); border-radius: 12px; padding: 7px 10px 8px;
+  }
+  .well-readout .k { font: 600 9.5px/1 var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  .well-readout .v { font: 700 22px/1 var(--font); font-variant-numeric: tabular-nums; color: #f9f4ed; }
+
+  /* ---------- panels ---------- */
+  .panel {
+    background: var(--panel);
+    border-radius: var(--r-panel);
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .panel.rail { flex: 0 0 auto; }
+  .rail-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .rail-range { font: 500 11.5px/1 var(--font); color: var(--label); }
+
+  /* ---------- pills: every choice and toggle ---------- */
+  .pill {
+    height: 32px;
+    padding: 0 14px;
+    border-radius: var(--r-pill);
+    border: 1px solid var(--line);
+    background: transparent;
+    font: 600 12px/1 var(--font);
+    color: var(--label);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background-color 0.12s, color 0.12s;
+    white-space: nowrap;
+  }
+  .pill:hover { background: var(--hover-bg); }
+  .pill:active { background: var(--track); }
+  .pill.on { border-color: transparent; background: var(--accent); color: #f9f4ed; font-weight: 700; }
+  .pill.on:hover { background: var(--accent-deep); }
+  .pill:disabled { opacity: 0.45; cursor: default; }
+  .pill.sm { height: 28px; padding: 0 13px; font-size: 11.5px; }
+  .pill.wide { width: 100%; }
+  .pill.dashed { border-style: dashed; border-color: var(--muted); color: var(--label); }
+  .pill.power { background: var(--well); border-color: transparent; color: #f9f4ed; font-weight: 700; height: 36px; }
+  .pill.power .led {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--muted); transition: background-color 0.12s, box-shadow 0.12s;
+  }
+  .pill.power.on { background: var(--well); color: #f9f4ed; }
+  .pill.power.on .led { background: #34d399; box-shadow: 0 0 7px #34d399; }
+
+  /* exclusive groups sit in a track-coloured bed */
+  .pillbed { display: flex; gap: 4px; padding: 3px; border-radius: var(--r-pill); background: var(--track); }
+  .pillbed button {
+    height: 26px; padding: 0 14px; border-radius: var(--r-pill); border: 0;
+    background-color: transparent; color: var(--label); font: 600 11.5px/1 var(--font); cursor: pointer;
+    transition: background-color 0.12s, color 0.12s; white-space: nowrap;
+  }
+  .pillbed button:hover:not(:disabled):not(.on) { background-color: var(--hover-bg); }
+  .pillbed.accent > button.on { background-color: var(--accent); color: #f9f4ed; font-weight: 700; }
+  .pillbed.sage > button.on { background-color: var(--sage); color: #f9f4ed; font-weight: 700; }
+  #band-selector > button.on, #routing-group > button.on {
+    background-color: var(--accent); color: #f9f4ed; font-weight: 700;
+  }
+  .pillbed > button:disabled { opacity: 0.45; cursor: default; }
+
+  .charset { display: flex; flex-wrap: wrap; gap: 5px; }
+  .fieldlabel { font: 600 10.5px/1 var(--font); color: var(--label); }
+
+  /* ---------- knob: every continuous parameter ---------- */
+  .knob {
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    width: 78px; cursor: ns-resize; touch-action: none;
+    border-radius: 12px; padding: 2px 0;
+  }
+  .knob:hover { background: var(--hover-bg); }
+  .knob .klabel { font: 600 10.5px/1 var(--font); color: var(--label); pointer-events: none; }
+  .knob .v { font: 700 14px/1 var(--font); font-variant-numeric: tabular-nums; pointer-events: none; }
+  .knob svg { display: block; pointer-events: none; }
+  .knob.dragging .v { color: var(--accent-deep); }
+  .knob.lg { width: 92px; }
+  .knob.sm { width: auto; flex-direction: row; align-items: center; gap: 7px; }
+  .knob.sm .kstack { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; }
+  .knob.sm .klabel { font-size: 10px; }
+  .knob.sm .v { font-size: 12.5px; }
+
+  /* ---------- meters are wells too ---------- */
+  .vmeter-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .vmeter {
+    flex: 1; min-height: 40px; width: 16px; border-radius: var(--r-pill);
+    background: var(--well); overflow: hidden; position: relative;
+  }
+  .vmeter i {
+    position: absolute; left: 0; right: 0; bottom: 0; height: var(--fill, 0%);
+    background: linear-gradient(0deg, var(--sage), var(--accent-lit));
+    border-radius: var(--r-pill);
+  }
+  .vmeter-wrap .k { font: 600 9.5px/1 var(--font); letter-spacing: 0.1em; text-transform: uppercase; color: var(--label); }
+  .vmeter-wrap .v { font: 700 11.5px/1 var(--font); font-variant-numeric: tabular-nums; }
+
+  /* ---------- master strip: identical in all fourteen ---------- */
+  .master {
+    flex: 0 0 132px;
+    background: var(--panel);
+    border-radius: var(--r-panel);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .master .fill { flex: 1; min-height: 0; }
+  .master .stack { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+
+  /* ---------- band panes ---------- */
+  .pane { display: none; }
+  .pane.active { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .vsep { width: 1px; align-self: stretch; min-height: 46px; background: var(--line); }
+  .knobs { display: flex; gap: 6px; }
+  .charcol { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 7px; }
+
+  /* ---------- modulation strip ---------- */
+  .mod { flex: 0 0 auto; }
+  .mod-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .mod-title { display: flex; flex-direction: column; gap: 3px; }
+  .mod-title .t { font: 700 10.5px/1 var(--font); letter-spacing: 0.12em; text-transform: uppercase; color: var(--label); }
+  .mod-title .s { font: 500 11px/1 var(--font); color: var(--muted); }
+  .route {
+    display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px;
+    border-radius: var(--r-pill); background: var(--sage-tint); color: var(--sage-deep);
+    font: 600 11.5px/1 var(--font); white-space: nowrap; flex: 0 0 auto;
+  }
+  .route .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--sage); flex: none; }
+  .routes { display: flex; gap: 6px; flex: 1; min-width: 0; justify-content: flex-end; }
+
+  /* matrix — the only thing in the suite allowed to collapse */
+  .matrix { display: none; flex-direction: column; gap: 6px; max-height: 168px; overflow-y: auto; padding-top: 4px; }
+  .slot {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-pill);
+    padding: 0 12px; height: 32px;
+  }
+  .slot.active { border-color: var(--sage); background: var(--sage-tint); }
+  .slot input[type="checkbox"] { accent-color: var(--sage); cursor: pointer; }
+  .slot select {
+    background: transparent; color: var(--text); border: 0;
+    font: 600 11.5px/1 var(--font); cursor: pointer; outline: none;
+  }
+  .slot .arrow { color: var(--muted); font-size: 11px; }
+  .slot input[type="range"] { flex: 1; accent-color: var(--sage); height: 4px; cursor: pointer; }
+  .slot .val { font: 700 11px/1 var(--font); font-variant-numeric: tabular-nums; width: 34px; text-align: right; color: var(--label); }
+
+  @media (max-width: 820px) {
+    .well-group.narrow { min-width: 146px; }
+    .knob { width: 66px; }
+    .charcol { min-width: 168px; }
+  }
+
+  /* ── Precision Instrument Structural & Hardware Refinements ── */
+  header {
+    height: 46px;
+    padding: 0 14px;
+    gap: 10px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent), var(--panel);
+    border-bottom: 1px solid var(--line-hi);
+  }
+  .brand svg { filter: drop-shadow(0 0 5px var(--accent)); }
+  .brand .name { font-size: 16.5px; font-weight: 700; letter-spacing: -0.01em; }
+  .headsep { height: 20px; }
+  #buildTag { font: 500 9.5px/1.2 var(--font); color: var(--muted); max-width: 135px; opacity: 0.75; }
+
+  .track-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 26px;
+    padding: 0 8px;
+    border-radius: var(--r-pill);
+    background: var(--track);
+    border: 1px solid var(--line);
+    cursor: pointer;
+    flex: 0 1 118px;
+    min-width: 72px;
+    max-width: 128px;
+    transition: border-color 0.12s, background-color 0.12s;
+  }
+  .track-chip:hover { border-color: var(--line-hi); background: var(--panel-hi); }
+  .track-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-lit); flex: 0 0 auto; }
+  .track-name { flex: 1 1 auto; min-width: 0; font: 700 11px/1 var(--font); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .track-edit-ico { font-size: 10px; color: var(--muted); opacity: 0.65; flex: 0 0 auto; }
+  .track-chip:hover .track-edit-ico { opacity: 1; color: var(--text); }
+  .track-name-input {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    height: 20px;
+    background: var(--well);
+    color: var(--cream);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    font: 600 11px/1 var(--font);
+    padding: 0 5px;
+    outline: none;
+  }
+
+  .beacon-picker {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 6px 0 8px;
+    border-radius: var(--r-pill);
+    background: var(--track);
+    border: 1px solid var(--line);
+    flex: 0 0 auto;
+  }
+  .beacon-led {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--muted);
+    transition: background-color 0.15s, box-shadow 0.15s;
+  }
+  .beacon-picker.receiving .beacon-led { background: #34d399; box-shadow: 0 0 7px #34d399; }
+  .beacon-picker.waiting .beacon-led { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; }
+  .beacon-picker.mismatch { border-color: #f59e0b; }
+  .beacon-picker.mismatch .beacon-led { background: #ef4444; box-shadow: 0 0 7px #ef4444; }
+  .beacon-lbl {
+    font: 700 9px/1 var(--font);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--label);
+    white-space: nowrap;
+  }
+  .beacon-select {
+    height: 22px;
+    max-width: 122px;
+    min-width: 88px;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font: 600 11px/1 var(--font);
+    cursor: pointer;
+    outline: none;
+  }
+  .beacon-select option { background: var(--panel); color: var(--text); }
+  .beacon-select:disabled { opacity: 0.55; cursor: default; }
+
+  .pill.ext-key.on {
+    border-color: rgba(56, 189, 248, 0.50);
+    background: rgba(56, 189, 248, 0.16);
+    color: #38bdf8;
+    box-shadow: 0 1px 8px rgba(2, 132, 199, 0.22);
+  }
+  .pill.ext-key.on:hover {
+    background: rgba(56, 189, 248, 0.24);
+    filter: none;
+  }
+  :root[data-theme="japandi-light"] .pill.ext-key.on {
+    border-color: rgba(2, 132, 199, 0.45);
+    background: rgba(2, 132, 199, 0.14);
+    color: #0284c7;
+  }
+
+  .theme-strip {
+    display: inline-flex;
+    background: var(--track);
+    border: 1px solid var(--line);
+    border-radius: var(--r-pill);
+    padding: 2px;
+    gap: 2px;
+  }
+  .theme-btn {
+    height: 22px;
+    padding: 0 8px;
+    border: 0;
+    border-radius: calc(var(--r-pill) - 1px);
+    background: transparent;
+    color: var(--label);
+    font: 600 10px/1 var(--font);
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: background-color 0.12s, color 0.12s;
+  }
+  .theme-btn:hover:not(.on) { color: var(--text); background: var(--hover-bg); }
+  .theme-btn.on { background: var(--panel-hi); color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35); }
+
+  .body { gap: 8px; padding: 8px 10px 10px; }
+  .col { gap: 8px; }
+  .wells { gap: 8px; }
+  .well {
+    border: 1px solid var(--line-hi);
+    box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.65);
+  }
+  .well-readout {
+    background: rgba(9, 11, 16, 0.84);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 6px;
+    backdrop-filter: blur(6px);
+  }
+  .panel, .master {
+    border: 1px solid var(--line);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+  .pill {
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--label);
+    border: 1px solid var(--line);
+  }
+  .pill:hover:not(:disabled):not(.on) { background: var(--hover-bg); color: var(--text); }
+  .pill.on { border-color: transparent; background: var(--accent); color: #ffffff; box-shadow: 0 1px 8px rgba(0, 0, 0, 0.35); }
+  .pill.on:hover { filter: brightness(1.1); background: var(--accent); }
+  .pillbed { border: 1px solid var(--line); background: var(--track); }
+  .pillbed button { color: var(--label); }
+  .pillbed button:hover:not(:disabled):not(.on) { background-color: var(--hover-bg); color: var(--text); }
+
+  .vmeter {
+    width: 14px;
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.75);
+  }
+  .vmeter i { border-radius: 2px; }
+
+  .knob .karc { filter: drop-shadow(0 0 3px var(--accent)); }
+  .knob .v {
+    pointer-events: auto;
+    cursor: text;
+    padding: 1px 4px;
+    border-radius: 3px;
+    transition: background-color 0.12s, color 0.12s;
+  }
+  .knob .v:hover { background: var(--hover-bg); }
+  .knob input.v,
+  .knob input.v-edit {
+    width: 58px;
+    background: var(--well);
+    color: var(--text);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    font: 700 12px/1 var(--font);
+    text-align: center;
+    padding: 2px 3px;
+    outline: none;
+  }
+
+  /* ── Phase 3 ModUX: Source Pills, XLFO Step Editor & Presets ── */
+  .mod-sources {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+  }
+  .src-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 24px;
+    padding: 0 9px;
+    border-radius: var(--r-pill);
+    background: var(--track);
+    border: 1px solid var(--line);
+    color: var(--label);
+    font: 700 10.5px/1 var(--font);
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+    transition: border-color 0.12s, color 0.12s, background-color 0.12s;
+  }
+  .src-pill:hover { color: var(--text); border-color: var(--line-hi); background: var(--panel-hi); }
+  .src-pill.active { color: var(--text); border-color: var(--accent); background: var(--panel-hi); }
+  .src-pill .sdot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+  }
+
+  .xlfo-row {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+    min-height: 66px;
+  }
+  .xlfo-well {
+    flex: 1 1 240px;
+    height: 68px;
+    min-width: 160px;
+    cursor: crosshair;
+    touch-action: none;
+  }
+  .xlfo-controls {
+    flex: 1 1 320px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 5px;
+    min-width: 0;
+  }
+  .xlfo-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .xlfo-select {
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 4px;
+    border: 1px solid var(--line);
+    background: var(--track);
+    color: var(--text);
+    font: 600 10.5px/1 var(--font);
+    cursor: pointer;
+    outline: none;
+  }
+  .xlfo-select option { background: var(--panel); color: var(--text); }
+  .wd-xlfo-sep {
+    width: 1px;
+    height: 14px;
+    background: var(--line);
+    margin: 0 2px;
+  }
+
+</style>
+</head>
+<body>
+  <header>
+    <button class="pill power header-power-btn" id="param_power" title="Bypass the whole plugin. Crossfades over 30 ms so it never clicks."><span class="led"></span><span>Engaged</span></button>
+    <div class="brand">
+      <svg width="20" height="18" viewBox="0 0 20 18">
+        <path d="M2 16.5 L10 1.5 L18 16.5 Z" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linejoin="round"/>
+      </svg>
+      <div class="stack">
+        <div class="line">Werewolf Digital</div>
+        <div class="name">Filter</div>
+      </div>
+    </div>
+    <div class="track-chip" id="selfTrackChip" title="Click to rename this Filter track for Beacon broadcasting">
+      <span class="track-dot" id="selfTrackDot"></span>
+      <span class="track-name" id="selfTrackName">Filter 1</span>
+      <span class="track-edit-ico">✎</span>
+    </div>
+    <div class="beacon-picker" id="beaconPickerWrap" title="Select an active Werewolf Digital Beacon track for external Envelope Follower keying. Wireless cross-track key — for sample-exact timing at large DAW buffer sizes (1024+), use Off (Host Bus) with a DAW sidechain send.">
+      <span class="beacon-led" id="beaconLed"></span>
+      <span class="beacon-lbl">Beacon</span>
+      <select class="beacon-select" id="beaconSourceSelect" aria-label="External WD Beacon source">
+        <option value="">Off (Host Bus)</option>
+      </select>
+    </div>
+    <div class="spacer"></div>
+    <button class="pill sm header-audition-pill" id="param_delta" title="Listen to ONLY what the filter is changing — output minus input.">Delta</button>
+    <div class="stat"><div class="k">Rate</div><div class="v" id="srTag">—</div></div>
+    <div class="theme-strip" id="themeSwitcher" title="Switch instrument chassis finish">
+      <button class="theme-btn on" data-theme="studio">Studio</button>
+      <button class="theme-btn" data-theme="japandi-dark">Sumi</button>
+      <button class="theme-btn" data-theme="japandi-light">Washi</button>
+    </div>
+    <div id="buildTag">—</div>
+  </header>
+
+  <div class="body">
+    <div class="col">
+
+      <div class="stage-row">
+        <div class="wells">
+          <div class="well-group" id="responseContainer">
+            <div class="well-head">
+              <div class="well-title">Response</div>
+              <div class="well-hint" id="responseHint">Series</div>
+            </div>
+            <div class="well">
+              <canvas id="responseCanvas"></canvas>
+              <div class="well-readout"><div class="k">Q</div><div class="v" id="qVal">—</div></div>
+            </div>
+          </div>
+
+          <div class="well-group narrow">
+            <div class="well-head">
+              <div class="well-title" id="char_title">Character</div>
+              <div class="well-hint accent" id="activeCharLabel">Clean</div>
+            </div>
+            <div class="well"><canvas id="charCanvas"></canvas></div>
+          </div>
+        </div>
+
+        <div class="meter-bridge">
+          <div class="vmeter-wrap">
+            <div class="vmeter"><i id="outMeterBar"></i></div>
+            <div class="k">Out</div>
+            <div class="v" id="outMeterVal">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel rail">
+        <div class="rail-head">
+          <div class="pillbed accent" id="band-selector">
+            <button id="sel_block_A" class="on">Block A</button>
+            <button id="sel_block_B">Block B</button>
+          </div>
+          <div class="rail-range" id="active_block_title">First in series</div>
+          <div class="spacer"></div>
+          <div class="pillbed accent" id="routing-group" title="How the two filter blocks are joined: one after the other, side by side, or one per channel.">
+            <button data-index="0" class="on">Series</button>
+            <button data-index="1">Parallel</button>
+            <button data-index="2">Split L/R</button>
+            <button data-index="3">Split M/S</button>
+          </div>
+        </div>
+
+        <div id="band_panes_container">
+          <div class="pane active" id="block_pane_A">
+            <div class="knobs">
+              <div class="knob" id="param_freqA" data-param-id="freqA" data-dest-id="1" data-label="Cutoff" title="Where the filter acts. Drag the A handle in the response well to set it by eye."></div>
+              <div class="knob" id="param_resoA" data-param-id="resoA" data-dest-id="2" data-label="Resonance" title="Emphasis at the cutoff. Above 95% the filter rings on its own."></div>
+              <div class="knob" id="param_driveA" data-param-id="driveA" data-dest-id="3" data-label="Drive" title="Pushes the signal into the character stage before the filter."></div>
+              <div class="knob" id="param_panA" data-param-id="panA" data-dest-id="4" data-label="Pan" data-bipolar="1" title="Where this block's output sits in the stereo field."></div>
+              <div class="knob" id="param_levelA" data-param-id="levelA" data-dest-id="5" data-label="Level" data-bipolar="1" title="Level trim for this block's output."></div>
+            </div>
+            <div class="vsep"></div>
+            <div class="charcol">
+              <div class="fieldlabel">Mode</div>
+              <div class="charset" id="mode-group-A" title="Filter shape and slope. 12 is one stage, 24 is two."></div>
+              <div class="fieldlabel">Character</div>
+              <div class="charset" id="char-group-A" title="The shape of the drive stage in front of the filter."></div>
+            </div>
+          </div>
+
+          <div class="pane" id="block_pane_B">
+            <div class="knobs">
+              <div class="knob" id="param_freqB" data-param-id="freqB" data-dest-id="6" data-label="Cutoff" title="Where the filter acts. Drag the B handle in the response well to set it by eye."></div>
+              <div class="knob" id="param_resoB" data-param-id="resoB" data-dest-id="7" data-label="Resonance" title="Emphasis at the cutoff. Above 95% the filter rings on its own."></div>
+              <div class="knob" id="param_driveB" data-param-id="driveB" data-dest-id="8" data-label="Drive" title="Pushes the signal into the character stage before the filter."></div>
+              <div class="knob" id="param_panB" data-param-id="panB" data-dest-id="9" data-label="Pan" data-bipolar="1" title="Where this block's output sits in the stereo field."></div>
+              <div class="knob" id="param_levelB" data-param-id="levelB" data-dest-id="10" data-label="Level" data-bipolar="1" title="Level trim for this block's output."></div>
+            </div>
+            <div class="vsep"></div>
+            <div class="charcol">
+              <div class="fieldlabel">Mode</div>
+              <div class="charset" id="mode-group-B" title="Filter shape and slope. 12 is one stage, 24 is two."></div>
+              <div class="fieldlabel">Character</div>
+              <div class="charset" id="char-group-B" title="The shape of the drive stage in front of the filter."></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel mod">
+        <div class="mod-head">
+          <div class="mod-title">
+            <div class="t">Modulation</div>
+            <div class="s" id="routeCount">no routes live</div>
+          </div>
+          <div class="pillbed sage" id="xlfo-tabs">
+            <button class="on" data-xlfo="1">LFO 1</button>
+            <button data-xlfo="2">LFO 2</button>
+            <button data-xlfo="3">LFO 3</button>
+          </div>
+          <div class="vsep"></div>
+          <div class="knobs" style="gap: 12px;">
+            <div class="knob sm" id="xlfo_rate" data-label="Rate" data-size="38" title="How fast this LFO cycles."></div>
+            <div class="knob sm" id="xlfo_phase" data-label="Phase" data-size="38" title="Where in its cycle this LFO starts."></div>
+            <div class="knob sm" id="xlfo_snap" data-label="Snap" data-size="38" title="Quantise the LFO into steps instead of a smooth sweep."></div>
+          </div>
+          <button class="pill sm" id="xlfo_balance" title="Bipolar: the LFO swings both above and below center.">Bipolar</button>
+          <div class="vsep"></div>
+          <button class="pill sm ext-key" id="btn_followerExtSc" title="Key the Modulation Envelope Follower from the External sidechain (WD Beacon or Host Sidechain Bus 1) instead of main input.">Env Key: Int</button>
+          <div class="routes" id="routeChips"></div>
+          <button class="pill sm dashed" id="matrixToggle">Routes</button>
+          <div class="deck-master-bay">
+            <div class="knob sm" id="param_mix" data-param-id="mix" data-dest-id="11" data-size="40" data-label="Mix" title="Blend between the dry signal and the filtered one."></div>
+          </div>
+        </div>
+        <div class="mod-sources" id="modSourceStrip" title="Drag any modulation source pill onto a knob or filter handle to route modulation.">
+          <div class="src-pill active" data-source-id="0"><span class="sdot" style="background:#38bdf8"></span>LFO 1</div>
+          <div class="src-pill" data-source-id="1"><span class="sdot" style="background:#34d399"></span>LFO 2</div>
+          <div class="src-pill" data-source-id="2"><span class="sdot" style="background:#a78bfa"></span>LFO 3</div>
+          <div class="src-pill" data-source-id="4"><span class="sdot" style="background:#f59e0b"></span>Env</div>
+          <div class="src-pill" data-source-id="5"><span class="sdot" style="background:#f472b6"></span>Note</div>
+          <div class="src-pill" data-source-id="6"><span class="sdot" style="background:#fb923c"></span>Vel</div>
+          <div class="src-pill" data-source-id="7"><span class="sdot" style="background:#60a5fa"></span>Wheel</div>
+        </div>
+        <div class="xlfo-row">
+          <div class="well xlfo-well">
+            <canvas id="xlfoCanvas"></canvas>
+          </div>
+          <div class="xlfo-controls">
+            <div class="xlfo-meta-row">
+              <select class="xlfo-select" id="xlfoStepsSelect" aria-label="XLFO steps">
+                <option value="4">4 steps</option>
+                <option value="8">8 steps</option>
+                <option value="12">12 steps</option>
+                <option value="16">16 steps</option>
+                <option value="24">24 steps</option>
+                <option value="32">32 steps</option>
+              </select>
+              <select class="xlfo-select" id="xlfoRetrigSelect" aria-label="XLFO retrigger">
+                <option value="0">Free</option>
+                <option value="1" selected>Sync</option>
+                <option value="2">1-Shot</option>
+                <option value="3">MIDI</option>
+              </select>
+            </div>
+            <div class="wd-xlfo-presets" id="xlfoPresetBar"></div>
+          </div>
+        </div>
+        <div class="matrix" id="matrixContainer"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  window.addEventListener('error', e => {
+    if (e.message && (e.message.includes('ResizeObserver') || e.message.includes('loop completed with undelivered notifications'))) return;
+    let el = document.getElementById('errBanner');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'errBanner';
+      el.style.cssText = 'position:fixed;left:0;right:0;bottom:0;background:#12605e;'
+        + 'color:#f2f5fa;font:11px monospace;padding:4px 10px;z-index:99;';
+      document.body.appendChild(el);
+    }
+    el.textContent = 'UI error: ' + e.message + ' @' + (e.lineno || '?');
+  });
+</script>
+
+<script type="module">
+(async () => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+
+  // Canvas 2D silently rejects 'var(--x)' colour strings, so the theme is
+  // resolved to literals once and the wells draw from these.
+  const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const COL = {
+    accent:    cssVar('--accent')     || '#3d9391',
+    accentLit: cssVar('--accent-lit') || '#78c4c1',
+    well:      cssVar('--well')       || '#06070a',
+    cream:     cssVar('--cream')      || '#f2f5fa',
+  };
+  let uiReady = false;
+  function applyTheme(theme) {
+    const t = theme || 'studio';
+    if (t === 'studio') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', t);
+    COL.accent = cssVar('--accent') || COL.accent;
+    COL.accentLit = cssVar('--accent-lit') || COL.accentLit;
+    COL.well = cssVar('--well') || '#06070a';
+    COL.cream = cssVar('--cream') || '#f2f5fa';
+    const sw = document.getElementById('themeSwitcher');
+    if (sw) {
+      sw.querySelectorAll('.theme-btn').forEach(b => {
+        b.classList.toggle('on', b.dataset.theme === t);
+      });
+    }
+    try { localStorage.setItem('wd_theme', t); } catch (e) {}
+    if (uiReady) { drawResponse(); drawCharacter(); drawXlfoCurve(); }
+  }
+  {
+    let saved = 'studio';
+    try { saved = localStorage.getItem('wd_theme') || 'studio'; } catch (e) {}
+    applyTheme(saved);
+    const sw = document.getElementById('themeSwitcher');
+    if (sw) {
+      sw.addEventListener('click', e => {
+        const btn = e.target.closest('.theme-btn');
+        if (btn && btn.dataset.theme) applyTheme(btn.dataset.theme);
+      });
+    }
+  }
+  const ink = a => 'rgba(242, 245, 250, ' + a + ')';
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+  // ------------------------------------------------------------------ host
+  let host = null;
+  if (window.__JUCE__ && window.__JUCE__.backend) {
+    try {
+      const lib = await import('./juce/index.js');
+      const be = window.__JUCE__.backend;
+      host = {
+        slider: id => lib.getSliderState(id),
+        combo:  id => lib.getComboBoxState(id),
+        toggle: id => lib.getToggleState(id),
+        call:   (name, ...args) => lib.getNativeFunction(name)(...args),
+        on:     (event, cb) => be.addEventListener(event, cb),
+      };
+    } catch (e) { console.warn('JUCE frontend unavailable:', e); }
+  }
+
+  // ------------------------------------------------------------------ state
+  let currentXlfoIdx = 0;   // 0..2
+  let currentBlock = 'A';   // 'A' | 'B'
+  let sampleRate = 48000;
+  let liveInDb = -100, liveOutDb = -100, liveScDb = -120;
+  let shownOutDb = -100;
+  const scTrace = [];
+  const selfMeta = { name: 'Filter 1', customName: '', publishedName: '', publishing: false };
+  let beaconSelected = '';
+  let beaconReceiving = false;
+  let scActive = false;
+  let beaconSrMismatch = false;
+  let beaconMetersSeen = false;
+  let lastBeaconSig = '';
+  let followerExtSc = false;
+
+  let activeSlots = [];
+  let liveSourceVals = new Array(10).fill(0);
+  let liveXlfoPhases = new Array(3).fill(0);
+  let liveSlotVals = new Array(24).fill(0);
+  let liveDestOffsets = new Array(12).fill(0);
+
+  for (let s = 0; s < 24; ++s)
+    activeSlots.push({ index: s, source: -1, dest: -1, curve: 0, on: false, depth: 0.0 });
+
+  const xlfosState = Array.from({ length: 3 }, (_, i) => ({
+    index: i,
+    numSteps: 4,
+    isSynced: true,
+    syncRateBeats: 1.0,
+    retriggerMode: 1,
+    steps: Array.from({ length: 32 }, (__, step) => ({
+      index: step,
+      value: (step % 2 === 0) ? 0.0 : 1.0,
+      glide: 100.0,
+      slope: 0.0
+    }))
+  }));
+
+  const FFT_BINS = 240;
+  const preFft = new Float32Array(FFT_BINS).fill(-120);
+  const postFft = new Float32Array(FFT_BINS).fill(-120);
+  let preFftValid = false;
+  let postFftValid = false;
+
+  const SOURCE_META = {
+    0: { label: 'LFO 1', color: '#38bdf8' },
+    1: { label: 'LFO 2', color: '#34d399' },
+    2: { label: 'LFO 3', color: '#a78bfa' },
+    4: { label: 'Env',   color: '#f59e0b' },
+    5: { label: 'Note',  color: '#f472b6' },
+    6: { label: 'Vel',   color: '#fb923c' },
+    7: { label: 'Wheel', color: '#60a5fa' }
+  };
+  const getSourceColor = id => (SOURCE_META[id] && SOURCE_META[id].color) || '#38bdf8';
+  const getSourceLabel = id => {
+    if (id === 4 && followerExtSc) return 'Env (Ext)';
+    return (SOURCE_META[id] && SOURCE_META[id].label) || ('Src ' + id);
+  };
+
+  const DEST_OPTIONS = [
+    { val: -1, label: "None" },
+    { val: 1, label: "Block A Cutoff" },
+    { val: 2, label: "Block A Resonance" },
+    { val: 3, label: "Block A Drive" },
+    { val: 4, label: "Block A Pan" },
+    { val: 5, label: "Block A Level" },
+    { val: 6, label: "Block B Cutoff" },
+    { val: 7, label: "Block B Resonance" },
+    { val: 8, label: "Block B Drive" },
+    { val: 9, label: "Block B Pan" },
+    { val: 10, label: "Block B Level" },
+    { val: 11, label: "Global Mix" },
+    { val: 1000, label: "LFO 1 Rate" },
+    { val: 1001, label: "LFO 2 Rate" },
+    { val: 1002, label: "LFO 3 Rate" }
+  ];
+
+  const SRC_OPTIONS = [
+    { val: -1, label: "None" },
+    { val: 0, label: "LFO 1" },
+    { val: 1, label: "LFO 2" },
+    { val: 2, label: "LFO 3" },
+    { val: 4, label: "Envelope" },
+    { val: 5, label: "MIDI Note" },
+    { val: 6, label: "Velocity" },
+    { val: 7, label: "Mod Wheel" }
+  ];
+
+  const MODE_CHOICES = ['Low 12', 'Low 24', 'Band 12', 'Band 24', 'High 12', 'High 24', 'Notch', 'Peak'];
+  const CHAR_CHOICES = ['Clean', 'Tube', 'Tape', 'Fold'];
+  const ROUTING_CHOICES = ['Series', 'Parallel', 'Split L/R', 'Split M/S'];
+  const BLOCK_ROLE = [
+    { A: 'First in series',  B: 'Second in series' },
+    { A: 'Parallel, summed', B: 'Parallel, summed' },
+    { A: 'Left channel',     B: 'Right channel' },
+    { A: 'Mid',              B: 'Side' },
+  ];
+
+  const sliders = {}, combos = {}, toggles = {};
+  const sl = id => { if (!host) return null; if (!sliders[id]) sliders[id] = host.slider(id); return sliders[id]; };
+  const cb = id => { if (!host) return null; if (!combos[id]) combos[id] = host.combo(id); return combos[id]; };
+  const tg = id => { if (!host) return null; if (!toggles[id]) toggles[id] = host.toggle(id); return toggles[id]; };
+
+  const comboIndex = (id, n) => { const s = cb(id); return s ? Math.round((s.value || 0) * (n - 1)) : 0; };
+  const setComboIndex = (id, i) => { const s = cb(id); if (s && s.setChoiceIndex) s.setChoiceIndex(i); };
+
+  // --------------------------------------------------- slider / toggle binds
+  function bindSlider(el, id, fmt, onValueChange = null) {
+    const slider = sl(id);
+    if (!el || !slider) return;
+    if (window.WDKit && WDKit.bindSliderKnob) {
+      WDKit.bindSliderKnob(el, slider, { paramId: id, fmt, onValueChange });
+    }
+  }
+
+  function bindToggle(el, id, onValueChange = null) {
+    const t = tg(id);
+    if (!el || !t) return;
+    const updateDisplay = () => {
+      const v = !!t.getValue();
+      el.classList.toggle('on', v);
+      if (onValueChange) onValueChange(v);
+    };
+
+    if (t.customListener) t.valueChangedEvent.removeListener(t.customListener);
+    t.customListener = updateDisplay;
+    t.valueChangedEvent.addListener(updateDisplay);
+    updateDisplay();
+
+    const newEl = el.cloneNode(true);
+    el.parentNode.replaceChild(newEl, el);
+    el = newEl;
+    el.addEventListener('click', () => {
+      t.setValue(!t.getValue());
+      updateDisplay();
+    });
+  }
+
+  function bindChoicePills(groupEl, id, choices, onChange = null) {
+    if (!groupEl) return;
+    groupEl.innerHTML = '';
+    choices.forEach((name, i) => {
+      const b = document.createElement('button');
+      b.className = 'pill sm';
+      b.dataset.index = String(i);
+      b.textContent = name;
+      groupEl.appendChild(b);
+    });
+    const buttons = groupEl.querySelectorAll('button');
+
+    const updateDisplay = () => {
+      const idx = comboIndex(id, choices.length);
+      buttons.forEach(btn => btn.classList.toggle('on', parseInt(btn.dataset.index, 10) === idx));
+      if (onChange) onChange(idx);
+    };
+
+    const s = cb(id);
+    if (s) {
+      if (s.customListener) s.valueChangedEvent.removeListener(s.customListener);
+      s.customListener = updateDisplay;
+      s.valueChangedEvent.addListener(updateDisplay);
+    }
+    updateDisplay();
+
+    buttons.forEach(btn => btn.addEventListener('click', () => {
+      setComboIndex(id, parseInt(btn.dataset.index, 10));
+      updateDisplay();
+    }));
+  }
+
+  function bindChoiceBed(groupEl, id, count, onChange = null) {
+    if (!groupEl) return;
+    const buttons = groupEl.querySelectorAll('button');
+    const updateDisplay = () => {
+      const idx = comboIndex(id, count);
+      buttons.forEach(btn => btn.classList.toggle('on', parseInt(btn.dataset.index, 10) === idx));
+      if (onChange) onChange(idx);
+    };
+    const s = cb(id);
+    if (s) {
+      if (s.customListener) s.valueChangedEvent.removeListener(s.customListener);
+      s.customListener = updateDisplay;
+      s.valueChangedEvent.addListener(updateDisplay);
+    }
+    updateDisplay();
+    buttons.forEach(btn => btn.addEventListener('click', () => {
+      setComboIndex(id, parseInt(btn.dataset.index, 10));
+      updateDisplay();
+    }));
+  }
+
+  // ------------------------------------------------------ filter maths
+  function readBlock(b, modulated = false) {
+    const get = (id, dflt) => { const s = sl(id + b); return s ? s.getScaledValue() : dflt; };
+    let freq = get('freq', 1000);
+    let reso = get('reso', 15);
+    let driveDb = get('drive', 0);
+    let pan = get('pan', 0);
+    let levelDb = get('level', 0);
+
+    if (modulated) {
+      const base = b === 'A' ? 1 : 6;
+      const offFreq = liveDestOffsets[base] || 0;
+      const offReso = liveDestOffsets[base + 1] || 0;
+      const offDrive = liveDestOffsets[base + 2] || 0;
+      const offPan = liveDestOffsets[base + 3] || 0;
+      const offLevel = liveDestOffsets[base + 4] || 0;
+      if (offFreq !== 0) freq = clamp(freq * Math.pow(2.0, offFreq), 20, 20000);
+      if (offReso !== 0) reso = clamp(reso + offReso, 0, 100);
+      if (offDrive !== 0) driveDb = clamp(driveDb + offDrive, 0, 24);
+      if (offPan !== 0) pan = clamp(pan + offPan, -100, 100);
+      if (offLevel !== 0) levelDb = clamp(levelDb + offLevel, -24, 12);
+    }
+
+    return {
+      freq, reso, driveDb, pan, levelDb,
+      mode: comboIndex('mode' + b, MODE_CHOICES.length),
+      char: comboIndex('character' + b, CHAR_CHOICES.length),
+    };
+  }
+
+  function dampingOf(blk) {
+    const is24 = blk.mode === 1 || blk.mode === 3 || blk.mode === 5;
+    const isBp = blk.mode === 2 || blk.mode === 3;
+    let k;
+    if (blk.reso <= 95.0) {
+      const t = blk.reso / 95.0;
+      const Q = is24 ? (1.0 + 24.0 * t * t) : (0.70710678118 + 24.29289321882 * t * t);
+      k = 1.0 / Q;
+    } else {
+      k = 0.04 * (1.0 - (blk.reso - 95.0) / 5.0);
+    }
+    const kReso = k;
+    k *= Math.pow(10.0, -blk.driveDb / 40.0);
+    const kReso0 = is24 ? 1.0 : 1.41421356237;
+    const comp = isBp ? 1.0 : Math.sqrt(clamp(kReso, 0.04, kReso0) / kReso0);
+    return { k, kReso, is24, comp };
+  }
+
+  function stage(w, kk, type) {
+    const dr = 1.0 - w * w, di = kk * w;
+    let nr = 0, ni = 0;
+    switch (type) {
+      case 'lp':    nr = 1.0; break;
+      case 'bp':    ni = kk * w; break;
+      case 'hp':    nr = -w * w; break;
+      case 'notch': nr = 1.0 - w * w; break;
+      case 'peak':  nr = 1.0 + w * w; break;
+    }
+    const den = Math.max(1e-12, dr * dr + di * di);
+    return { re: (nr * dr + ni * di) / den, im: (ni * dr - nr * di) / den };
+  }
+  const cmul = (a, b) => ({ re: a.re * b.re - a.im * b.im, im: a.re * b.im + a.im * b.re });
+  const cmag = a => Math.sqrt(a.re * a.re + a.im * a.im);
+
+  function blockResponse(blk, hz) {
+    const g = clamp(Math.tan(Math.PI * blk.freq / sampleRate), 1e-6, 100.0);
+    const w = Math.tan(Math.PI * clamp(hz, 1, sampleRate * 0.499) / sampleRate) / g;
+    const d = dampingOf(blk);
+    const types = ['lp', 'lp', 'bp', 'bp', 'hp', 'hp', 'notch', 'peak'];
+    const type = types[blk.mode] || 'lp';
+    let h;
+    if (d.is24) {
+      const k1 = Math.max(d.k / 1.3065629648763765, 0.008);
+      const k2 = Math.max(d.k / 0.541196100146197, 0.008);
+      h = cmul(stage(w, k1, type), stage(w, k2, type));
+    } else {
+      const k12 = type === 'bp' ? Math.max(d.k, 0.008) : Math.max(d.k, 1e-3);
+      h = stage(w, k12, type);
+    }
+    const gain = d.comp * Math.pow(10.0, blk.levelDb / 20.0);
+    return { re: h.re * gain, im: h.im * gain };
+  }
+
+  function effectiveQ(blk) {
+    const d = dampingOf(blk);
+    return d.k <= 1e-4 ? Infinity : 1.0 / d.k;
+  }
+
+  function routingNow() {
+    return comboIndex('routing', ROUTING_CHOICES.length);
+  }
+
+  // ------------------------------------------------- response well
+  const responseCanvas = $('responseCanvas');
+  const rCtx = responseCanvas.getContext('2d');
+  let rW = 0, rH = 0, rDpr = 1;
+
+  function fitResponseCanvas() {
+    rDpr = window.devicePixelRatio || 1;
+    const r = responseCanvas.getBoundingClientRect();
+    rW = r.width; rH = r.height;
+    responseCanvas.width = Math.round(rW * rDpr);
+    responseCanvas.height = Math.round(rH * rDpr);
+    rCtx.setTransform(rDpr, 0, 0, rDpr, 0, 0);
+    drawResponse();
+  }
+  new ResizeObserver(fitResponseCanvas).observe(responseCanvas);
+
+  const FMIN = 20.0, FMAX = 20000.0;
+  const DB_TOP = 24.0, DB_BOTTOM = -48.0;
+  const AXIS = 16;
+  const hzToX = hz => clamp((Math.log(hz / FMIN) / Math.log(FMAX / FMIN)) * rW, 0, rW);
+  const xToHz = x => FMIN * Math.pow(FMAX / FMIN, clamp(x / rW, 0, 1));
+  const dbToY = (db, plotH) => clamp((DB_TOP - db) / (DB_TOP - DB_BOTTOM), -0.2, 1.2) * plotH;
+
+  let dragBlock = null;
+  const fmtHz = hz => hz >= 1000 ? (hz / 1000).toFixed(hz >= 10000 ? 1 : 2) + 'k' : String(Math.round(hz));
+
+  function strokeCurve(ctx, plotH, fn, width, colour) {
+    ctx.strokeStyle = colour;
+    ctx.lineWidth = width;
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    const n = Math.max(2, Math.floor(rW / 2));
+    for (let i = 0; i <= n; ++i) {
+      const x = (i / n) * rW;
+      const mag = fn(xToHz(x));
+      const db = 20.0 * Math.log10(Math.max(1e-6, mag));
+      const y = dbToY(db, plotH);
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+    ctx.stroke();
+  }
+
+  function hasBlockModulation() {
+    for (let i = 1; i <= 10; ++i) {
+      if (Math.abs(liveDestOffsets[i] || 0) > 1e-4) return true;
+    }
+    return false;
+  }
+
+  function drawResponse() {
+    rCtx.clearRect(0, 0, rW, rH);
+    if (rW < 40 || rH < 40) return;
+
+    const plotH = rH - AXIS;
+    const A = readBlock('A', false), B = readBlock('B', false);
+    const routing = routingNow();
+    const blocks = { A, B };
+
+    // Vertical grid lines and decade marks
+    rCtx.strokeStyle = ink(0.07);
+    rCtx.lineWidth = 1;
+    rCtx.font = '600 9px ' + cssVar('--font');
+    rCtx.fillStyle = ink(0.34);
+    rCtx.textAlign = 'center';
+    [50, 100, 200, 500, 1000, 2000, 5000, 10000].forEach(hz => {
+      const x = hzToX(hz);
+      rCtx.beginPath(); rCtx.moveTo(x, 0); rCtx.lineTo(x, plotH); rCtx.stroke();
+      rCtx.fillText(hz >= 1000 ? (hz / 1000) + 'k' : String(hz), x, rH - 4);
+    });
+
+    // Lock-free Pre/Post FFT spectrum traces (KindFilter = 9)
+    const fftYOfDb = db => clamp((0.0 - (Number.isFinite(db) ? db : -120.0)) / 96.0, 0, 1) * plotH;
+    const drawSpectrum = (bins, strokeCol, fillCol) => {
+      rCtx.beginPath();
+      rCtx.moveTo(0, plotH);
+      for (let i = 0; i < FFT_BINS; ++i) {
+        const x = (i / (FFT_BINS - 1)) * rW;
+        const y = fftYOfDb(bins[i]);
+        rCtx.lineTo(x, y);
+      }
+      rCtx.lineTo(rW, plotH);
+      rCtx.closePath();
+      rCtx.fillStyle = fillCol;
+      rCtx.fill();
+
+      rCtx.beginPath();
+      for (let i = 0; i < FFT_BINS; ++i) {
+        const x = (i / (FFT_BINS - 1)) * rW;
+        const y = fftYOfDb(bins[i]);
+        i ? rCtx.lineTo(x, y) : rCtx.moveTo(x, y);
+      }
+      rCtx.strokeStyle = strokeCol;
+      rCtx.lineWidth = 1.25;
+      rCtx.stroke();
+    };
+    if (preFftValid) drawSpectrum(preFft, ink(0.28), ink(0.06));
+    if (postFftValid) drawSpectrum(postFft, COL.accent, 'rgba(61, 147, 145, 0.14)');
+
+    const own = b => hz => cmag(blockResponse(blocks[b], hz));
+    if (routing === 0) {
+      strokeCurve(rCtx, plotH, own(currentBlock), 1.8, ink(0.28));
+      strokeCurve(rCtx, plotH, hz => cmag(cmul(blockResponse(A, hz), blockResponse(B, hz))), 2.6, COL.accentLit);
+    } else if (routing === 1) {
+      strokeCurve(rCtx, plotH, own(currentBlock), 1.8, ink(0.28));
+      strokeCurve(rCtx, plotH, hz => {
+        const a = blockResponse(A, hz), b = blockResponse(B, hz);
+        return 0.5 * cmag({ re: a.re + b.re, im: a.im + b.im });
+      }, 2.6, COL.accentLit);
+    } else {
+      strokeCurve(rCtx, plotH, own(currentBlock === 'A' ? 'B' : 'A'), 1.8, ink(0.28));
+      strokeCurve(rCtx, plotH, own(currentBlock), 2.6, COL.accentLit);
+    }
+
+    // Live modulated curve when modulation routes are active
+    if (hasBlockModulation()) {
+      const modA = readBlock('A', true), modB = readBlock('B', true);
+      if (routing === 0) {
+        strokeCurve(rCtx, plotH, hz => cmag(cmul(blockResponse(modA, hz), blockResponse(modB, hz))), 2.2, COL.cream);
+      } else if (routing === 1) {
+        strokeCurve(rCtx, plotH, hz => {
+          const a = blockResponse(modA, hz), b = blockResponse(modB, hz);
+          return 0.5 * cmag({ re: a.re + b.re, im: a.im + b.im });
+        }, 2.2, COL.cream);
+      } else {
+        const activeMod = currentBlock === 'A' ? modA : modB;
+        strokeCurve(rCtx, plotH, hz => cmag(blockResponse(activeMod, hz)), 2.2, COL.cream);
+      }
+    }
+
+    // Handles: dashed guide plus a cream pill carrying the value.
+    ['A', 'B'].forEach(b => {
+      const x = hzToX(blocks[b].freq);
+      const dragging = dragBlock === b;
+      const selected = currentBlock === b;
+
+      rCtx.strokeStyle = ink(dragging ? 0.92 : (selected ? 0.65 : 0.35));
+      rCtx.lineWidth = 1.5;
+      rCtx.setLineDash([4, 4]);
+      rCtx.beginPath(); rCtx.moveTo(x, 0); rCtx.lineTo(x, plotH); rCtx.stroke();
+      rCtx.setLineDash([]);
+
+      const label = b + '  ' + fmtHz(blocks[b].freq);
+      rCtx.font = '700 10px ' + cssVar('--font');
+      const tw = rCtx.measureText(label).width + 16;
+      rCtx.fillStyle = dragging ? COL.cream : (selected ? COL.cream : ink(0.85));
+      rCtx.beginPath();
+      if (rCtx.roundRect) rCtx.roundRect(x - tw / 2, 8, tw, 20, 10);
+      else rCtx.rect(x - tw / 2, 8, tw, 20);
+      rCtx.fill();
+
+      rCtx.fillStyle = COL.well;
+      rCtx.textAlign = 'center';
+      rCtx.textBaseline = 'middle';
+      rCtx.fillText(label, x, 18.5);
+      rCtx.textBaseline = 'alphabetic';
+    });
+
+    const q = effectiveQ(readBlock(currentBlock, true));
+    $('qVal').textContent = !isFinite(q) ? '∞' : (q < 10 ? q.toFixed(2) : q.toFixed(1));
+
+    // Cyan External Key live trace + badge on Response canvas when followerExtSc is active
+    if (followerExtSc) {
+      const scNorm = clamp((liveScDb + 60) / 60, 0, 1);
+      if (scTrace.length > 1) {
+        const traceH = Math.max(16, plotH * 0.28);
+        rCtx.beginPath();
+        for (let i = 0; i < scTrace.length; ++i) {
+          const tx = (i / Math.max(1, scTrace.length - 1)) * rW;
+          const ty = plotH - clamp((scTrace[i] + 60) / 60, 0, 1) * traceH;
+          if (i === 0) rCtx.moveTo(tx, ty);
+          else rCtx.lineTo(tx, ty);
+        }
+        rCtx.strokeStyle = 'rgba(56, 189, 248, 0.65)';
+        rCtx.lineWidth = 1.5;
+        rCtx.stroke();
+
+        rCtx.lineTo(rW, plotH);
+        rCtx.lineTo(0, plotH);
+        rCtx.closePath();
+        rCtx.fillStyle = 'rgba(2, 132, 199, 0.14)';
+        rCtx.fill();
+      }
+
+      const keySource = beaconSelected || 'Host Bus 1';
+      const keyStatus = beaconSelected
+        ? (beaconSrMismatch ? 'SR Mismatch' : (beaconReceiving ? (liveScDb > -118 ? liveScDb.toFixed(1) + ' dB' : 'Ready') : 'Waiting'))
+        : (scActive ? liveScDb.toFixed(1) + ' dB' : 'Silent');
+      const badgeText = 'KEY · ' + keySource + ' · ' + keyStatus;
+      rCtx.font = '700 10px ' + cssVar('--font');
+      const bw = Math.min(rW - 16, Math.max(118, rCtx.measureText(badgeText).width + 24));
+      const bx = rW - bw - 8;
+      const by = Math.max(32, plotH - 26);
+
+      rCtx.fillStyle = 'rgba(6, 12, 20, 0.86)';
+      rCtx.strokeStyle = beaconSrMismatch ? '#ef4444' : 'rgba(56, 189, 248, 0.55)';
+      rCtx.lineWidth = 1;
+      rCtx.beginPath();
+      if (rCtx.roundRect) rCtx.roundRect(bx, by, bw, 20, 6);
+      else rCtx.rect(bx, by, bw, 20);
+      rCtx.fill();
+      rCtx.stroke();
+
+      if (scNorm > 0.01) {
+        rCtx.fillStyle = 'rgba(2, 132, 199, 0.34)';
+        rCtx.beginPath();
+        if (rCtx.roundRect) rCtx.roundRect(bx + 1, by + 1, Math.max(4, (bw - 2) * scNorm), 18, 5);
+        else rCtx.rect(bx + 1, by + 1, Math.max(4, (bw - 2) * scNorm), 18);
+        rCtx.fill();
+      }
+
+      rCtx.fillStyle = '#38bdf8';
+      rCtx.beginPath();
+      rCtx.arc(bx + 10, by + 10, 3, 0, Math.PI * 2);
+      rCtx.fill();
+
+      rCtx.textAlign = 'left';
+      rCtx.textBaseline = 'middle';
+      rCtx.fillText(badgeText, bx + 17, by + 10.5, bw - 22);
+      rCtx.textBaseline = 'alphabetic';
+    }
+  }
+
+  function handleNear(mx) {
+    const A = readBlock('A'), B = readBlock('B');
+    const dA = Math.abs(mx - hzToX(A.freq)), dB = Math.abs(mx - hzToX(B.freq));
+    if (dA >= 18 && dB >= 18) return null;
+    if (dA < 18 && dB < 18) return currentBlock;
+    return dA < dB ? 'A' : 'B';
+  }
+  let handleSt = null;
+
+  responseCanvas.addEventListener('pointerdown', ev => {
+    if ((ev.button ?? 0) !== 0) return;
+    const r = responseCanvas.getBoundingClientRect();
+    const b = handleNear(ev.clientX - r.left);
+    if (!b) return;
+    if (b !== currentBlock) selectBlock(b);
+    const fs = sl('freq' + b), rs = sl('reso' + b);
+    if (!fs || !rs) return;
+    dragBlock = b;
+    handleSt = { y: ev.clientY, reso: rs.getScaledValue() };
+    fs.sliderDragStarted();
+    rs.sliderDragStarted();
+    responseCanvas.setPointerCapture(ev.pointerId);
+    drawResponse();
+  });
+
+  responseCanvas.addEventListener('pointermove', ev => {
+    const r = responseCanvas.getBoundingClientRect();
+    if (!dragBlock) {
+      responseCanvas.style.cursor = handleNear(ev.clientX - r.left) ? 'move' : 'default';
+      return;
+    }
+    const fs = sl('freq' + dragBlock), rs = sl('reso' + dragBlock);
+    if (!fs || !rs) return;
+    const mx = clamp(ev.clientX - r.left, 2, rW - 2);
+    const hz = xToHz(mx);
+    const fp = fs.properties || { start: 20, end: 20000, skew: 1 };
+    fs.setNormalisedValue(Math.pow(clamp((hz - fp.start) / (fp.end - fp.start), 0, 1), fp.skew || 1));
+
+    const plotH = Math.max(1, rH - AXIS);
+    const fine = ev.shiftKey ? 0.1 : 1.0;
+    const reso = clamp(handleSt.reso + (handleSt.y - ev.clientY) * (100.0 / plotH) * fine, 0, 100);
+    const rp = rs.properties || { start: 0, end: 100, skew: 1 };
+    rs.setNormalisedValue(Math.pow(clamp((reso - rp.start) / (rp.end - rp.start), 0, 1), rp.skew || 1));
+    drawResponse();
+  });
+
+  function endResponseDrag(ev) {
+    if (dragBlock) {
+      const fs = sl('freq' + dragBlock), rs = sl('reso' + dragBlock);
+      if (fs) fs.sliderDragEnded();
+      if (rs) rs.sliderDragEnded();
+      try { responseCanvas.releasePointerCapture(ev.pointerId); } catch (e) {}
+      dragBlock = null;
+      handleSt = null;
+      drawResponse();
+    }
+  }
+  responseCanvas.addEventListener('pointerup', endResponseDrag);
+  responseCanvas.addEventListener('pointercancel', endResponseDrag);
+
+  // ------------------------------------------------- character well
+  const charCanvas = $('charCanvas');
+  const cCtx = charCanvas.getContext('2d');
+  let cW = 0, cH = 0, cDpr = 1;
+
+  function fitCharCanvas() {
+    cDpr = window.devicePixelRatio || 1;
+    const r = charCanvas.getBoundingClientRect();
+    cW = r.width; cH = r.height;
+    charCanvas.width = Math.round(cW * cDpr);
+    charCanvas.height = Math.round(cH * cDpr);
+    cCtx.setTransform(cDpr, 0, 0, cDpr, 0, 0);
+    drawCharacter();
+  }
+  new ResizeObserver(fitCharCanvas).observe(charCanvas);
+
+  const shapeClean = x => x;
+  const shapeTube = (x, g) => Math.tanh(x * g);
+  const shapeTape = (x, g) => {
+    const b = 0.5 + 0.5 * Math.tanh((g - 1.0) * 0.25);
+    return Math.tanh(x * g + b) - Math.tanh(b);
+  };
+  const shapeFold = (x, g) => Math.sin(x * g);
+  const SHAPES = [shapeClean, shapeTube, shapeTape, shapeFold];
+
+  function autoGain(charIdx, g) {
+    if (charIdx === 0) return 1.0;
+    const shaper = SHAPES[charIdx] || shapeClean;
+    let sumIn = 0.0, sumOut = 0.0;
+    for (let k = 0; k < 64; ++k) {
+      const x = 0.25 * Math.sin(2.0 * Math.PI * k / 64.0);
+      const y = shaper(x, g);
+      sumIn += x * x;
+      sumOut += y * y;
+    }
+    return clamp(1.0 / Math.sqrt(Math.max(1e-12, sumOut) / sumIn), 0.0316, 31.6);
+  }
+
+  function drawCharacter() {
+    cCtx.clearRect(0, 0, cW, cH);
+    if (cW < 40 || cH < 40) return;
+
+    const blk = readBlock(currentBlock, true);
+    const g = Math.max(1e-3, Math.pow(10.0, blk.driveDb / 20.0));
+    const shaper = SHAPES[blk.char] || shapeClean;
+    const ag = autoGain(blk.char, g);
+
+    const pad = 18;
+    const drawW = cW - pad * 2, drawH = cH - pad * 2;
+    const yFor = out => pad + drawH / 2 - (clamp(out * ag, -1.5, 1.5) / 1.5) * (drawH / 2);
+
+    // Grid / Axes
+    cCtx.strokeStyle = ink(0.08);
+    cCtx.lineWidth = 1;
+    cCtx.beginPath();
+    cCtx.moveTo(cW / 2, pad * 0.4); cCtx.lineTo(cW / 2, cH - pad * 0.4);
+    cCtx.moveTo(pad * 0.4, cH / 2); cCtx.lineTo(cW - pad * 0.4, cH / 2);
+    cCtx.stroke();
+
+    cCtx.strokeStyle = ink(0.16);
+    cCtx.setLineDash([3, 4]);
+    cCtx.beginPath();
+    cCtx.moveTo(pad, pad + drawH);
+    cCtx.lineTo(pad + drawW, pad);
+    cCtx.stroke();
+    cCtx.setLineDash([]);
+
+    // Setting curve
+    cCtx.strokeStyle = COL.accentLit;
+    cCtx.lineWidth = 2.6;
+    cCtx.lineJoin = 'round';
+    cCtx.beginPath();
+    for (let px = 0; px <= drawW; ++px) {
+      const y = yFor(shaper((px / drawW) * 2.0 - 1.0, g));
+      px ? cCtx.lineTo(pad + px, y) : cCtx.moveTo(pad + px, y);
+    }
+    cCtx.stroke();
+
+    // Audio excursion
+    const excursion = clamp(Math.pow(10.0, liveInDb / 20.0), 0.0, 1.2);
+    if (excursion > 0.005) {
+      const spanPx = Math.round(excursion * (drawW / 2));
+      const from = Math.round(drawW / 2 - spanPx);
+      cCtx.strokeStyle = ink(0.92);
+      cCtx.lineWidth = 3.4;
+      cCtx.beginPath();
+      for (let px = from; px <= drawW / 2 + spanPx; ++px) {
+        const y = yFor(shaper((px / drawW) * 2.0 - 1.0, g));
+        px === from ? cCtx.moveTo(pad + px, y) : cCtx.lineTo(pad + px, y);
+      }
+      cCtx.stroke();
+      cCtx.fillStyle = COL.cream;
+      cCtx.beginPath();
+      cCtx.arc(pad + drawW / 2 + spanPx, yFor(shaper(excursion, g)), 4, 0, Math.PI * 2);
+      cCtx.fill();
+    }
+  }
+
+  // --------------------------------------------------------- block controls
+  const fmtFreq = v => v >= 1000 ? (v / 1000).toFixed(2) + ' kHz' : Math.round(v) + ' Hz';
+  const fmtPan = v => {
+    const r = Math.round(v);
+    return r === 0 ? 'C' : (r < 0 ? 'L ' + (-r) : 'R ' + r);
+  };
+  const fmtSignedDb = v => (v > 0 ? '+' : '') + v.toFixed(1) + ' dB';
+
+  function refreshWells() {
+    drawResponse();
+    drawCharacter();
+  }
+
+  function bindBlock(b) {
+    const ifSelected = fn => () => { if (currentBlock === b) fn(); };
+    bindSlider($('param_freq' + b), 'freq' + b, fmtFreq, () => { drawResponse(); updateModCollars(); });
+    bindSlider($('param_reso' + b), 'reso' + b, v => Math.round(v) + '%', () => { drawResponse(); updateModCollars(); });
+    bindSlider($('param_drive' + b), 'drive' + b, v => v.toFixed(1) + ' dB', () => { refreshWells(); updateModCollars(); });
+    bindSlider($('param_pan' + b), 'pan' + b, fmtPan, () => updateModCollars());
+    bindSlider($('param_level' + b), 'level' + b, fmtSignedDb, () => { drawResponse(); updateModCollars(); });
+    bindChoicePills($('mode-group-' + b), 'mode' + b, MODE_CHOICES, () => drawResponse());
+    bindChoicePills($('char-group-' + b), 'character' + b, CHAR_CHOICES, ifSelected(() => {
+      const idx = comboIndex('character' + b, CHAR_CHOICES.length);
+      $('activeCharLabel').textContent = CHAR_CHOICES[idx] || 'Clean';
+      drawCharacter();
+    }));
+  }
+
+  function selectBlock(b) {
+    currentBlock = b;
+    ['A', 'B'].forEach(k => {
+      const btn = $('sel_block_' + k);
+      if (btn) btn.classList.toggle('on', k === b);
+      const pane = $('block_pane_' + k);
+      if (pane) pane.classList.toggle('active', k === b);
+    });
+    updateRoutingText();
+    const idx = comboIndex('character' + b, CHAR_CHOICES.length);
+    $('activeCharLabel').textContent = CHAR_CHOICES[idx] || 'Clean';
+    refreshWells();
+  }
+
+  function updateRoutingText() {
+    const r = routingNow();
+    const hint = $('responseHint');
+    if (hint) hint.textContent = ROUTING_CHOICES[r] || 'Series';
+    const title = $('active_block_title');
+    if (title) title.textContent = (BLOCK_ROLE[r] || BLOCK_ROLE[0])[currentBlock];
+  }
+
+  ['A', 'B'].forEach(b => {
+    const btn = $('sel_block_' + b);
+    if (btn) btn.addEventListener('click', () => selectBlock(b));
+  });
+
+  // ------------------------------------------------------------- modulation
+  const xlfoTabs = document.querySelectorAll('#xlfo-tabs button');
+  function selectXlfo(idx) {
+    currentXlfoIdx = clamp(idx | 0, 0, 2);
+    xlfoTabs.forEach((t, i) => t.classList.toggle('on', i === currentXlfoIdx));
+    document.querySelectorAll('#modSourceStrip .src-pill').forEach(p => {
+      const sid = parseInt(p.dataset.sourceId, 10);
+      p.classList.toggle('active', sid === currentXlfoIdx);
+    });
+    bindActiveXlfoControls();
+    syncXlfoMetaSelectors();
+    drawXlfoCurve();
+  }
+
+  xlfoTabs.forEach((tab, idx) => {
+    tab.addEventListener('click', () => selectXlfo(idx));
+  });
+
+  document.querySelectorAll('#modSourceStrip .src-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      const sid = parseInt(pill.dataset.sourceId, 10);
+      if (sid >= 0 && sid <= 2) selectXlfo(sid);
+    });
+  });
+
+  function bindActiveXlfoControls() {
+    const N = (currentXlfoIdx + 1).toString();
+    bindSlider($('xlfo_rate'), 'xlfo' + N + 'rate', v => v.toFixed(2) + ' Hz');
+    bindSlider($('xlfo_phase'), 'xlfo' + N + 'phase', v => Math.round(v) + '°', () => drawXlfoCurve());
+    bindSlider($('xlfo_snap'), 'xlfo' + N + 'snap', v => Math.round(v) + '%', () => drawXlfoCurve());
+    bindToggle($('xlfo_balance'), 'xlfo' + N + 'balance', () => drawXlfoCurve());
+  }
+
+  // --------------------------------------------------- XLFO Canvas & Presets
+  const xlfoCanvas = $('xlfoCanvas');
+  const xCtx = xlfoCanvas ? xlfoCanvas.getContext('2d') : null;
+  let xW = 0, xH = 0, xDpr = 1;
+
+  function fitXlfoCanvas() {
+    if (!xlfoCanvas || !xCtx) return;
+    xDpr = window.devicePixelRatio || 1;
+    const r = xlfoCanvas.getBoundingClientRect();
+    xW = r.width; xH = r.height;
+    xlfoCanvas.width = Math.round(xW * xDpr);
+    xlfoCanvas.height = Math.round(xH * xDpr);
+    xCtx.setTransform(xDpr, 0, 0, xDpr, 0, 0);
+    drawXlfoCurve();
+  }
+  if (xlfoCanvas) new ResizeObserver(fitXlfoCanvas).observe(xlfoCanvas);
+
+  function applyXlfoSlope(u, slope) {
+    if (!Number.isFinite(u) || u <= 0) return 0;
+    if (u >= 1) return 1;
+    const s = clamp(Number.isFinite(slope) ? slope : 0, -1, 1);
+    if (Math.abs(s) < 1e-6) return u;
+    const p = s > 0 ? (1.0 - s * 0.95) : (1.0 - s * 19.0);
+    return Math.pow(u, p);
+  }
+
+  function evaluateXlfoUnipolar(xlfo, phase) {
+    const numSteps = clamp(xlfo.numSteps || 4, 1, 32);
+    const clampedPhase = clamp(Number.isFinite(phase) ? phase : 0, 0, 1 - 1e-9);
+    const stepPhase = clampedPhase * numSteps;
+    const stepIdx = clamp(Math.floor(stepPhase), 0, numSteps - 1);
+    const t = stepPhase - stepIdx;
+    const prevIdx = (stepIdx - 1 + numSteps) % numSteps;
+    const prevStep = xlfo.steps[prevIdx] || { value: 0 };
+    const currStep = xlfo.steps[stepIdx] || { value: 0, glide: 100, slope: 0 };
+    const vPrev = clamp(Number.isFinite(prevStep.value) ? prevStep.value : 0, 0, 1);
+    const vCurr = clamp(Number.isFinite(currStep.value) ? currStep.value : 0, 0, 1);
+    const g = clamp(Number.isFinite(currStep.glide) ? currStep.glide : 100, 0, 100) / 100.0;
+    let valGlided = vCurr;
+    if (g > 0 && t < g) {
+      valGlided = vPrev + applyXlfoSlope(t / g, currStep.slope) * (vCurr - vPrev);
+    }
+    const snapSlider = sl('xlfo' + (currentXlfoIdx + 1) + 'snap');
+    const snapFrac = snapSlider ? clamp(snapSlider.getScaledValue() / 100.0, 0, 1) : 0;
+    return valGlided + snapFrac * (vCurr - valGlided);
+  }
+
+  function drawXlfoCurve() {
+    if (!xCtx || xW < 24 || xH < 20) return;
+    xCtx.clearRect(0, 0, xW, xH);
+    const xlfo = xlfosState[currentXlfoIdx];
+    if (!xlfo) return;
+    const numSteps = clamp(xlfo.numSteps || 4, 1, 32);
+    const padX = 4, padY = 5;
+    const drawW = Math.max(1, xW - padX * 2);
+    const drawH = Math.max(1, xH - padY * 2);
+    const color = getSourceColor(currentXlfoIdx);
+
+    // Step grid
+    xCtx.strokeStyle = ink(0.08);
+    xCtx.lineWidth = 1;
+    for (let i = 1; i < numSteps; ++i) {
+      const gx = padX + (i / numSteps) * drawW;
+      xCtx.beginPath(); xCtx.moveTo(gx, padY); xCtx.lineTo(gx, padY + drawH); xCtx.stroke();
+    }
+    xCtx.beginPath();
+    xCtx.moveTo(padX, padY + drawH * 0.5);
+    xCtx.lineTo(padX + drawW, padY + drawH * 0.5);
+    xCtx.stroke();
+
+    // Curve fill & stroke
+    const samples = Math.max(48, Math.min(256, Math.round(drawW)));
+    xCtx.beginPath();
+    xCtx.moveTo(padX, padY + drawH);
+    for (let i = 0; i <= samples; ++i) {
+      const ph = i / samples;
+      const val = evaluateXlfoUnipolar(xlfo, ph);
+      const px = padX + ph * drawW;
+      const py = padY + (1.0 - val) * drawH;
+      xCtx.lineTo(px, py);
+    }
+    xCtx.lineTo(padX + drawW, padY + drawH);
+    xCtx.closePath();
+    xCtx.fillStyle = color;
+    xCtx.globalAlpha = 0.16;
+    xCtx.fill();
+    xCtx.globalAlpha = 1.0;
+
+    xCtx.beginPath();
+    for (let i = 0; i <= samples; ++i) {
+      const ph = i / samples;
+      const val = evaluateXlfoUnipolar(xlfo, ph);
+      const px = padX + ph * drawW;
+      const py = padY + (1.0 - val) * drawH;
+      i ? xCtx.lineTo(px, py) : xCtx.moveTo(px, py);
+    }
+    xCtx.strokeStyle = color;
+    xCtx.lineWidth = 2.0;
+    xCtx.lineJoin = 'round';
+    xCtx.stroke();
+
+    // Step dots
+    xCtx.fillStyle = COL.cream;
+    for (let i = 0; i < numSteps; ++i) {
+      const st = xlfo.steps[i] || { value: 0 };
+      const sx = padX + ((i + 0.5) / numSteps) * drawW;
+      const sy = padY + (1.0 - clamp(st.value, 0, 1)) * drawH;
+      xCtx.beginPath();
+      xCtx.arc(sx, sy, 2.4, 0, Math.PI * 2);
+      xCtx.fill();
+    }
+
+    // Live playhead
+    const livePhase = liveXlfoPhases[currentXlfoIdx];
+    if (Number.isFinite(livePhase)) {
+      const phNorm = ((livePhase % 1) + 1) % 1;
+      const hx = padX + phNorm * drawW;
+      xCtx.strokeStyle = ink(0.72);
+      xCtx.lineWidth = 1.2;
+      xCtx.beginPath();
+      xCtx.moveTo(hx, padY);
+      xCtx.lineTo(hx, padY + drawH);
+      xCtx.stroke();
+    }
+  }
+
+  async function pushXlfoConfig(xlfoIdx) {
+    const xlfo = xlfosState[xlfoIdx];
+    if (!xlfo || !host) return;
+    try {
+      await host.call('setXlfoConfig', xlfoIdx, xlfo.numSteps, !!xlfo.isSynced, xlfo.syncRateBeats, xlfo.retriggerMode);
+    } catch (e) {}
+  }
+
+  async function pushXlfoStep(xlfoIdx, stepIdx) {
+    const xlfo = xlfosState[xlfoIdx];
+    if (!xlfo || !xlfo.steps[stepIdx] || !host) return;
+    const st = xlfo.steps[stepIdx];
+    try {
+      await host.call('setXlfoStep', xlfoIdx, stepIdx, st.value, st.glide, st.slope);
+    } catch (e) {}
+  }
+
+  function syncXlfoMetaSelectors() {
+    const xlfo = xlfosState[currentXlfoIdx];
+    if (!xlfo) return;
+    const stepsSel = $('xlfoStepsSelect');
+    if (stepsSel) stepsSel.value = String(xlfo.numSteps);
+    const retrigSel = $('xlfoRetrigSelect');
+    if (retrigSel) retrigSel.value = String(xlfo.retriggerMode);
+  }
+
+  {
+    const stepsSel = $('xlfoStepsSelect');
+    if (stepsSel) {
+      stepsSel.addEventListener('change', () => {
+        const xlfo = xlfosState[currentXlfoIdx];
+        if (!xlfo) return;
+        xlfo.numSteps = clamp(parseInt(stepsSel.value, 10) || 16, 1, 32);
+        pushXlfoConfig(currentXlfoIdx);
+        drawXlfoCurve();
+      });
+    }
+    const retrigSel = $('xlfoRetrigSelect');
+    if (retrigSel) {
+      retrigSel.addEventListener('change', () => {
+        const xlfo = xlfosState[currentXlfoIdx];
+        if (!xlfo) return;
+        const mode = clamp(parseInt(retrigSel.value, 10) || 0, 0, 3);
+        xlfo.retriggerMode = mode;
+        xlfo.isSynced = (mode === 1);
+        pushXlfoConfig(currentXlfoIdx);
+      });
+    }
+  }
+
+  if (xlfoCanvas) {
+    let xlfoDrag = false;
+    let lastEditedStep = -1;
+    const editStepAt = ev => {
+      const xlfo = xlfosState[currentXlfoIdx];
+      if (!xlfo) return;
+      const r = xlfoCanvas.getBoundingClientRect();
+      if (r.width <= 0 || r.height <= 0) return;
+      const numSteps = clamp(xlfo.numSteps || 4, 1, 32);
+      const u = clamp((ev.clientX - r.left) / r.width, 0, 0.9999);
+      const stepIdx = clamp(Math.floor(u * numSteps), 0, numSteps - 1);
+      const val = clamp(1.0 - (ev.clientY - r.top) / r.height, 0, 1);
+      xlfo.steps[stepIdx].value = val;
+      lastEditedStep = stepIdx;
+      drawXlfoCurve();
+      pushXlfoStep(currentXlfoIdx, stepIdx);
+    };
+
+    xlfoCanvas.addEventListener('pointerdown', ev => {
+      if ((ev.button ?? 0) !== 0) return;
+      xlfoDrag = true;
+      lastEditedStep = -1;
+      try { xlfoCanvas.setPointerCapture(ev.pointerId); } catch (e) {}
+      editStepAt(ev);
+      ev.preventDefault();
+    });
+    xlfoCanvas.addEventListener('pointermove', ev => {
+      if (!xlfoDrag) return;
+      editStepAt(ev);
+    });
+    const endXlfoDrag = ev => {
+      if (!xlfoDrag) return;
+      xlfoDrag = false;
+      if (lastEditedStep >= 0) pushXlfoStep(currentXlfoIdx, lastEditedStep);
+      lastEditedStep = -1;
+      try { xlfoCanvas.releasePointerCapture(ev.pointerId); } catch (e) {}
+    };
+    xlfoCanvas.addEventListener('pointerup', endXlfoDrag);
+    xlfoCanvas.addEventListener('pointercancel', endXlfoDrag);
+  }
+
+  {
+    const presetBar = $('xlfoPresetBar');
+    if (presetBar) {
+      const presets = (window.WDKit && Array.isArray(WDKit.XLFO_PRESETS))
+        ? WDKit.XLFO_PRESETS
+        : ['Sine', 'Triangle', 'Saw', 'Ramp', 'Square', 'S&H', 'Sidechain Pump', 'Euclidean'];
+
+      const applySteps = (steps, activeLen) => {
+        const xlfo = xlfosState[currentXlfoIdx];
+        if (!xlfo || !Array.isArray(steps)) return;
+        for (let i = 0; i < 32; ++i) {
+          const st = steps[i] || { value: 0, glide: 100, slope: 0 };
+          xlfo.steps[i] = {
+            index: i,
+            value: clamp(Number.isFinite(st.value) ? st.value : 0, 0, 1),
+            glide: clamp(Number.isFinite(st.glide) ? st.glide : 100, 0, 100),
+            slope: clamp(Number.isFinite(st.slope) ? st.slope : 0, -1, 1)
+          };
+        }
+        drawXlfoCurve();
+        const n = clamp(activeLen || xlfo.numSteps || 4, 1, 32);
+        for (let i = 0; i < n; ++i)
+          pushXlfoStep(currentXlfoIdx, i);
+      };
+
+      presets.forEach(name => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'wd-xlfo-preset-btn';
+        btn.textContent = name;
+        btn.addEventListener('click', () => {
+          const xlfo = xlfosState[currentXlfoIdx];
+          if (!xlfo || !window.WDKit || !WDKit.buildXlfoPresetSteps) return;
+          presetBar.querySelectorAll('.wd-xlfo-preset-btn[data-preset]').forEach(b => b.classList.remove('on'));
+          btn.classList.add('on');
+          const res = WDKit.buildXlfoPresetSteps(name, xlfo.numSteps);
+          if (res && Array.isArray(res.steps)) {
+            xlfo.numSteps = res.numSteps || xlfo.numSteps;
+            syncXlfoMetaSelectors();
+            pushXlfoConfig(currentXlfoIdx);
+            applySteps(res.steps, xlfo.numSteps);
+          }
+        });
+        btn.dataset.preset = name;
+        presetBar.appendChild(btn);
+      });
+
+      const sep = document.createElement('span');
+      sep.className = 'wd-xlfo-sep';
+      presetBar.appendChild(sep);
+
+      const transforms = [
+        { label: 'Invert', op: 'invert', arg: undefined },
+        { label: 'Phase Shift', op: 'shift', arg: 1 },
+        { label: 'Smooth', op: 'smooth', arg: 35 }
+      ];
+      transforms.forEach(tr => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'wd-xlfo-preset-btn';
+        btn.textContent = tr.label;
+        btn.addEventListener('click', () => {
+          const xlfo = xlfosState[currentXlfoIdx];
+          if (!xlfo || !window.WDKit || !WDKit.transformXlfoSteps) return;
+          const next = WDKit.transformXlfoSteps(xlfo.steps, tr.op, tr.arg, xlfo.numSteps);
+          applySteps(next, xlfo.numSteps);
+        });
+        presetBar.appendChild(btn);
+      });
+    }
+  }
+
+  const matrixToggle = $('matrixToggle');
+  const matrixContainer = $('matrixContainer');
+  if (matrixToggle && matrixContainer) {
+    matrixToggle.addEventListener('click', () => {
+      const open = matrixContainer.style.display === 'flex';
+      matrixContainer.style.display = open ? 'none' : 'flex';
+      matrixToggle.classList.toggle('on', !open);
+      matrixToggle.textContent = open ? 'Routes' : 'Hide routes';
+    });
+  }
+
+  const labelOf = (list, val) => {
+    const hit = list.find(o => o.val === val);
+    return hit ? hit.label : '—';
+  };
+
+  function refreshRouteChips() {
+    const chips = $('routeChips');
+    if (!chips) return;
+    const live = activeSlots.filter(s => s.on && s.source >= 0 && s.dest >= 0);
+    $('routeCount').textContent = live.length === 0 ? 'no routes live'
+      : (live.length + (live.length === 1 ? ' route live' : ' routes live'));
+    chips.innerHTML = '';
+    live.slice(0, 1).forEach(s => {
+      const el = document.createElement('div');
+      el.className = 'route';
+      const srcLabel = (s.source === 4 && followerExtSc) ? 'Env (Ext)' : labelOf(SRC_OPTIONS, s.source);
+      el.innerHTML = '<span class="dot"></span>' + srcLabel
+        + ' → ' + labelOf(DEST_OPTIONS, s.dest)
+        + ' ' + Math.round(Math.abs(s.depth) * 50) + '%';
+      chips.appendChild(el);
+    });
+    if (live.length > 1) {
+      const more = document.createElement('button');
+      more.className = 'pill sm';
+      more.textContent = '+' + (live.length - 1);
+      more.addEventListener('click', () => matrixToggle && matrixToggle.click());
+      chips.appendChild(more);
+    }
+  }
+
+  async function saveSlot(s) {
+    const slot = activeSlots[s];
+    if (host) {
+      try {
+        await host.call('setSlotConfig', s, slot.source, slot.dest, slot.curve, slot.on);
+      } catch (e) { console.error('Error saving slot config:', e); }
+    }
+  }
+
+  function rebuildSlotsGridUI() {
+    if (!matrixContainer) return;
+    matrixContainer.innerHTML = '';
+    for (let s = 0; s < 24; ++s) {
+      const slot = activeSlots[s];
+      const row = document.createElement('div');
+      row.className = 'slot' + (slot.on ? ' active' : '');
+      row.dataset.slotIndex = s;
+
+      const chk = document.createElement('input');
+      chk.type = 'checkbox';
+      chk.checked = slot.on;
+      chk.addEventListener('change', () => {
+        slot.on = chk.checked;
+        row.classList.toggle('active', slot.on);
+        saveSlot(s);
+        refreshRouteChips();
+        updateModCollars();
+        if (patchCords) patchCords.refresh();
+      });
+      row.appendChild(chk);
+
+      const srcSel = document.createElement('select');
+      SRC_OPTIONS.forEach(opt => {
+        const o = document.createElement('option');
+        o.value = opt.val; o.textContent = opt.label;
+        if (slot.source === opt.val) o.selected = true;
+        srcSel.appendChild(o);
+      });
+      srcSel.addEventListener('change', () => {
+        slot.source = parseInt(srcSel.value, 10);
+        saveSlot(s);
+        refreshRouteChips();
+        updateModCollars();
+        if (patchCords) patchCords.refresh();
+      });
+      row.appendChild(srcSel);
+
+      const arr = document.createElement('span');
+      arr.className = 'arrow';
+      arr.textContent = '→';
+      row.appendChild(arr);
+
+      const destSel = document.createElement('select');
+      DEST_OPTIONS.forEach(opt => {
+        const o = document.createElement('option');
+        o.value = opt.val; o.textContent = opt.label;
+        if (slot.dest === opt.val) o.selected = true;
+        destSel.appendChild(o);
+      });
+      destSel.addEventListener('change', () => {
+        slot.dest = parseInt(destSel.value, 10);
+        saveSlot(s);
+        refreshRouteChips();
+        updateModCollars();
+        if (patchCords) patchCords.refresh();
+      });
+      row.appendChild(destSel);
+
+      const depthSlider = document.createElement('input');
+      depthSlider.type = 'range';
+      depthSlider.min = -2.0; depthSlider.max = 2.0; depthSlider.step = 0.01;
+      depthSlider.value = slot.depth;
+
+      const valSpan = document.createElement('span');
+      valSpan.className = 'val';
+      valSpan.textContent = slot.depth.toFixed(2);
+
+      depthSlider.addEventListener('input', () => {
+        const dVal = parseFloat(depthSlider.value);
+        slot.depth = dVal;
+        valSpan.textContent = dVal.toFixed(2);
+        const pSl = sl('slot' + (s + 1) + 'depth');
+        if (pSl) pSl.setNormalisedValue((dVal + 2.0) / 4.0);
+        refreshRouteChips();
+        if (patchCords) patchCords.refresh();
+      });
+      row.appendChild(depthSlider);
+      row.appendChild(valSpan);
+
+      matrixContainer.appendChild(row);
+    }
+    refreshRouteChips();
+  }
+
+  // --------------------------------------------------- track name + WD Beacon
+  function renderSelfTrackChip() {
+    const chip = $('selfTrackChip');
+    const nameEl = $('selfTrackName');
+    if (nameEl && nameEl.isConnected && !nameEl.querySelector('input'))
+      nameEl.textContent = selfMeta.name || 'Filter 1';
+    if (chip) {
+      const pubName = selfMeta.publishedName || selfMeta.name || 'Filter 1';
+      chip.title = 'Click to rename this Filter track · Broadcasting on Beacon as "' + pubName + '"';
+    }
+  }
+
+  function startInlineTrackRename(labelEl, currentText) {
+    if (!labelEl || labelEl.querySelector('input')) return;
+    const prev = currentText;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.maxLength = 47;
+    input.className = 'track-name-input';
+    input.value = prev;
+    let done = false;
+    const commit = async keep => {
+      if (done) return;
+      done = true;
+      const next = keep ? input.value.trim() : prev;
+      input.replaceWith(labelEl);
+      if (keep && host) {
+        try {
+          const res = await host.call('setInstanceName', next);
+          if (res && res.ok) {
+            selfMeta.name = res.name || selfMeta.name;
+            selfMeta.customName = res.customName || '';
+            if (typeof res.beaconPublishedName === 'string') selfMeta.publishedName = res.beaconPublishedName;
+            if (typeof res.beaconPublishing === 'boolean') selfMeta.publishing = res.beaconPublishing;
+            renderSelfTrackChip();
+          }
+        } catch (e) {}
+      }
+    };
+    input.addEventListener('keydown', ev => {
+      if (ev.key === 'Enter') { ev.preventDefault(); commit(true); }
+      else if (ev.key === 'Escape') { ev.preventDefault(); commit(false); }
+      ev.stopPropagation();
+    });
+    input.addEventListener('pointerdown', ev => ev.stopPropagation());
+    input.addEventListener('blur', () => commit(true));
+    labelEl.replaceWith(input);
+    input.focus({ preventScroll: true });
+    input.select();
+  }
+
+  {
+    const chip = $('selfTrackChip');
+    if (chip) {
+      chip.addEventListener('click', () => startInlineTrackRename($('selfTrackName'), selfMeta.customName || selfMeta.name));
+    }
+  }
+
+  function renderFollowerExtBtn() {
+    const btn = $('btn_followerExtSc');
+    if (!btn) return;
+    btn.classList.toggle('on', !!followerExtSc);
+    btn.textContent = followerExtSc ? 'Env Key: Ext' : 'Env Key: Int';
+  }
+
+  {
+    const extBtn = $('btn_followerExtSc');
+    if (extBtn) {
+      extBtn.addEventListener('click', async () => {
+        followerExtSc = !followerExtSc;
+        renderFollowerExtBtn();
+        updateBeaconLed();
+        refreshRouteChips();
+        drawResponse();
+        if (host) {
+          try { await host.call('setFollowerExtSc', followerExtSc); } catch (e) {}
+        }
+      });
+    }
+  }
+
+  function updateBeaconLed() {
+    const wrap = $('beaconPickerWrap');
+    if (!wrap) return;
+    const extOn = !!followerExtSc;
+    wrap.classList.remove('receiving', 'waiting', 'mismatch');
+    if (!extOn) {
+      wrap.title = beaconSelected
+        ? `Internal key active — enable Env Key: Ext to receive WD Beacon "${beaconSelected}".`
+        : 'Select an active Werewolf Digital Beacon track for external Envelope Follower keying. Wireless cross-track key — for sample-exact timing at large DAW buffer sizes (1024+), use Off (Host Bus) with a DAW sidechain send.';
+      return;
+    }
+    if (beaconSelected) {
+      if (beaconSrMismatch) {
+        wrap.classList.add('mismatch');
+        wrap.title = `Sample rate mismatch between this track and WD Beacon "${beaconSelected}" — external key input is muted.`;
+      } else if (beaconReceiving) {
+        wrap.classList.add('receiving');
+        wrap.title = `Receiving external key audio from WD Beacon "${beaconSelected}". Wireless cross-track key — for sample-exact timing at large DAW buffer sizes (1024+), use Off (Host Bus) with a DAW sidechain send.`;
+      } else {
+        wrap.classList.add('waiting');
+        wrap.title = `Waiting for WD Beacon "${beaconSelected}" stream (active on Host Bus 1 only if Bus 1 is enabled). Wireless cross-track key — for sample-exact timing at large DAW buffer sizes (1024+), use Off (Host Bus) with a DAW sidechain send.`;
+      }
+    } else if (scActive) {
+      wrap.classList.add('receiving');
+      wrap.title = 'Receiving external sidechain audio from Host Sidechain Bus 1.';
+    } else {
+      wrap.classList.add('waiting');
+      wrap.title = 'External key set to Host Sidechain Bus 1 — waiting for incoming sidechain audio. For sample-exact timing at large DAW buffer sizes (1024+), keep Off (Host Bus) with a DAW sidechain send.';
+    }
+  }
+
+  function renderBeaconSources(res) {
+    const sel = $('beaconSourceSelect');
+    if (!sel || !res || typeof res !== 'object') return;
+    const sources = Array.isArray(res.sources) ? res.sources : [];
+    if (typeof res.selected === 'string') beaconSelected = res.selected;
+    if (!beaconMetersSeen) {
+      if (typeof res.receiving === 'boolean') beaconReceiving = res.receiving;
+      if (typeof res.scActive === 'boolean') scActive = res.scActive;
+    }
+    if (typeof res.srMismatch === 'boolean') beaconSrMismatch = res.srMismatch;
+
+    const sig = sources.map(s => `${s.name}:${s.sr}:${s.ch}`).join('|') + '#' + beaconSelected;
+    updateBeaconLed();
+    if (document.activeElement === sel || sig === lastBeaconSig) return;
+    lastBeaconSig = sig;
+
+    sel.textContent = '';
+    const off = document.createElement('option');
+    off.value = '';
+    off.textContent = 'Off (Host Bus)';
+    sel.appendChild(off);
+
+    let found = (beaconSelected === '');
+    for (const s of sources) {
+      if (!s || typeof s.name !== 'string') continue;
+      const opt = document.createElement('option');
+      opt.value = s.name;
+      const sr = s.sr ? (s.sr / 1000).toFixed(s.sr % 1000 === 0 ? 0 : 1) + 'k' : '?';
+      const ch = s.ch === 1 ? 'Mono' : s.ch === 2 ? 'St' : (s.ch + 'ch');
+      opt.textContent = `${s.name} (${sr} · ${ch})`;
+      if (s.name === beaconSelected) found = true;
+      sel.appendChild(opt);
+    }
+    if (!found && beaconSelected) {
+      const offline = document.createElement('option');
+      offline.value = beaconSelected;
+      offline.textContent = `${beaconSelected} (waiting…)`;
+      sel.appendChild(offline);
+    }
+    sel.value = beaconSelected;
+  }
+
+  async function refreshBeaconSources() {
+    if (!host) return;
+    try {
+      const res = await host.call('getBeaconSources');
+      renderBeaconSources(res);
+    } catch (e) {}
+  }
+
+  {
+    const sel = $('beaconSourceSelect');
+    if (sel) {
+      sel.addEventListener('pointerdown', refreshBeaconSources);
+      sel.addEventListener('focus', refreshBeaconSources);
+      sel.addEventListener('change', async () => {
+        beaconSelected = sel.value || '';
+        beaconSrMismatch = false;
+        if (beaconSelected && !followerExtSc) {
+          followerExtSc = true;
+          renderFollowerExtBtn();
+          refreshRouteChips();
+        }
+        updateBeaconLed();
+        drawResponse();
+        if (host) {
+          try {
+            const res = await host.call('setBeaconSource', beaconSelected);
+            if (res && typeof res.receiving === 'boolean') beaconReceiving = res.receiving;
+            if (res && typeof res.scActive === 'boolean') scActive = res.scActive;
+            if (res && typeof res.srMismatch === 'boolean') beaconSrMismatch = res.srMismatch;
+            updateBeaconLed();
+            drawResponse();
+          } catch (e) {}
+        }
+      });
+    }
+  }
+
+  // ------------------------------------------------------------- output meter
+  function paintOutputMeter() {
+    shownOutDb = Math.max(liveOutDb, shownOutDb - 1.5);
+    const pct = clamp(((shownOutDb + 60) / 60) * 100, 0, 100);
+    const bar = $('outMeterBar');
+    const val = $('outMeterVal');
+    if (bar) bar.style.setProperty('--fill', pct.toFixed(1) + '%');
+    if (val) val.textContent = shownOutDb <= -59.5 ? '—' : shownOutDb.toFixed(1) + ' dB';
+  }
+
+  // ------------------------------------------------------------------- init
+  function initAll() {
+    document.querySelectorAll('.knob').forEach(el => {
+      if (window.WDKit && WDKit.mountKnob) WDKit.mountKnob(el);
+    });
+
+    bindSlider($('param_mix'), 'mix', v => Math.round(v) + '%', () => updateModCollars());
+    bindChoiceBed($('routing-group'), 'routing', ROUTING_CHOICES.length, () => {
+      updateRoutingText();
+      drawResponse();
+    });
+
+    bindToggle($('param_delta'), 'delta');
+    bindToggle($('param_power'), 'power', v => {
+      const b = $('param_power');
+      if (b) b.lastChild.textContent = v ? 'Engaged' : 'Bypassed';
+    });
+
+    for (let i = 1; i <= 3; ++i) {
+      sl('xlfo' + i + 'rate');
+      sl('xlfo' + i + 'phase');
+      sl('xlfo' + i + 'snap');
+      tg('xlfo' + i + 'balance');
+    }
+    bindActiveXlfoControls();
+    bindBlock('A');
+    bindBlock('B');
+    if (window.WDKit && WDKit.enhanceAllKnobs) WDKit.enhanceAllKnobs(sl);
+    selectBlock('A');
+    syncXlfoMetaSelectors();
+  }
+
+  const DEST_KNOB_MAP = [
+    { destId: 1,  knobId: 'param_freqA',  paramId: 'freqA',  kind: 'freq'  },
+    { destId: 2,  knobId: 'param_resoA',  paramId: 'resoA',  kind: 'reso'  },
+    { destId: 3,  knobId: 'param_driveA', paramId: 'driveA', kind: 'drive' },
+    { destId: 4,  knobId: 'param_panA',   paramId: 'panA',   kind: 'pan'   },
+    { destId: 5,  knobId: 'param_levelA', paramId: 'levelA', kind: 'level' },
+    { destId: 6,  knobId: 'param_freqB',  paramId: 'freqB',  kind: 'freq'  },
+    { destId: 7,  knobId: 'param_resoB',  paramId: 'resoB',  kind: 'reso'  },
+    { destId: 8,  knobId: 'param_driveB', paramId: 'driveB', kind: 'drive' },
+    { destId: 9,  knobId: 'param_panB',   paramId: 'panB',   kind: 'pan'   },
+    { destId: 10, knobId: 'param_levelB', paramId: 'levelB', kind: 'level' },
+    { destId: 11, knobId: 'param_mix',    paramId: 'mix',    kind: 'mix'   }
+  ];
+
+  function updateModCollars() {
+    if (!window.WDKit || !WDKit.setKnobModulationSources || !WDKit.scaledDeltaToNorm) return;
+
+    const deltaFor = (kind, base, off) => {
+      if (kind === 'freq')  return clamp(base * Math.pow(2.0, off), 20, 20000) - base;
+      if (kind === 'reso')  return clamp(base + off, 0, 100) - base;
+      if (kind === 'drive') return clamp(base + off, 0, 24) - base;
+      if (kind === 'pan')   return clamp(base + off, -100, 100) - base;
+      if (kind === 'level') return clamp(base + off, -24, 12) - base;
+      return clamp(base + off, 0, 100) - base;
+    };
+
+    for (const d of DEST_KNOB_MAP) {
+      const el = $(d.knobId);
+      const s = sl(d.paramId);
+      if (!el || !s) continue;
+
+      const routedSlots = activeSlots.filter(slot => slot.on && slot.dest === d.destId && slot.source >= 0);
+      el.classList.toggle('is-modulated', routedSlots.length > 0);
+
+      const baseScaled = s.getScaledValue();
+      const baseNorm = s.getNormalisedValue();
+      const totalOffset = liveDestOffsets[d.destId] || 0;
+
+      if (routedSlots.length === 0 || Math.abs(totalOffset) < 1e-6) {
+        WDKit.setKnobModulationSources(el, baseNorm, []);
+        continue;
+      }
+
+      const totalDeltaScaled = deltaFor(d.kind, baseScaled, totalOffset);
+      const totalNorm = WDKit.scaledDeltaToNorm(s, baseScaled, totalDeltaScaled);
+
+      if (routedSlots.length === 1) {
+        const slot = routedSlots[0];
+        WDKit.setKnobModulationSources(el, baseNorm, [{
+          sourceId: slot.source,
+          color: getSourceColor(slot.source),
+          offsetNorm: totalNorm,
+          label: getSourceLabel(slot.source)
+        }]);
+      } else {
+        let weights = routedSlots.map(slot => Math.abs((liveSlotVals[slot.index] || 0) * (slot.depth || 0)));
+        let sumW = weights.reduce((acc, w) => acc + w, 0);
+        if (sumW < 1e-6) {
+          weights = routedSlots.map(slot => Math.max(0.01, Math.abs(slot.depth || 0)));
+          sumW = weights.reduce((acc, w) => acc + w, 0);
+        }
+        const sources = routedSlots.map((slot, i) => ({
+          sourceId: slot.source,
+          color: getSourceColor(slot.source),
+          offsetNorm: totalNorm * (weights[i] / sumW),
+          label: getSourceLabel(slot.source)
+        }));
+        WDKit.setKnobModulationSources(el, baseNorm, sources);
+      }
+    }
+  }
+
+  // ------------------------------------------- Patch Cords & Hover Depth Ring
+  const ringGestureOpen = new Array(24).fill(false);
+
+  function nearestResponseHandleAt(cx, cy) {
+    if (!responseCanvas) return null;
+    const r = responseCanvas.getBoundingClientRect();
+    if (r.width <= 0 || r.height <= 0) return null;
+    const mx = cx - r.left;
+    const my = cy - r.top;
+    if (my < 0 || my > r.height) return null;
+    const A = readBlock('A'), B = readBlock('B');
+    const xA = clamp((Math.log(A.freq / FMIN) / Math.log(FMAX / FMIN)) * r.width, 0, r.width);
+    const xB = clamp((Math.log(B.freq / FMIN) / Math.log(FMAX / FMIN)) * r.width, 0, r.width);
+    const dA = Math.abs(mx - xA);
+    const dB = Math.abs(mx - xB);
+    if (dA > 24 && dB > 24) return null;
+    if (dA <= 24 && dB <= 24) {
+      if (Math.abs(dA - dB) < 6) return currentBlock;
+      return dA <= dB ? 'A' : 'B';
+    }
+    return dA <= 24 ? 'A' : 'B';
+  }
+
+  function handleRectFor(block) {
+    const r = responseCanvas.getBoundingClientRect();
+    const blk = readBlock(block);
+    const hx = clamp((Math.log(blk.freq / FMIN) / Math.log(FMAX / FMIN)) * r.width, 0, r.width);
+    return {
+      left: r.left + hx - 28,
+      top: r.top + 6,
+      right: r.left + hx + 28,
+      bottom: r.top + 30,
+      width: 56,
+      height: 24
+    };
+  }
+
+  const patchCords = (window.WDKit && WDKit.initPatchCords)
+    ? WDKit.initPatchCords({
+        sourceSelector: '[data-source-id]',
+        destSelector: '.knob[data-dest-id]',
+        canvasTargets: responseCanvas ? [
+          {
+            canvas: responseCanvas,
+            destId: 1,
+            hitTest: (cx, cy) => nearestResponseHandleAt(cx, cy) === 'A',
+            getRect: () => handleRectFor('A')
+          },
+          {
+            canvas: responseCanvas,
+            destId: 6,
+            hitTest: (cx, cy) => nearestResponseHandleAt(cx, cy) === 'B',
+            getRect: () => handleRectFor('B')
+          }
+        ] : [],
+        getSourceColor,
+        getSourceLabel,
+        getDestLabel: id => labelOf(DEST_OPTIONS, id),
+        getSlotsForDest: destId => activeSlots.filter(s => s.dest === destId && s.source >= 0),
+        onConnect: (sourceId, destId) => {
+          let slot = activeSlots.find(s => s.source === sourceId && s.dest === destId);
+          if (!slot) {
+            slot = activeSlots.find(s => !s.on && (s.dest < 0 || s.source < 0))
+                || activeSlots.find(s => !s.on);
+          }
+          if (!slot) return;
+          slot.source = sourceId;
+          slot.dest = destId;
+          slot.on = true;
+          const dSlider = sl('slot' + (slot.index + 1) + 'depth');
+          if (Math.abs(slot.depth) < 0.05) {
+            slot.depth = 1.0;
+            if (dSlider) {
+              dSlider.sliderDragStarted();
+              dSlider.setNormalisedValue((1.0 + 2.0) / 4.0);
+              dSlider.sliderDragEnded();
+            }
+          }
+          saveSlot(slot.index);
+          rebuildSlotsGridUI();
+          updateModCollars();
+        },
+        onChangeDepth: (slotIndex, depth, isFinal) => {
+          const slot = activeSlots[slotIndex];
+          if (!slot) return;
+          const d = clamp(Number.isFinite(depth) ? depth : 0, -2.0, 2.0);
+          slot.depth = d;
+          const dSlider = sl('slot' + (slotIndex + 1) + 'depth');
+          if (dSlider) {
+            if (!ringGestureOpen[slotIndex]) {
+              ringGestureOpen[slotIndex] = true;
+              dSlider.sliderDragStarted();
+            }
+            dSlider.setNormalisedValue((d + 2.0) / 4.0);
+            if (isFinal && ringGestureOpen[slotIndex]) {
+              ringGestureOpen[slotIndex] = false;
+              dSlider.sliderDragEnded();
+            }
+          }
+          if (matrixContainer) {
+            const r = matrixContainer.querySelector('[data-slot-index="' + slotIndex + '"]');
+            if (r) {
+              const rng = r.querySelector('input[type="range"]');
+              const lbl = r.querySelector('span.val');
+              if (rng) rng.value = d;
+              if (lbl) lbl.textContent = d.toFixed(2);
+            }
+          }
+          refreshRouteChips();
+          updateModCollars();
+        },
+        onToggleSlot: (slotIndex, nextOn) => {
+          const slot = activeSlots[slotIndex];
+          if (!slot) return;
+          slot.on = !!nextOn;
+          saveSlot(slotIndex);
+          rebuildSlotsGridUI();
+          updateModCollars();
+        },
+        onRemoveSlot: slotIndex => {
+          const slot = activeSlots[slotIndex];
+          if (!slot) return;
+          slot.on = false;
+          slot.source = -1;
+          slot.dest = -1;
+          slot.depth = 0.0;
+          const dSlider = sl('slot' + (slotIndex + 1) + 'depth');
+          if (dSlider) {
+            if (ringGestureOpen[slotIndex]) {
+              ringGestureOpen[slotIndex] = false;
+              dSlider.sliderDragEnded();
+            }
+            dSlider.sliderDragStarted();
+            dSlider.setNormalisedValue(0.5);
+            dSlider.sliderDragEnded();
+          }
+          saveSlot(slotIndex);
+          rebuildSlotsGridUI();
+          updateModCollars();
+        }
+      })
+    : null;
+
+  // ------------------------------------------------ Binary Telemetry Poller
+  const telemetryPoller = (window.WDKit && WDKit.createTelemetryPoller)
+    ? WDKit.createTelemetryPoller(pkt => {
+        if (!pkt || pkt.kind !== 9 || !pkt.floats) return;
+        const fl = pkt.floats;
+        if (fl.length >= FFT_BINS) {
+          for (let i = 0; i < FFT_BINS; ++i) {
+            const v = fl[i];
+            preFft[i] = Number.isFinite(v) ? v : -120;
+          }
+          preFftValid = true;
+        }
+        if (fl.length >= FFT_BINS * 2) {
+          for (let i = 0; i < FFT_BINS; ++i) {
+            const v = fl[FFT_BINS + i];
+            postFft[i] = Number.isFinite(v) ? v : -120;
+          }
+          postFftValid = true;
+        }
+        drawResponse();
+      }, 16)
+    : null;
+  if (telemetryPoller) telemetryPoller.start();
+
+  const beaconEpochWatch = (window.WDKit && WDKit.createBeaconEpochWatcher)
+    ? WDKit.createBeaconEpochWatcher(refreshBeaconSources)
+    : null;
+
+  if (window.WDKit && WDKit.mountHeaderKit) {
+    WDKit.mountHeaderKit({ host });
+  }
+  if (window.WDKit && WDKit.syncGlobalTheme) {
+    WDKit.syncGlobalTheme(host, t => applyTheme(t));
+  }
+
+  setTimeout(async () => {
+    initAll();
+    renderFollowerExtBtn();
+
+    if (host) {
+      try {
+        const state = await Promise.race([
+          host.call('getModState'),
+          new Promise(res => setTimeout(() => res(null), 400))
+        ]);
+        if (state && typeof state === 'object') {
+          if (Array.isArray(state.slots)) {
+            state.slots.forEach(s => {
+              if (s && s.index >= 0 && s.index < 24) {
+                activeSlots[s.index] = {
+                  index: s.index, source: s.source, dest: s.dest,
+                  curve: s.curve, on: !!s.on, depth: 0.0
+                };
+              }
+            });
+          }
+          if (Array.isArray(state.xlfos)) {
+            state.xlfos.forEach(x => {
+              if (!x || x.index < 0 || x.index >= 3) return;
+              const target = xlfosState[x.index];
+              target.numSteps = clamp(x.numSteps || 4, 1, 32);
+              target.isSynced = x.isSynced !== undefined ? !!x.isSynced : true;
+              target.syncRateBeats = Number.isFinite(x.syncRateBeats) ? x.syncRateBeats : 1.0;
+              target.retriggerMode = clamp(x.retriggerMode ?? 1, 0, 3);
+              if (Array.isArray(x.steps)) {
+                x.steps.forEach(st => {
+                  if (!st || st.index < 0 || st.index >= 32) return;
+                  target.steps[st.index] = {
+                    index: st.index,
+                    value: clamp(Number.isFinite(st.value) ? st.value : 0, 0, 1),
+                    glide: clamp(Number.isFinite(st.glide) ? st.glide : 100, 0, 100),
+                    slope: clamp(Number.isFinite(st.slope) ? st.slope : 0, -1, 1)
+                  };
+                });
+              }
+            });
+          }
+          if (typeof state.followerExtSc === 'boolean') {
+            followerExtSc = state.followerExtSc;
+            renderFollowerExtBtn();
+            updateBeaconLed();
+          }
+        }
+      } catch (e) { console.error('Error getting initial modState:', e); }
+    }
+
+    for (let s = 0; s < 24; ++s) {
+      const slider = sl('slot' + (s + 1) + 'depth');
+      if (slider) {
+        activeSlots[s].depth = slider.getNormalisedValue() * 4.0 - 2.0;
+        slider.valueChangedEvent.addListener(() => {
+          activeSlots[s].depth = slider.getNormalisedValue() * 4.0 - 2.0;
+          if (matrixContainer) {
+            const r = matrixContainer.querySelector('[data-slot-index="' + s + '"]');
+            if (r) {
+              r.querySelector('input[type="range"]').value = activeSlots[s].depth;
+              r.querySelector('span.val').textContent = activeSlots[s].depth.toFixed(2);
+            }
+          }
+          refreshRouteChips();
+          updateModCollars();
+        });
+      }
+    }
+
+    rebuildSlotsGridUI();
+    syncXlfoMetaSelectors();
+    updateModCollars();
+    if (patchCords) patchCords.refresh();
+    fitResponseCanvas();
+    fitCharCanvas();
+    fitXlfoCanvas();
+    uiReady = true;
+
+    if (host) {
+      try {
+        const uiState = await host.call('getUiState');
+        if (uiState) {
+          if (uiState.build) $('buildTag').textContent = uiState.build;
+          if (uiState.sampleRate) {
+            sampleRate = uiState.sampleRate;
+            $('srTag').textContent = (uiState.sampleRate / 1000).toFixed(1) + ' kHz';
+            drawResponse();
+          }
+          if (window.WDKit && WDKit.bindBrandDiagnostics) {
+            WDKit.bindBrandDiagnostics(document.querySelector('.brand'), {
+              plugin: 'Werewolf Digital Filter',
+              sampleRate: uiState.sampleRate ? (uiState.sampleRate / 1000).toFixed(1) + ' kHz' : '—',
+              build: uiState.build || '—'
+            });
+          }
+          if (uiState.selfName) selfMeta.name = uiState.selfName;
+          if (typeof uiState.selfCustomName === 'string') selfMeta.customName = uiState.selfCustomName;
+          if (typeof uiState.beaconPublishedName === 'string') selfMeta.publishedName = uiState.beaconPublishedName;
+          if (typeof uiState.beaconPublishing === 'boolean') selfMeta.publishing = uiState.beaconPublishing;
+          if (typeof uiState.beaconSource === 'string') beaconSelected = uiState.beaconSource;
+          if (typeof uiState.beaconReceiving === 'boolean') beaconReceiving = uiState.beaconReceiving;
+          if (typeof uiState.scActive === 'boolean') scActive = uiState.scActive;
+          if (typeof uiState.beaconSrMismatch === 'boolean') beaconSrMismatch = uiState.beaconSrMismatch;
+          renderSelfTrackChip();
+          updateBeaconLed();
+          drawResponse();
+        }
+      } catch (e) {}
+      await refreshBeaconSources();
+    } else {
+      renderSelfTrackChip();
+      updateBeaconLed();
+    }
+  }, 120);
+
+  // ------------------------------------------------------------ live events
+  if (host) {
+    host.on('modState', data => {
+      if (!data) return;
+      liveSourceVals = data.sourceVals || liveSourceVals;
+      liveXlfoPhases = data.xlfoPhases || liveXlfoPhases;
+      liveSlotVals = data.slotVals || liveSlotVals;
+      liveDestOffsets = data.destOffsets || liveDestOffsets;
+      if (typeof data.followerExtSc === 'boolean' && data.followerExtSc !== followerExtSc) {
+        followerExtSc = data.followerExtSc;
+        renderFollowerExtBtn();
+        updateBeaconLed();
+        refreshRouteChips();
+      }
+      updateModCollars();
+      drawResponse();
+      drawCharacter();
+      drawXlfoCurve();
+    });
+
+    host.on('meters', data => {
+      if (!data) return;
+      beaconMetersSeen = true;
+      if (beaconEpochWatch) beaconEpochWatch(data);
+      if (typeof data.inDb === 'number') liveInDb = data.inDb;
+      if (typeof data.outDb === 'number') liveOutDb = data.outDb;
+      if (typeof data.beaconReceiving === 'boolean') beaconReceiving = data.beaconReceiving;
+      if (typeof data.scActive === 'boolean') scActive = data.scActive;
+      if (typeof data.beaconSrMismatch === 'boolean') beaconSrMismatch = data.beaconSrMismatch;
+      if (typeof data.beaconSource === 'string' && !beaconSelected) beaconSelected = data.beaconSource;
+      if (typeof data.sc === 'number' && isFinite(data.sc)) {
+        liveScDb = data.sc;
+        scTrace.push(liveScDb);
+        if (scTrace.length > 64) scTrace.shift();
+      }
+      if (typeof data.selfName === 'string' && data.selfName) {
+        selfMeta.name = data.selfName;
+        if (typeof data.selfCustomName === 'string') selfMeta.customName = data.selfCustomName;
+        if (typeof data.beaconPublishedName === 'string') selfMeta.publishedName = data.beaconPublishedName;
+        if (typeof data.beaconPublishing === 'boolean') selfMeta.publishing = data.beaconPublishing;
+        renderSelfTrackChip();
+      }
+      updateBeaconLed();
+      paintOutputMeter();
+      if (followerExtSc) drawResponse();
+      drawCharacter();
+    });
+  } else {
+    setInterval(() => {
+      const t = Date.now() * 0.001;
+      liveInDb = -18 + 12 * Math.sin(t * 3);
+      liveOutDb = liveInDb - 3;
+      paintOutputMeter();
+      drawCharacter();
+    }, 33);
+  }
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,2030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Werewolf Digital Modulation</title>
+<link rel="stylesheet" href="./wd/tokens.css">
+<script src="./demo-bar.js"></script>
+<script src="./modules/mod.js"></script>
+<script src="./wd-plugin-host.js"></script>
+<script src="./wd/kit.js"></script>
+<style>
+  /* ══════════════════════════════════════════════════════════════════════
+     Instrument Panel (Organic) — Werewolf Digital chassis.
+
+     The :root block defines the system tokens.
+     Modulation Accent: Amber #c58a2b / #eeb85e / #7d5407
+     ════════════════════════════════════════════════════════════════════ */
+  :root {
+    --bg:      #0b0d12;   /* deep studio obsidian chassis */
+    --panel:   #151922;   /* machined slate control bays  */
+    --panel-hi:#1d2330;   /* elevated cap / active surface */
+    --track:   #0d0f15;   /* recessed tracks & beds       */
+    --line:    rgba(255, 255, 255, 0.08);
+    --line-hi: rgba(255, 255, 255, 0.15);
+    --hover-bg:rgba(255, 255, 255, 0.06);
+    --text:    #f2f5fa;
+    --label:   #8b96a8;
+    --muted:   #586274;
+    --well:    #06070a;   /* pure OLED signal surface     */
+    --cream:   #f2f5fa;   /* live plot, on well           */
+
+    --accent:     #c58a2b;
+    --accent-lit: #eeb85e;
+    --accent-deep:#7d5407;
+
+    --sage:      #34d399;
+    --sage-tint: rgba(52, 211, 153, 0.14);
+    --sage-deep: #6ee7b7;
+
+    --r-window: 0px;
+    --r-panel: 8px;
+    --r-pill: 5px;
+
+    --font: "Figtree", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    --font-display: "Caprasimo", "Segoe UI Variable Display", "Segoe UI Semibold", system-ui, sans-serif;
+  }
+  :root[data-theme="japandi-dark"] {
+    --bg:      #121316;
+    --panel:   #1b1d21;
+    --panel-hi:#24272d;
+    --track:   #0d0e10;
+    --line:    rgba(242, 237, 228, 0.08);
+    --line-hi: rgba(242, 237, 228, 0.15);
+    --hover-bg:rgba(242, 237, 228, 0.06);
+    --text:    #f2ede4;
+    --label:   #9e978c;
+    --muted:   #666057;
+    --well:    #090a0c;
+    --cream:   #f2ede4;
+    --accent-deep:#96660b;
+    --sage:      #7a9171;
+    --sage-tint: rgba(122, 145, 113, 0.18);
+    --sage-deep: #b8cfb0;
+  }
+  :root[data-theme="japandi-light"] {
+    --bg:      #e6e1d8;
+    --panel:   #dbd5c9;
+    --panel-hi:#e4dfd5;
+    --track:   #ccc5b8;
+    --line:    rgba(24, 25, 28, 0.11);
+    --line-hi: rgba(24, 25, 28, 0.20);
+    --hover-bg:rgba(24, 25, 28, 0.06);
+    --text:    #18191c;
+    --label:   #635f58;
+    --muted:   #8c867c;
+    --well:    #17181b;
+    --cream:   #f2ede4;
+    --accent-deep:#7d5407;
+    --sage:      #4d6b47;
+    --sage-tint: rgba(77, 107, 71, 0.16);
+    --sage-deep: #2d4229;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 400 13px/1.45 var(--font);
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  :focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- header ---------- */
+  header {
+    flex: 0 0 auto;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand svg { display: block; }
+  .brand .stack { display: flex; flex-direction: column; gap: 1px; }
+  .brand .line { font: 700 8.5px/1 var(--font); letter-spacing: 0.22em; text-transform: uppercase; color: var(--label); }
+  .brand .name { font-family: var(--font-display); font-size: 19px; line-height: 1; letter-spacing: -0.01em; }
+  .headsep { width: 1px; height: 26px; background: var(--line); }
+  .spacer { flex: 1; }
+  .stat { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  .stat .k { font: 600 9px/1 var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  .stat .v { font: 700 11.5px/1 var(--font); font-variant-numeric: tabular-nums; }
+  #buildTag { font: 500 10px/1.3 var(--font); color: var(--muted); text-align: right; max-width: 150px; }
+
+  /* ---------- frame ---------- */
+  .body {
+    flex: 1 1 auto;
+    display: flex;
+    gap: 12px;
+    padding: 14px;
+    min-height: 0;
+  }
+  .col { flex: 1 1 auto; display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; }
+
+  /* ---------- wells ---------- */
+  .wells { flex: 1 1 46%; display: flex; gap: 12px; min-height: 150px; min-width: 0; }
+  .well-group { flex: 2 1 0; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+  .well-group.narrow { flex: 1 1 0; min-width: 210px; }
+  .well-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 0 2px;
+    min-height: 22px;
+    flex-wrap: wrap;
+  }
+  .well-title { font: 700 11px/1 var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--label); }
+  .well-hint { font: 500 11.5px/1 var(--font); color: var(--muted); white-space: nowrap; }
+  .well-hint.accent { color: var(--accent-deep); font-weight: 600; }
+  .well {
+    flex: 1;
+    min-height: 0;
+    border-radius: var(--r-panel);
+    overflow: hidden;
+    background: var(--well);
+    position: relative;
+  }
+  .well canvas { width: 100%; height: 100%; display: block; }
+  .well-readout {
+    position: absolute; right: 12px; top: 10px;
+    display: flex; flex-direction: column; gap: 3px; pointer-events: none;
+    background: rgba(18, 17, 14, 0.78); border-radius: 12px; padding: 6px 10px 7px;
+    align-items: flex-end;
+  }
+  .well-readout .k { font: 600 9.5px/1 var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  .well-readout .v { font: 700 20px/1 var(--font); font-variant-numeric: tabular-nums; color: #f9f4ed; }
+
+  .well-head select {
+    background: var(--panel); color: var(--text); border: 1px solid var(--line);
+    border-radius: var(--r-pill); font: 600 11px/1 var(--font);
+    cursor: pointer; outline: none; padding: 2px 8px; height: 24px;
+  }
+  .well-head .cfg { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .well-head .cfg .k {
+    font: 600 10px/1 var(--font); letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--label);
+  }
+  #xlfoCanvas { cursor: crosshair; }
+
+  /* Sources well list */
+  .srcs { display: flex; flex-direction: column; height: 100%; padding: 10px; gap: 4px; overflow-y: auto; }
+  .src {
+    flex: 1 1 0; min-height: 28px; display: flex; align-items: center; gap: 8px;
+    padding: 0 10px; color: var(--cream); cursor: grab;
+    font: 600 11px/1 var(--font); letter-spacing: 0.08em; text-transform: uppercase;
+    background: rgba(242, 245, 250, 0.06); border-radius: 8px;
+    transition: background 0.12s;
+  }
+  .src:nth-child(odd) { background: rgba(242, 245, 250, 0.1); }
+  .src.on { background: rgba(197, 138, 43, 0.35); box-shadow: inset 0 0 0 1px var(--accent-lit); }
+  .src:active { cursor: grabbing; }
+  .src .n { flex: 0 0 60px; pointer-events: none; display: inline-flex; align-items: center; gap: 6px; }
+  .wd-src-dot { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; background: var(--accent-lit); }
+  .src .bar { flex: 1; height: 8px; background: rgba(242, 245, 250, 0.15); border-radius: var(--r-pill); overflow: hidden; pointer-events: none; }
+  .src .bar i { display: block; height: 100%; width: 0%; background: var(--accent-lit); border-radius: var(--r-pill); }
+
+  /* ---------- panels ---------- */
+  .panel {
+    background: var(--panel);
+    border-radius: var(--r-panel);
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .panel.rail { flex: 0 0 auto; }
+  .rail-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .rail-range { font: 600 11.5px/1 var(--font); color: var(--label); }
+
+  /* ---------- pills ---------- */
+  .pill {
+    height: 32px;
+    padding: 0 14px;
+    border-radius: var(--r-pill);
+    border: 1px solid var(--line);
+    background: transparent;
+    font: 600 12px/1 var(--font);
+    color: var(--label);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background-color 0.12s, color 0.12s;
+    white-space: nowrap;
+  }
+  .pill:hover { background: var(--hover-bg); }
+  .pill:active { background: var(--track); }
+  .pill.on { border-color: transparent; background: var(--accent); color: #f9f4ed; font-weight: 700; }
+  .pill.on:hover { background: var(--accent-deep); }
+  .pill:disabled { opacity: 0.45; cursor: default; }
+  .pill.sm { height: 28px; padding: 0 13px; font-size: 11.5px; }
+  .pill.wide { width: 100%; }
+  .pill.dashed { border-style: dashed; border-color: var(--muted); color: var(--label); }
+  .pill.power { background: var(--track); color: var(--label); }
+  .pill.power.on { background: var(--well); color: var(--cream); }
+  .pill.power .led { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+  .pill.power.on .led { background: var(--accent-lit); box-shadow: 0 0 8px var(--accent-lit); }
+
+  .pillbed { display: flex; gap: 4px; padding: 3px; border-radius: var(--r-pill); background: var(--track); }
+  .pillbed button {
+    height: 26px; padding: 0 14px; border-radius: var(--r-pill); border: 0;
+    background-color: transparent; color: var(--label); font: 600 11.5px/1 var(--font); cursor: pointer;
+    transition: background-color 0.12s, color 0.12s; white-space: nowrap;
+  }
+  .pillbed button:hover:not(:disabled):not(.on) { background-color: var(--hover-bg); }
+  .pillbed.accent > button.on { background-color: var(--accent); color: #f9f4ed; font-weight: 700; }
+  .pillbed.sage > button.on { background-color: var(--sage); color: #f9f4ed; font-weight: 700; }
+  .pillbed > button:disabled { opacity: 0.45; cursor: default; }
+
+  .charset { display: flex; flex-wrap: wrap; gap: 5px; }
+  .fieldlabel { font: 600 10.5px/1 var(--font); color: var(--label); }
+
+  /* ---------- knob ---------- */
+  .knob {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    width: 78px; cursor: ns-resize; touch-action: none;
+    border-radius: 12px; padding: 4px 0; position: relative;
+    transition: background 0.12s;
+  }
+  .knob:hover { background: var(--hover-bg); }
+  .knob.drag-over { background: var(--hover-bg); box-shadow: 0 0 0 2px var(--accent); }
+  .knob .klabel { font: 600 10.5px/1 var(--font); color: var(--label); pointer-events: none; }
+  .knob .v { font: 700 13.5px/1 var(--font); font-variant-numeric: tabular-nums; pointer-events: none; }
+  .knob svg { display: block; pointer-events: none; }
+  .knob.dragging .v { color: var(--accent-deep); }
+  .knob.lg { width: 92px; }
+  .knob.sm { width: auto; flex-direction: row; align-items: center; gap: 7px; padding: 0 4px; }
+  .knob.sm .kstack { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; }
+  .knob.sm .klabel { font-size: 10px; }
+  .knob.sm .v { font-size: 12.5px; }
+
+  #knobRow { display: flex; align-items: center; justify-content: space-around; width: 100%; }
+
+  /* ---------- meters ---------- */
+  .vmeter-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .vmeter {
+    flex: 1; min-height: 40px; width: 16px; border-radius: var(--r-pill);
+    background: var(--well); overflow: hidden; position: relative;
+  }
+  .vmeter i {
+    position: absolute; left: 0; right: 0; bottom: 0; height: var(--fill, 0%);
+    background: linear-gradient(0deg, var(--sage), var(--accent-lit));
+    border-radius: var(--r-pill);
+  }
+  .vmeter-wrap .k { font: 600 9.5px/1 var(--font); letter-spacing: 0.1em; text-transform: uppercase; color: var(--label); }
+  .vmeter-wrap .v { font: 700 11.5px/1 var(--font); font-variant-numeric: tabular-nums; }
+
+  /* ---------- master ---------- */
+  .master {
+    flex: 0 0 132px;
+    background: var(--panel);
+    border-radius: var(--r-panel);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .master .fill { flex: 1; min-height: 0; }
+  .master .stack { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+
+  /* ---------- modulation strip ---------- */
+  .mod { flex: 0 0 auto; }
+  .mod-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .mod-title { display: flex; flex-direction: column; gap: 3px; }
+  .mod-title .t { font: 700 10.5px/1 var(--font); letter-spacing: 0.12em; text-transform: uppercase; color: var(--label); }
+  .mod-title .s { font: 500 11px/1 var(--font); color: var(--muted); }
+  .route {
+    display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px;
+    border-radius: var(--r-pill); background: var(--sage-tint); color: var(--sage-deep);
+    font: 600 11.5px/1 var(--font); white-space: nowrap; flex: 0 0 auto;
+  }
+  .route .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--sage); flex: none; }
+  .routes { display: flex; gap: 6px; flex: 1; min-width: 0; justify-content: flex-end; }
+
+  .matrix { display: none; flex-direction: column; gap: 6px; max-height: 168px; overflow-y: auto; padding-top: 4px; }
+  .slot {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-pill);
+    padding: 0 12px; height: 32px;
+  }
+  .slot.active { border-color: var(--sage); background: var(--sage-tint); }
+  .slot input[type="checkbox"] { accent-color: var(--sage); cursor: pointer; }
+  .slot select {
+    background: transparent; color: var(--text); border: 0;
+    font: 600 11.5px/1 var(--font); cursor: pointer; outline: none;
+  }
+  .slot .arrow { color: var(--muted); font-size: 11px; }
+  .slot input[type="range"] { flex: 1; accent-color: var(--sage); height: 4px; cursor: pointer; }
+  .slot .val { font: 700 11px/1 var(--font); font-variant-numeric: tabular-nums; width: 34px; text-align: right; color: var(--label); }
+
+  /* Compact layout adjustments */
+  @media (max-width: 860px) {
+    .panel { padding: 8px 10px; gap: 7px; }
+    .knob { width: 68px; }
+  }
+
+  /* ── Precision Instrument Structural & Hardware Refinements ── */
+  header {
+    height: 46px;
+    padding: 0 14px;
+    gap: 10px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent), var(--panel);
+    border-bottom: 1px solid var(--line-hi);
+  }
+  .brand svg { filter: drop-shadow(0 0 5px var(--accent)); }
+  .brand .name { font-size: 16.5px; font-weight: 700; letter-spacing: -0.01em; }
+  .headsep { height: 20px; }
+  #buildTag { font: 500 9.5px/1.2 var(--font); color: var(--muted); max-width: 135px; opacity: 0.75; }
+
+  .track-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 26px;
+    padding: 0 8px;
+    border-radius: var(--r-pill);
+    background: var(--track);
+    border: 1px solid var(--line);
+    cursor: pointer;
+    flex: 0 1 118px;
+    min-width: 72px;
+    max-width: 128px;
+    transition: border-color 0.12s, background-color 0.12s;
+  }
+  .track-chip:hover { border-color: var(--line-hi); background: var(--panel-hi); }
+  .track-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-lit); flex: 0 0 auto; }
+  .track-name { flex: 1 1 auto; min-width: 0; font: 700 11px/1 var(--font); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .track-edit-ico { font-size: 10px; color: var(--muted); opacity: 0.65; flex: 0 0 auto; }
+  .track-chip:hover .track-edit-ico { opacity: 1; color: var(--text); }
+  .track-name-input {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    height: 20px;
+    background: var(--well);
+    color: var(--cream);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    font: 600 11px/1 var(--font);
+    padding: 0 5px;
+    outline: none;
+  }
+
+  .beacon-picker {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 6px 0 8px;
+    border-radius: var(--r-pill);
+    background: var(--track);
+    border: 1px solid var(--line);
+    flex: 0 0 auto;
+  }
+  .beacon-led {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--muted);
+    transition: background-color 0.15s, box-shadow 0.15s;
+  }
+  .beacon-picker.receiving .beacon-led { background: #34d399; box-shadow: 0 0 7px #34d399; }
+  .beacon-picker.waiting .beacon-led { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; }
+  .beacon-picker.mismatch { border-color: #f59e0b; }
+  .beacon-picker.mismatch .beacon-led { background: #ef4444; box-shadow: 0 0 7px #ef4444; }
+  .beacon-lbl {
+    font: 700 9px/1 var(--font);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--label);
+    white-space: nowrap;
+  }
+  .beacon-select {
+    height: 22px;
+    max-width: 122px;
+    min-width: 88px;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font: 600 11px/1 var(--font);
+    cursor: pointer;
+    outline: none;
+  }
+  .beacon-select option { background: var(--panel); color: var(--text); }
+  .beacon-select:disabled { opacity: 0.55; cursor: default; }
+
+  .src-key-tgl {
+    flex: 0 0 auto;
+    height: 20px;
+    min-width: 34px;
+    padding: 0 7px;
+    border-radius: var(--r-pill);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: rgba(0, 0, 0, 0.28);
+    color: var(--label);
+    font: 700 9.5px/1 var(--font);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background-color 0.12s, color 0.12s, border-color 0.12s;
+  }
+  .src-key-tgl:hover { color: var(--text); border-color: rgba(255, 255, 255, 0.42); }
+  .src-key-tgl.on {
+    border-color: rgba(56, 189, 248, 0.72);
+    background: rgba(56, 189, 248, 0.22);
+    color: #38bdf8;
+    box-shadow: 0 0 8px rgba(2, 132, 199, 0.28);
+  }
+  .src.ext-key .bar i {
+    background: #38bdf8;
+    box-shadow: 0 0 6px rgba(56, 189, 248, 0.5);
+  }
+  .vmeter i.ext-key {
+    background: linear-gradient(0deg, #0284c7, #38bdf8);
+  }
+  .route.ext-key {
+    background: rgba(56, 189, 248, 0.16);
+    color: #38bdf8;
+  }
+  .route.ext-key .dot {
+    background: #38bdf8;
+    box-shadow: 0 0 6px rgba(56, 189, 248, 0.55);
+  }
+  :root[data-theme="japandi-light"] .route.ext-key {
+    background: rgba(2, 132, 199, 0.14);
+    color: #0284c7;
+  }
+  :root[data-theme="japandi-light"] .route.ext-key .dot {
+    background: #0284c7;
+  }
+
+  .theme-strip {
+    display: inline-flex;
+    background: var(--track);
+    border: 1px solid var(--line);
+    border-radius: var(--r-pill);
+    padding: 2px;
+    gap: 2px;
+  }
+  .theme-btn {
+    height: 22px;
+    padding: 0 8px;
+    border: 0;
+    border-radius: calc(var(--r-pill) - 1px);
+    background: transparent;
+    color: var(--label);
+    font: 600 10px/1 var(--font);
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: background-color 0.12s, color 0.12s;
+  }
+  .theme-btn:hover:not(.on) { color: var(--text); background: var(--hover-bg); }
+  .theme-btn.on { background: var(--panel-hi); color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35); }
+
+  .body { gap: 8px; padding: 8px 10px 10px; }
+  .col { gap: 8px; }
+  .wells { gap: 8px; }
+  .well {
+    border: 1px solid var(--line-hi);
+    box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.65);
+  }
+  .well-readout {
+    background: rgba(9, 11, 16, 0.84);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 6px;
+    backdrop-filter: blur(6px);
+  }
+  .panel, .master {
+    border: 1px solid var(--line);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+  .pill {
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--label);
+    border: 1px solid var(--line);
+  }
+  .pill:hover:not(:disabled):not(.on) { background: var(--hover-bg); color: var(--text); }
+  .pill.on { border-color: transparent; background: var(--accent); color: #ffffff; box-shadow: 0 1px 8px rgba(0, 0, 0, 0.35); }
+  .pill.on:hover { filter: brightness(1.1); background: var(--accent); }
+  .pillbed { border: 1px solid var(--line); background: var(--track); }
+  .pillbed button { color: var(--label); }
+  .pillbed button:hover:not(:disabled):not(.on) { background-color: var(--hover-bg); color: var(--text); }
+
+  .vmeter {
+    width: 14px;
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.75);
+  }
+  .vmeter i { border-radius: 2px; }
+
+  .knob .karc { filter: drop-shadow(0 0 3px var(--accent)); }
+  .knob .v {
+    pointer-events: auto;
+    cursor: text;
+    padding: 1px 4px;
+    border-radius: 3px;
+    transition: background-color 0.12s, color 0.12s;
+  }
+  .knob .v:hover { background: var(--hover-bg); }
+  .knob input.v,
+  .knob input.v-edit {
+    width: 58px;
+    background: var(--well);
+    color: var(--text);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    font: 700 12px/1 var(--font);
+    text-align: center;
+    padding: 2px 3px;
+    outline: none;
+  }
+  .knob.is-modulated .klabel::after {
+    content: "";
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #38bdf8;
+    margin-left: 4px;
+    vertical-align: middle;
+    box-shadow: 0 0 6px rgba(56, 189, 248, 0.7);
+  }
+  .wd-xlfo-sep {
+    width: 1px;
+    height: 14px;
+    background: var(--line);
+    margin: 0 2px;
+  }
+
+</style>
+</head>
+<body>
+  <header>
+    <button class="pill power header-power-btn" id="param_power" title="Bypass the whole plugin. Crossfades over 30 ms so it never clicks."><span class="led"></span>Engaged</button>
+    <div class="brand">
+      <svg width="20" height="18" viewBox="0 0 20 18">
+        <path d="M2 16.5 L10 1.5 L18 16.5 Z" fill="none" stroke="#c58a2b" stroke-width="2.2" stroke-linejoin="round"/>
+      </svg>
+      <div class="stack">
+        <div class="line">Werewolf Digital</div>
+        <div class="name">Modulation</div>
+      </div>
+    </div>
+    <div class="track-chip" id="selfTrackChip" title="Click to rename this Modulation track for Beacon routing">
+      <span class="track-dot"></span>
+      <span class="track-name" id="selfTrackName">Mod 1</span>
+      <span class="track-edit-ico" aria-hidden="true">&#x270E;</span>
+    </div>
+    <div class="beacon-picker" id="beaconPickerWrap" title="Select an active Werewolf Digital Beacon track for external Envelope Follower keying. Wireless cross-track key — for sample-exact timing at large DAW buffer sizes (1024+), use Off (Host Bus) with a DAW sidechain send.">
+      <span class="beacon-led" aria-hidden="true"></span>
+      <span class="beacon-lbl">Beacon</span>
+      <select class="beacon-select" id="beaconSourceSelect" aria-label="Beacon key source">
+        <option value="">Off (Host Bus)</option>
+      </select>
+    </div>
+    <button class="pill header-audition-pill" id="param_delta" title="Listen to ONLY what the effect is changing — the difference between output and input.">Delta</button>
+    <div class="spacer"></div>
+    <div class="stat"><div class="k">Sample rate</div><div class="v" id="srTag">&mdash;</div></div>
+    <div class="theme-strip" id="themeSwitcher" title="Visual finish: Studio, Sumi (dark), Washi (light)">
+      <button class="theme-btn on" data-theme="studio">Studio</button>
+      <button class="theme-btn" data-theme="japandi-dark">Sumi</button>
+      <button class="theme-btn" data-theme="japandi-light">Washi</button>
+    </div>
+    <div class="headsep"></div>
+    <div id="buildTag">&mdash;</div>
+  </header>
+
+  <div class="body">
+    <div class="col">
+
+      <div class="stage-row">
+      <div class="wells">
+        <div class="well-group" id="lfoWellGroup">
+          <div class="well-head">
+            <div class="well-title" id="xlfoTitle">LFO 1 pattern</div>
+            <div class="well-hint" id="xlfoHint">Synced</div>
+            <div class="spacer"></div>
+            <div class="cfg" title="How many steps the pattern has before it loops.">
+              <span class="k">Steps</span>
+              <select id="xlfoStepsSelect">
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="6">6</option>
+                <option value="8">8</option>
+                <option value="12">12</option>
+                <option value="16">16</option>
+                <option value="24">24</option>
+                <option value="32">32</option>
+              </select>
+            </div>
+            <div class="cfg" title="What restarts the pattern from step one.">
+              <span class="k">Retrigger</span>
+              <select id="xlfoRetrigSelect">
+                <option value="0">Free run</option>
+                <option value="1">Host lock</option>
+                <option value="2">One shot</option>
+                <option value="3">MIDI note</option>
+              </select>
+            </div>
+            <div class="cfg" title="Snap dragged step values to this many levels.">
+              <span class="k">Grid</span>
+              <select id="gridSnapSelect">
+                <option value="0">Off</option>
+                <option value="4">1/4</option>
+                <option value="8" selected>1/8</option>
+                <option value="12">1/12</option>
+                <option value="16">1/16</option>
+                <option value="24">1/24</option>
+                <option value="32">1/32</option>
+              </select>
+            </div>
+          </div>
+          <div class="wd-xlfo-presets" id="xlfoPresetBar" aria-label="XLFO shape presets and transforms">
+            <button type="button" class="wd-xlfo-preset-btn" data-xlfo-preset="Sine">Sine</button>
+            <button type="button" class="wd-xlfo-preset-btn" data-xlfo-preset="Triangle">Triangle</button>
+            <button type="button" class="wd-xlfo-preset-btn" data-xlfo-preset="Saw">Saw</button>
+            <button type="button" class="wd-xlfo-preset-btn" data-xlfo-preset="Ramp">Ramp</button>
+            <button type="button" class="wd-xlfo-preset-btn" data-xlfo-preset="Square">Square</button>
+            <button type="button" class="wd-xlfo-preset-btn" data-xlfo-preset="S&amp;H">S&amp;H</button>
+            <button type="button" class="wd-xlfo-preset-btn" data-xlfo-preset="Sidechain Pump">Sidechain Pump</button>
+            <button type="button" class="wd-xlfo-preset-btn" data-xlfo-preset="Euclidean">Euclidean</button>
+            <span class="wd-xlfo-sep" aria-hidden="true"></span>
+            <button type="button" class="wd-xlfo-preset-btn" data-xlfo-op="invert">Invert</button>
+            <button type="button" class="wd-xlfo-preset-btn" data-xlfo-op="shift">Phase Shift</button>
+            <button type="button" class="wd-xlfo-preset-btn" data-xlfo-op="smooth">Smooth</button>
+          </div>
+          <div class="well">
+            <canvas id="xlfoCanvas"></canvas>
+            <div class="well-readout"><div class="k" id="lfoLiveKey">LFO 1</div><div class="v" id="lfoLiveVal">&mdash;</div></div>
+          </div>
+        </div>
+
+        <div class="well-group narrow" id="sourcesWellGroup">
+          <div class="well-head">
+            <div class="well-title">Sources</div>
+            <div class="well-hint">Drag onto a knob</div>
+          </div>
+          <div class="well" id="sourcesWell">
+            <div class="srcs" id="sourceList">
+              <div class="src on" data-source-id="0" role="button" tabindex="0" title="Step LFO 1. Click to edit it in the well; drag it onto a knob to route it."><span class="n"><span class="wd-src-dot" style="background:#38bdf8"></span>LFO 1</span><div class="bar"><i></i></div></div>
+              <div class="src" data-source-id="1" role="button" tabindex="0" title="Step LFO 2. Click to edit it in the well; drag it onto a knob to route it."><span class="n"><span class="wd-src-dot" style="background:#a78bfa"></span>LFO 2</span><div class="bar"><i></i></div></div>
+              <div class="src" data-source-id="2" role="button" tabindex="0" title="Step LFO 3. Click to edit it in the well; drag it onto a knob to route it."><span class="n"><span class="wd-src-dot" style="background:#34d399"></span>LFO 3</span><div class="bar"><i></i></div></div>
+              <div class="src" data-source-id="4" role="button" tabindex="0" title="Envelope follower: tracks incoming audio (or external sidechain when Ext is enabled). Drag onto a knob to route it."><span class="n"><span class="wd-src-dot" style="background:#f59e0b"></span>Env</span><div class="bar"><i></i></div><button class="src-key-tgl" id="btn_followerExtSc" type="button" title="Envelope follower key input: Int (main audio) or Ext (Host Sidechain Bus 1 or selected WD Beacon).">Int</button></div>
+              <div class="src" data-source-id="5" role="button" tabindex="0" title="MIDI note: the pitch of the played note, 0 to 1. Drag onto a knob to route it."><span class="n"><span class="wd-src-dot" style="background:#f472b6"></span>Note</span><div class="bar"><i></i></div></div>
+              <div class="src" data-source-id="6" role="button" tabindex="0" title="MIDI velocity: how hard the note was struck, 0 to 1. Drag onto a knob to route it."><span class="n"><span class="wd-src-dot" style="background:#fb7185"></span>Vel</span><div class="bar"><i></i></div></div>
+              <div class="src" data-source-id="7" role="button" tabindex="0" title="Mod wheel (CC 1) from the host. Drag onto a knob to route it."><span class="n"><span class="wd-src-dot" style="background:#60a5fa"></span>Wheel</span><div class="bar"><i></i></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="meter-bridge">
+        <div class="vmeter-wrap">
+          <div class="vmeter"><i id="srcMeterBar"></i></div>
+          <div class="k" id="srcMeterLabel">LFO 1</div>
+          <div class="v" id="srcMeterVal">&mdash;</div>
+        </div>
+      </div>
+      </div>
+
+      <div class="panel rail">
+        <div class="rail-head">
+          <div class="rail-range">Mode</div>
+          <div class="charset" id="param_mode" title="The effect engine: what the modulation is applied to."></div>
+          <div class="spacer"></div>
+        </div>
+
+        <div id="knobRow">
+          <div class="knob" id="knob_rate" data-dest-id="1" data-param-id="rate" data-label="Rate" title="How fast the effect's own sweep cycles."></div>
+          <div class="knob" id="knob_depth" data-dest-id="2" data-param-id="depth" data-label="Depth" title="How far the sweep travels."></div>
+          <div class="knob" id="knob_feedback" data-dest-id="3" data-param-id="feedback" data-label="Feedback" data-bipolar="1" title="How much of the output is fed back in. Negative inverts it."></div>
+          <div class="knob" id="knob_mix" data-dest-id="4" data-param-id="mix" data-label="Mix" title="Blend between the dry signal and the effect."></div>
+          <div class="knob" id="knob_stereowidth" data-dest-id="5" data-param-id="stereowidth" data-label="Width" title="Phase offset between the left and right sweeps, in degrees."></div>
+        </div>
+      </div>
+
+      <div class="panel mod">
+        <div class="mod-head">
+          <div class="mod-title">
+            <div class="t">Modulation</div>
+            <div class="s" id="routeCount">no routes live</div>
+          </div>
+          <div class="pillbed sage" id="xlfo-tabs">
+            <button class="on" data-xlfo="1">LFO 1</button>
+            <button data-xlfo="2">LFO 2</button>
+            <button data-xlfo="3">LFO 3</button>
+          </div>
+          <div class="knob sm" id="xlfo_rate" data-label="Rate" data-size="38" title="How fast this LFO cycles. On its own it does nothing until you point it at a control."></div>
+          <div class="knob sm" id="xlfo_phase" data-label="Phase" data-size="38" title="Where in its cycle this LFO starts. Offset two LFOs so they don't move in lockstep."></div>
+          <div class="knob sm" id="xlfo_snap" data-label="Snap" data-size="38" title="Quantise the LFO into steps instead of a smooth sweep."></div>
+          <button class="pill sm" id="xlfo_balance" title="Bipolar: the LFO swings both above and below centre.">Bipolar</button>
+          <button class="pill sm" id="xlfoSyncBtn" title="Lock this LFO's pattern to the host tempo.">Sync</button>
+          <div class="routes" id="routeChips"></div>
+          <button class="pill sm dashed" id="matrixToggle">Routes</button>
+        </div>
+        <div class="matrix" id="matrixContainer"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  window.addEventListener('error', e => {
+    if (e.message && (e.message.includes('ResizeObserver') || e.message.includes('loop completed with undelivered notifications'))) return;
+    let el = document.getElementById('errBanner');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'errBanner';
+      el.style.cssText = 'position:fixed;left:0;right:0;bottom:0;background:#7d5407;'
+        + 'color:#f2f5fa;font:11px monospace;padding:4px 10px;z-index:99;';
+      document.body.appendChild(el);
+    }
+    el.textContent = 'UI error: ' + e.message + ' @' + (e.lineno || '?');
+  });
+</script>
+
+<script type="module">
+(async () => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+
+  const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const COL = {
+    accent:    cssVar('--accent')     || '#c58a2b',
+    accentLit: cssVar('--accent-lit') || '#eeb85e',
+    well:      cssVar('--well')       || '#06070a',
+    cream:     cssVar('--cream')      || '#f2f5fa',
+  };
+  let uiReady = false;
+  function applyTheme(theme) {
+    const t = theme || 'studio';
+    if (t === 'studio') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', t);
+    COL.accent = cssVar('--accent') || COL.accent;
+    COL.accentLit = cssVar('--accent-lit') || COL.accentLit;
+    COL.well = cssVar('--well') || '#06070a';
+    COL.cream = cssVar('--cream') || '#f2f5fa';
+    const sw = document.getElementById('themeSwitcher');
+    if (sw) {
+      sw.querySelectorAll('.theme-btn').forEach(b => {
+        b.classList.toggle('on', b.dataset.theme === t);
+      });
+    }
+    try { localStorage.setItem('wd_theme', t); } catch (e) {}
+    if (uiReady) drawXlfoCurve();
+  }
+  {
+    let saved = 'studio';
+    try { saved = localStorage.getItem('wd_theme') || 'studio'; } catch (e) {}
+    applyTheme(saved);
+    const sw = document.getElementById('themeSwitcher');
+    if (sw) {
+      sw.addEventListener('click', e => {
+        const btn = e.target.closest('.theme-btn');
+        if (btn && btn.dataset.theme) applyTheme(btn.dataset.theme);
+      });
+    }
+  }
+  const ink = a => 'rgba(242, 245, 250, ' + a + ')';
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+  // ------------------------------------------------------------------ state
+  let currentXlfoIdx = 0;     // 0..2
+  let selectedSourceIdx = 0;  // 0..2 LFOs, 4 envelope, 5..7 MIDI
+  let followerExtSc = false;
+  let beaconSelected = '';
+  let beaconReceiving = false;
+  let scActive = false;
+  let beaconSrMismatch = false;
+  let beaconMetersSeen = false;
+  let lastBeaconSig = '';
+  const selfMeta = { name: 'Mod 1', customName: '', publishedName: 'Mod 1', publishing: true };
+  let activeSlots = [];
+  let xlfosState = [];
+  let liveSourceVals = new Array(10).fill(0);
+  let liveXlfoPhases = new Array(3).fill(0);
+  let liveSlotVals = new Array(24).fill(0);
+  let liveDestOffsets = new Array(6).fill(0); // indexed by dest id 1..5
+
+  for (let s = 0; s < 24; ++s)
+    activeSlots.push({ index: s, source: -1, dest: -1, curve: 0, on: false, depth: 0.0 });
+
+  const SRC_META = {
+    0: { label: 'LFO 1', color: '#38bdf8' },
+    1: { label: 'LFO 2', color: '#a78bfa' },
+    2: { label: 'LFO 3', color: '#34d399' },
+    4: { label: 'Env',   color: '#f59e0b' },
+    5: { label: 'Note',  color: '#f472b6' },
+    6: { label: 'Vel',   color: '#fb7185' },
+    7: { label: 'Wheel', color: '#60a5fa' },
+  };
+  const ringGestureOpen = {};
+  let patchCords = null;
+
+  for (let i = 0; i < 3; ++i) {
+    const steps = [];
+    for (let step = 0; step < 32; ++step)
+      steps.push({ index: step, value: 0.5 - 0.5 * Math.cos(2 * Math.PI * ((step + 1) / 16)), glide: 100.0, slope: 0.0 });
+    xlfosState.push({ index: i, numSteps: 16, isSynced: true, syncRateBeats: 1.0,
+                      retriggerMode: 1 /* host lock */, steps });
+  }
+
+  const DEST_OPTIONS = [
+    { val: -1, label: "None" },
+    { val: 1, label: "Rate" },
+    { val: 2, label: "Depth" },
+    { val: 3, label: "Feedback" },
+    { val: 4, label: "Mix" },
+    { val: 5, label: "Width" },
+    { val: 1000, label: "LFO 1 Rate" },
+    { val: 1001, label: "LFO 2 Rate" },
+    { val: 1002, label: "LFO 3 Rate" }
+  ];
+  for (let s = 0; s < 24; ++s)
+    DEST_OPTIONS.push({ val: 2000 + s, label: 'Slot ' + (s + 1) + ' Depth' });
+
+  const SRC_OPTIONS = [
+    { val: -1, label: "None" },
+    { val: 0, label: "LFO 1" },
+    { val: 1, label: "LFO 2" },
+    { val: 2, label: "LFO 3" },
+    { val: 4, label: "Envelope" },
+    { val: 5, label: "MIDI Note" },
+    { val: 6, label: "Velocity" },
+    { val: 7, label: "Mod Wheel" }
+  ];
+
+  const MODE_CHOICES = ["Chorus", "Flanger", "Phaser", "Ensemble", "Rotary", "Tremolo", "Vibrato"];
+
+  // ---------------------------------------------------------------- knobs (WDKit)
+  // Relay handles
+  let host = null;
+  const sliders = {}, combos = {}, toggles = {};
+  const sl = id => { if (!host) return null; if (!sliders[id]) sliders[id] = host.slider(id); return sliders[id]; };
+  const cb = id => { if (!host) return null; if (!combos[id]) combos[id] = host.combo(id); return combos[id]; };
+  const tg = id => { if (!host) return null; if (!toggles[id]) toggles[id] = host.toggle(id); return toggles[id]; };
+
+  const comboIndex = (id, n) => { const s = cb(id); return s ? Math.round((s.value || 0) * (n - 1)) : 0; };
+  const setComboIndex = (id, i) => { const s = cb(id); if (s && s.setChoiceIndex) s.setChoiceIndex(i); };
+
+  let dragHandleIdx = -1;
+  let dragStartPos = null;
+
+  document.querySelectorAll('.knob').forEach(el => {
+    if (window.WDKit && WDKit.mountKnob) WDKit.mountKnob(el);
+  });
+
+  const matrixContainer = $('matrixContainer');
+  const matrixToggle = $('matrixToggle');
+  matrixToggle.addEventListener('click', () => {
+    const open = matrixContainer.style.display === 'flex';
+    matrixContainer.style.display = open ? 'none' : 'flex';
+    matrixToggle.classList.toggle('on', !open);
+    matrixToggle.textContent = open ? 'Routes' : 'Hide';
+  });
+
+  const labelOf = (list, val) => {
+    const hit = list.find(o => o.val === val);
+    return hit ? hit.label : '—';
+  };
+
+  function refreshRouteChips() {
+    const chips = $('routeChips');
+    const live = activeSlots.filter(s => s.on && s.source >= 0 && s.dest >= 0);
+    $('routeCount').textContent = live.length === 0 ? 'no routes live'
+      : (live.length + (live.length === 1 ? ' route live' : ' routes live'));
+    chips.innerHTML = '';
+    live.slice(0, 1).forEach(s => {
+      const isExtEnv = (s.source === 4 && followerExtSc);
+      const el = document.createElement('div');
+      el.className = isExtEnv ? 'route ext-key' : 'route';
+      const dot = document.createElement('span');
+      dot.className = 'dot';
+      el.appendChild(dot);
+      el.appendChild(document.createTextNode(
+        (isExtEnv ? 'Env (Ext)' : labelOf(SRC_OPTIONS, s.source))
+        + ' \u2192 ' + labelOf(DEST_OPTIONS, s.dest)
+        + ' ' + Math.round(Math.abs(s.depth) * 50) + '%'));
+      chips.appendChild(el);
+    });
+    if (live.length > 1) {
+      const more = document.createElement('button');
+      more.className = 'pill sm';
+      more.textContent = '+' + (live.length - 1);
+      more.addEventListener('click', () => matrixToggle.click());
+      chips.appendChild(more);
+    }
+    paintAllKnobsLive();
+  }
+
+  function rebuildSlotsGridUI() {
+    matrixContainer.innerHTML = '';
+    for (let s = 0; s < 24; ++s) {
+      const initSlot = activeSlots[s];
+      const row = document.createElement('div');
+      row.className = 'slot' + (initSlot.on ? ' active' : '');
+      row.dataset.slotIndex = s;
+
+      const chk = document.createElement('input');
+      chk.type = 'checkbox';
+      chk.checked = initSlot.on;
+      chk.addEventListener('change', () => {
+        const slot = activeSlots[s];
+        if (!slot) return;
+        slot.on = chk.checked;
+        row.classList.toggle('active', slot.on);
+        saveSlot(s);
+        refreshRouteChips();
+        if (patchCords) patchCords.refresh();
+      });
+      row.appendChild(chk);
+
+      const srcSel = document.createElement('select');
+      SRC_OPTIONS.forEach(opt => {
+        const o = document.createElement('option');
+        o.value = opt.val; o.textContent = opt.label;
+        if (initSlot.source === opt.val) o.selected = true;
+        srcSel.appendChild(o);
+      });
+      srcSel.addEventListener('change', () => {
+        const slot = activeSlots[s];
+        if (!slot) return;
+        slot.source = parseInt(srcSel.value, 10);
+        saveSlot(s);
+        refreshRouteChips();
+        if (patchCords) patchCords.refresh();
+      });
+      row.appendChild(srcSel);
+
+      const arr = document.createElement('span');
+      arr.className = 'arrow';
+      arr.textContent = '→';
+      row.appendChild(arr);
+
+      const destSel = document.createElement('select');
+      DEST_OPTIONS.forEach(opt => {
+        const o = document.createElement('option');
+        o.value = opt.val; o.textContent = opt.label;
+        if (initSlot.dest === opt.val) o.selected = true;
+        destSel.appendChild(o);
+      });
+      destSel.addEventListener('change', () => {
+        const slot = activeSlots[s];
+        if (!slot) return;
+        slot.dest = parseInt(destSel.value, 10);
+        saveSlot(s);
+        refreshRouteChips();
+        if (patchCords) patchCords.refresh();
+      });
+      row.appendChild(destSel);
+
+      const depthSlider = document.createElement('input');
+      depthSlider.type = 'range';
+      depthSlider.min = -2.0; depthSlider.max = 2.0; depthSlider.step = 0.01;
+      depthSlider.value = initSlot.depth;
+
+      const valSpan = document.createElement('span');
+      valSpan.className = 'val';
+      valSpan.textContent = initSlot.depth.toFixed(2);
+
+      let matrixDragOpen = false;
+      const updateMatrixDepth = isFinal => {
+        const slot = activeSlots[s];
+        if (!slot) return;
+        const dVal = clamp(parseFloat(depthSlider.value) || 0, -2.0, 2.0);
+        slot.depth = dVal;
+        valSpan.textContent = dVal.toFixed(2);
+        const pSl = sl('slot' + (s + 1) + 'depth');
+        if (pSl) {
+          if (!matrixDragOpen) {
+            matrixDragOpen = true;
+            pSl.sliderDragStarted();
+          }
+          pSl.setNormalisedValue((dVal + 2.0) / 4.0);
+          if (isFinal) {
+            matrixDragOpen = false;
+            pSl.sliderDragEnded();
+          }
+        }
+        refreshRouteChips();
+      };
+      depthSlider.addEventListener('pointerdown', ev => {
+        if ((ev.button ?? 0) !== 0) return;
+        updateMatrixDepth(false);
+      });
+      depthSlider.addEventListener('input', () => updateMatrixDepth(false));
+      depthSlider.addEventListener('pointerup', () => { if (matrixDragOpen) updateMatrixDepth(true); });
+      depthSlider.addEventListener('pointercancel', () => { if (matrixDragOpen) updateMatrixDepth(true); });
+      depthSlider.addEventListener('change', () => updateMatrixDepth(true));
+      row.appendChild(depthSlider);
+      row.appendChild(valSpan);
+
+      matrixContainer.appendChild(row);
+    }
+    refreshRouteChips();
+  }
+  rebuildSlotsGridUI();
+
+  function applySlotsToRows() {
+    for (let s = 0; s < 24; ++s) {
+      const slot = activeSlots[s];
+      const row = matrixContainer.querySelector('[data-slot-index="' + s + '"]');
+      if (!row) continue;
+      row.classList.toggle('active', slot.on);
+      row.querySelector('input[type="checkbox"]').checked = slot.on;
+      const sels = row.querySelectorAll('select');
+      sels[0].value = String(slot.source);
+      sels[1].value = String(slot.dest);
+      row.querySelector('input[type="range"]').value = slot.depth;
+      row.querySelector('span.val').textContent = slot.depth.toFixed(2);
+    }
+    refreshRouteChips();
+    if (patchCords) patchCords.refresh();
+  }
+
+  // ------------------------------------------------------------------ host
+  if (window.__JUCE__ && window.__JUCE__.backend) {
+    try {
+      const lib = await import('./juce/index.js');
+      const be = window.__JUCE__.backend;
+      host = {
+        slider: id => lib.getSliderState(id),
+        combo:  id => lib.getComboBoxState(id),
+        toggle: id => lib.getToggleState(id),
+        call:   (name, ...args) => lib.getNativeFunction(name)(...args),
+        on:     (event, cb) => be.addEventListener(event, cb),
+      };
+    } catch (e) { console.warn('JUCE frontend unavailable:', e); }
+  }
+
+  async function saveSlot(s) {
+    const slot = activeSlots[s];
+    if (host) {
+      try {
+        await host.call('setSlotConfig', s, slot.source, slot.dest, slot.curve, slot.on);
+      } catch (e) { console.error('Error saving slot config:', e); }
+    }
+  }
+
+  async function saveStep(xlfoIdx, stepIdx) {
+    const xlfo = xlfosState[xlfoIdx];
+    if (!xlfo) return;
+    const step = xlfo.steps[stepIdx];
+    if (host) {
+      try {
+        await host.call('setXlfoStep', xlfoIdx, stepIdx, step.value, step.glide, step.slope);
+      } catch (e) { console.error('Error saving step:', e); }
+    }
+  }
+
+  async function saveXlfoConfig(xlfoIdx) {
+    const xlfo = xlfosState[xlfoIdx];
+    if (!xlfo) return;
+    if (host) {
+      try {
+        await host.call('setXlfoConfig', xlfoIdx, xlfo.numSteps, xlfo.isSynced, xlfo.syncRateBeats, xlfo.retriggerMode);
+      } catch (e) { console.error('Error saving XLFO config:', e); }
+    }
+  }
+
+  // --------------------------------------------------- slider / toggle binds
+  function bindToggle(el, id, onValueChange = null) {
+    const t = tg(id);
+    if (!el || !t) return;
+    if (el._wdToggleAbort) el._wdToggleAbort.abort();
+    const ac = typeof AbortController === 'function' ? new AbortController() : null;
+    el._wdToggleAbort = ac;
+    const evOpts = ac ? { signal: ac.signal } : undefined;
+
+    const updateDisplay = () => {
+      const v = !!t.getValue();
+      el.classList.toggle('on', v);
+      if (onValueChange) onValueChange(v);
+    };
+
+    if (t.customListener) t.valueChangedEvent.removeListener(t.customListener);
+    t.customListener = updateDisplay;
+    t.valueChangedEvent.addListener(updateDisplay);
+    updateDisplay();
+
+    el.addEventListener('click', () => {
+      t.setValue(!t.getValue());
+      updateDisplay();
+    }, evOpts);
+  }
+
+  function bindChoicePills(groupEl, id, choices, onChange = null) {
+    if (!groupEl) return;
+    groupEl.innerHTML = '';
+    choices.forEach((name, i) => {
+      const b = document.createElement('button');
+      b.className = 'pill sm';
+      b.dataset.index = String(i);
+      b.textContent = name;
+      groupEl.appendChild(b);
+    });
+    const buttons = groupEl.querySelectorAll('button');
+
+    const updateDisplay = () => {
+      const idx = comboIndex(id, choices.length);
+      buttons.forEach(btn => btn.classList.toggle('on', parseInt(btn.dataset.index, 10) === idx));
+      if (onChange) onChange(idx);
+    };
+
+    const s = cb(id);
+    if (s) {
+      if (s.customListener) s.valueChangedEvent.removeListener(s.customListener);
+      s.customListener = updateDisplay;
+      s.valueChangedEvent.addListener(updateDisplay);
+    }
+    updateDisplay();
+
+    buttons.forEach(btn => btn.addEventListener('click', () => {
+      setComboIndex(id, parseInt(btn.dataset.index, 10));
+      updateDisplay();
+    }));
+  }
+
+  // ------------------------------------------------------------ LFO well
+  const xCanvas = $('xlfoCanvas');
+  const xCtx = xCanvas.getContext('2d');
+  let xW = 0, xH = 0, xDpr = 1;
+  const AXIS = 20, PAD_TOP = 14;
+
+  function fitXCanvas() {
+    xDpr = window.devicePixelRatio || 1;
+    const r = xCanvas.getBoundingClientRect();
+    xW = r.width; xH = r.height;
+    xCanvas.width = Math.round(xW * xDpr);
+    xCanvas.height = Math.round(xH * xDpr);
+    xCtx.setTransform(xDpr, 0, 0, xDpr, 0, 0);
+    drawXlfoCurve();
+  }
+  new ResizeObserver(fitXCanvas).observe(xCanvas);
+
+  function bent(u, slope) {
+    if (Math.abs(slope) <= 1e-6) return u;
+    return slope > 0 ? Math.pow(u, 1.0 - slope * 0.95) : Math.pow(u, 1.0 - slope * 19.0);
+  }
+
+  function patternAt(xlfo, u) {
+    const n = xlfo.numSteps;
+    const i = clamp(Math.floor(u * n), 0, n - 1);
+    const local = u * n - i;
+    const prev = xlfo.steps[(i - 1 + n) % n].value;
+    const curr = xlfo.steps[i].value;
+    const g = xlfo.steps[i].glide / 100.0;
+    if (g > 0 && local < g) return prev + bent(local / g, xlfo.steps[i].slope) * (curr - prev);
+    return curr;
+  }
+
+  const plotH = () => xH - AXIS - PAD_TOP;
+  const yFor = v => PAD_TOP + (1.0 - v) * plotH();
+
+  function drawXlfoCurve() {
+    xCtx.clearRect(0, 0, xW, xH);
+    if (xW < 40 || xH < 40) return;
+    const xlfo = xlfosState[currentXlfoIdx];
+    if (!xlfo) return;
+    const n = xlfo.numSteps;
+    const stepW = xW / n;
+
+    // Axis step numerals
+    xCtx.font = '600 10px ' + cssVar('--font');
+    xCtx.fillStyle = ink(0.34);
+    xCtx.textAlign = 'center';
+    xCtx.textBaseline = 'alphabetic';
+    if (stepW > 14)
+      for (let i = 0; i < n; ++i) xCtx.fillText(String(i + 1), (i + 0.5) * stepW, xH - 5);
+
+    // Step boundary grid lines
+    xCtx.strokeStyle = ink(0.07);
+    xCtx.lineWidth = 1;
+    for (let i = 1; i < n; ++i) {
+      const bx = Math.round(i * stepW);
+      xCtx.beginPath(); xCtx.moveTo(bx, PAD_TOP); xCtx.lineTo(bx, xH - AXIS); xCtx.stroke();
+    }
+
+    // Setting pattern curve in --accent-lit
+    const trace = (from, to) => {
+      xCtx.beginPath();
+      let first = true;
+      for (let px = from; px <= to; ++px) {
+        const y = yFor(patternAt(xlfo, clamp(px / xW, 0, 0.999999)));
+        first ? xCtx.moveTo(px, y) : xCtx.lineTo(px, y);
+        first = false;
+      }
+      xCtx.stroke();
+    };
+    xCtx.lineWidth = 2.6;
+    xCtx.lineJoin = 'round';
+    xCtx.lineCap = 'round';
+    xCtx.strokeStyle = COL.accentLit;
+    trace(0, Math.round(xW));
+
+    // Live playhead trace in cream (92%) with tip dot
+    const phase = liveXlfoPhases[currentXlfoIdx];
+    if (typeof phase === 'number' && phase > 0) {
+      const px = clamp(Math.round(phase * xW), 0, xW);
+      xCtx.lineWidth = 3.4;
+      xCtx.strokeStyle = ink(0.92);
+      trace(0, px);
+      const tipY = yFor(patternAt(xlfo, clamp(phase, 0, 0.999999)));
+      xCtx.fillStyle = COL.cream;
+      xCtx.beginPath();
+      xCtx.arc(px, tipY, 4, 0, Math.PI * 2);
+      xCtx.fill();
+    }
+
+    // Handles as cream pills/rects on step ends and mid-glide
+    for (let i = 0; i < n; ++i) {
+      const hx = (i + 1) * stepW;
+      const hy = yFor(xlfo.steps[i].value);
+
+      // Dashed guide
+      xCtx.strokeStyle = ink(0.2);
+      xCtx.lineWidth = 1;
+      xCtx.setLineDash([3, 3]);
+      xCtx.beginPath(); xCtx.moveTo(hx, PAD_TOP); xCtx.lineTo(hx, xH - AXIS); xCtx.stroke();
+      xCtx.setLineDash([]);
+
+      xCtx.fillStyle = dragHandleIdx === i ? COL.accentLit : COL.cream;
+      xCtx.beginPath();
+      if (xCtx.roundRect) xCtx.roundRect(hx - 5, hy - 5, 10, 10, 3);
+      else xCtx.rect(hx - 5, hy - 5, 10, 10);
+      xCtx.fill();
+
+      const g = xlfo.steps[i].glide / 100.0;
+      if (g > 0 && stepW > 24) {
+        const prev = xlfo.steps[(i - 1 + n) % n].value;
+        const mx = i * stepW + (g * stepW) / 2;
+        const my = yFor((prev + xlfo.steps[i].value) / 2);
+        xCtx.fillStyle = dragHandleIdx === i + 100 ? COL.accentLit : COL.cream;
+        xCtx.beginPath();
+        xCtx.arc(mx, my, 3.5, 0, Math.PI * 2);
+        xCtx.fill();
+      }
+    }
+  }
+
+  xCanvas.addEventListener('pointerdown', ev => {
+    if ((ev.button ?? 0) !== 0) return;
+    const r = xCanvas.getBoundingClientRect();
+    const mx = ev.clientX - r.left;
+    const my = ev.clientY - r.top;
+    const xlfo = xlfosState[currentXlfoIdx];
+    if (!xlfo) return;
+    const n = xlfo.numSteps;
+    const stepW = xW / n;
+
+    dragHandleIdx = -1;
+    for (let i = 0; i < n; ++i) {
+      const hx = (i + 1) * stepW;
+      const hy = yFor(xlfo.steps[i].value);
+      if (Math.hypot(mx - hx, my - hy) < 12) {
+        dragHandleIdx = i;
+        dragStartPos = { x: mx, y: my, val: xlfo.steps[i].value, glide: xlfo.steps[i].glide };
+        try { xCanvas.setPointerCapture(ev.pointerId); } catch (_) {}
+        break;
+      }
+    }
+    if (dragHandleIdx === -1) {
+      for (let i = 0; i < n; ++i) {
+        const g = xlfo.steps[i].glide / 100.0;
+        const midX = i * stepW + (g * stepW) / 2;
+        const prev = xlfo.steps[(i - 1 + n) % n].value;
+        const midY = yFor((prev + xlfo.steps[i].value) / 2);
+        if (Math.hypot(mx - midX, my - midY) < 16) {
+          dragHandleIdx = i + 100;
+          dragStartPos = { x: mx, y: my, slope: xlfo.steps[i].slope };
+          try { xCanvas.setPointerCapture(ev.pointerId); } catch (_) {}
+          break;
+        }
+      }
+    }
+    drawXlfoCurve();
+  });
+
+  xCanvas.addEventListener('pointermove', ev => {
+    if (dragHandleIdx === -1 || !dragStartPos) return;
+    const r = xCanvas.getBoundingClientRect();
+    const mx = clamp(ev.clientX - r.left, 0, xW);
+    const my = clamp(ev.clientY - r.top, PAD_TOP, xH - AXIS);
+    const xlfo = xlfosState[currentXlfoIdx];
+    if (!xlfo) return;
+    const n = xlfo.numSteps;
+    const stepIdx = dragHandleIdx >= 100 ? dragHandleIdx - 100 : dragHandleIdx;
+    const step = xlfo.steps[stepIdx];
+    const snapGrid = parseInt($('gridSnapSelect').value, 10);
+
+    if (dragHandleIdx < 100) {
+      let newVal = 1.0 - (my - PAD_TOP) / plotH();
+      if (snapGrid > 0) newVal = Math.round(newVal * snapGrid) / snapGrid;
+      step.value = clamp(newVal, 0.0, 1.0);
+
+      const stepW = xW / n;
+      const localX = clamp(mx - stepIdx * stepW, 0, stepW);
+      let newGlide = (localX / stepW) * 100;
+      if (!ev.shiftKey) newGlide = Math.round(newGlide / 25) * 25;
+      step.glide = clamp(newGlide, 0.0, 100.0);
+    } else {
+      const deltaY = (dragStartPos.y - my) / (plotH() * 0.5);
+      step.slope = clamp(dragStartPos.slope + deltaY, -1.0, 1.0);
+    }
+    saveStep(currentXlfoIdx, stepIdx);
+    drawXlfoCurve();
+  });
+
+  const endXDrag = ev => {
+    if (dragHandleIdx !== -1) {
+      try { xCanvas.releasePointerCapture(ev.pointerId); } catch (e) {}
+      dragHandleIdx = -1;
+      dragStartPos = null;
+      drawXlfoCurve();
+    }
+  };
+  xCanvas.addEventListener('pointerup', endXDrag);
+  xCanvas.addEventListener('pointercancel', endXDrag);
+
+  function applyXlfoPreset(presetName) {
+    const xlfo = xlfosState[currentXlfoIdx];
+    if (!xlfo || !window.WDKit || !WDKit.buildXlfoPresetSteps) return;
+    const numSteps = xlfo.numSteps || 16;
+    const built = WDKit.buildXlfoPresetSteps(presetName, numSteps);
+    const steps = Array.isArray(built) ? built : (built && built.steps ? built.steps : []);
+    for (let i = 0; i < 32 && i < steps.length; ++i) {
+      xlfo.steps[i] = {
+        index: i,
+        value: clamp(steps[i].value, 0, 1),
+        glide: clamp(steps[i].glide, 0, 100),
+        slope: clamp(steps[i].slope, -1, 1),
+      };
+    }
+    saveXlfoConfig(currentXlfoIdx);
+    for (let i = 0; i < numSteps; ++i) saveStep(currentXlfoIdx, i);
+    drawXlfoCurve();
+  }
+
+  function applyXlfoTransform(op) {
+    const xlfo = xlfosState[currentXlfoIdx];
+    if (!xlfo || !window.WDKit || !WDKit.transformXlfoSteps) return;
+    const numSteps = xlfo.numSteps || 16;
+    const arg = op === 'shift' ? 1 : (op === 'smooth' ? 35 : undefined);
+    const next = WDKit.transformXlfoSteps(xlfo.steps, op, arg, numSteps);
+    for (let i = 0; i < 32 && i < next.length; ++i) {
+      xlfo.steps[i] = {
+        index: i,
+        value: clamp(next[i].value, 0, 1),
+        glide: clamp(next[i].glide, 0, 100),
+        slope: clamp(next[i].slope, -1, 1),
+      };
+    }
+    for (let i = 0; i < numSteps; ++i) saveStep(currentXlfoIdx, i);
+    drawXlfoCurve();
+  }
+
+  {
+    const bar = $('xlfoPresetBar');
+    if (bar) {
+      bar.querySelectorAll('[data-xlfo-preset]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          bar.querySelectorAll('[data-xlfo-preset]').forEach(b => b.classList.toggle('on', b === btn));
+          applyXlfoPreset(btn.dataset.xlfoPreset);
+        });
+      });
+      bar.querySelectorAll('[data-xlfo-op]').forEach(btn => {
+        btn.addEventListener('click', () => applyXlfoTransform(btn.dataset.xlfoOp));
+      });
+    }
+  }
+
+  // --------------------------------------------------------- LFO selection
+  function xlfoHintText() {
+    const x = xlfosState[currentXlfoIdx];
+    return x.isSynced ? 'Synced' : 'Free';
+  }
+
+  function loadXlfoControlsUI() {
+    const xlfo = xlfosState[currentXlfoIdx];
+    if (!xlfo) return;
+    $('xlfoStepsSelect').value = xlfo.numSteps;
+    $('xlfoRetrigSelect').value = xlfo.retriggerMode;
+    $('xlfoSyncBtn').classList.toggle('on', xlfo.isSynced);
+    $('xlfoTitle').textContent = 'LFO ' + (currentXlfoIdx + 1) + ' pattern';
+    $('xlfoHint').textContent = xlfoHintText();
+    $('lfoLiveKey').textContent = 'LFO ' + (currentXlfoIdx + 1);
+    bindActiveXlfoControls();
+    drawXlfoCurve();
+  }
+
+  function bindActiveXlfoControls() {
+    const N = (currentXlfoIdx + 1).toString();
+    if (window.WDKit && WDKit.bindSliderKnob) {
+      WDKit.bindSliderKnob($('xlfo_rate'), sl('xlfo' + N + 'rate'), { paramId: 'xlfo' + N + 'rate', fmt: v => v.toFixed(2) + ' Hz', unit: 'Hz' });
+      WDKit.bindSliderKnob($('xlfo_phase'), sl('xlfo' + N + 'phase'), { paramId: 'xlfo' + N + 'phase', fmt: v => Math.round(v) + '°' });
+      WDKit.bindSliderKnob($('xlfo_snap'), sl('xlfo' + N + 'snap'), { paramId: 'xlfo' + N + 'snap', fmt: v => Math.round(v) + '%' });
+    }
+    bindToggle($('xlfo_balance'), 'xlfo' + N + 'balance');
+  }
+
+  const xlfoTabs = document.querySelectorAll('#xlfo-tabs button');
+  function selectXlfo(idx) {
+    currentXlfoIdx = idx;
+    xlfoTabs.forEach((t, i) => t.classList.toggle('on', i === idx));
+    selectSource(idx, false);
+    loadXlfoControlsUI();
+  }
+  xlfoTabs.forEach((tab, idx) => tab.addEventListener('click', () => selectXlfo(idx)));
+
+  $('xlfoStepsSelect').addEventListener('change', e => {
+    const xlfo = xlfosState[currentXlfoIdx];
+    if (!xlfo) return;
+    xlfo.numSteps = parseInt(e.target.value, 10);
+    saveXlfoConfig(currentXlfoIdx);
+    $('xlfoHint').textContent = xlfoHintText();
+    drawXlfoCurve();
+  });
+  $('xlfoRetrigSelect').addEventListener('change', e => {
+    const xlfo = xlfosState[currentXlfoIdx];
+    if (!xlfo) return;
+    xlfo.retriggerMode = parseInt(e.target.value, 10);
+    saveXlfoConfig(currentXlfoIdx);
+    $('xlfoHint').textContent = xlfoHintText();
+  });
+  $('xlfoSyncBtn').addEventListener('click', () => {
+    const xlfo = xlfosState[currentXlfoIdx];
+    if (!xlfo) return;
+    xlfo.isSynced = !xlfo.isSynced;
+    $('xlfoSyncBtn').classList.toggle('on', xlfo.isSynced);
+    saveXlfoConfig(currentXlfoIdx);
+    $('xlfoHint').textContent = xlfoHintText();
+  });
+  $('gridSnapSelect').addEventListener('change', () => drawXlfoCurve());
+
+  // ---------------------------------------------------------- sources well
+  const SRC_NAMES = { 0: 'LFO 1', 1: 'LFO 2', 2: 'LFO 3', 4: 'Envelope', 5: 'Note', 6: 'Velocity', 7: 'Wheel' };
+
+  function selectSource(sId, followTabs) {
+    selectedSourceIdx = sId;
+    document.querySelectorAll('.src').forEach(it =>
+      it.classList.toggle('on', parseInt(it.dataset.sourceId, 10) === sId));
+    $('srcMeterLabel').textContent = (sId === 4 && followerExtSc) ? 'Env (Ext)' : (SRC_NAMES[sId] || '\u2014');
+    const meterBar = $('srcMeterBar');
+    if (meterBar) meterBar.classList.toggle('ext-key', sId === 4 && !!followerExtSc);
+    if (followTabs && sId <= 2 && sId !== currentXlfoIdx) selectXlfo(sId);
+  }
+
+  document.querySelectorAll('.src').forEach(item => {
+    item.addEventListener('click', () => selectSource(parseInt(item.dataset.sourceId, 10), true));
+  });
+
+  function sourceLevel(sId) {
+    let v = liveSourceVals[sId] || 0;
+    if (sId <= 2) {
+      const t = tg('xlfo' + (sId + 1) + 'balance');
+      if (t && t.getValue()) v = (v + 1.0) * 0.5;
+    }
+    return clamp(v, 0, 1);
+  }
+
+  function refreshSourceBars() {
+    document.querySelectorAll('.src').forEach(item => {
+      const sId = parseInt(item.dataset.sourceId, 10);
+      item.querySelector('.bar i').style.width = (sourceLevel(sId) * 100).toFixed(1) + '%';
+    });
+    const sel = sourceLevel(selectedSourceIdx);
+    $('srcMeterBar').style.setProperty('--fill', (sel * 100).toFixed(1) + '%');
+    $('srcMeterVal').textContent = (liveSourceVals[selectedSourceIdx] || 0).toFixed(2);
+    $('lfoLiveVal').textContent = (liveSourceVals[currentXlfoIdx] || 0).toFixed(2);
+  }
+
+  // --------------------------------------------------- mod collars & cords
+  function applyModCollar(knobEl, paramId, destId, totalOffsetScaled) {
+    const s = sl(paramId);
+    if (!knobEl || !s || !window.WDKit || !WDKit.scaledDeltaToNorm || !WDKit.setKnobModulationSources) return;
+    const baseScaled = s.getScaledValue();
+    const baseNorm = s.getNormalisedValue();
+    const routedSlots = activeSlots.filter(slSlot => slSlot.on && slSlot.dest === destId && slSlot.source >= 0);
+    knobEl.classList.toggle('is-modulated', routedSlots.length > 0);
+    const totalNorm = WDKit.scaledDeltaToNorm(s, baseScaled, totalOffsetScaled || 0);
+    if (Math.abs(totalNorm) < 0.001) {
+      WDKit.setKnobModulationSources(knobEl, baseNorm, []);
+      return;
+    }
+    if (routedSlots.length === 0) {
+      WDKit.setKnobModulationSources(knobEl, baseNorm, [{ sourceId: -1, color: '#38bdf8', offsetNorm: totalNorm }]);
+      return;
+    }
+    if (routedSlots.length === 1) {
+      const slot = routedSlots[0];
+      WDKit.setKnobModulationSources(knobEl, baseNorm, [{
+        sourceId: slot.source,
+        color: (SRC_META[slot.source] && SRC_META[slot.source].color) || '#38bdf8',
+        offsetNorm: totalNorm,
+      }]);
+      return;
+    }
+    let weights = routedSlots.map(slot => Math.abs((liveSlotVals[slot.index] || 0) * (slot.depth || 0)));
+    let sumW = weights.reduce((a, b) => a + b, 0);
+    if (sumW < 1e-6) {
+      weights = routedSlots.map(slot => Math.max(0.01, Math.abs(slot.depth || 0)));
+      sumW = weights.reduce((a, b) => a + b, 0);
+    }
+    const sources = routedSlots.map((slot, i) => ({
+      sourceId: slot.source,
+      color: (SRC_META[slot.source] && SRC_META[slot.source].color) || '#38bdf8',
+      offsetNorm: totalNorm * (weights[i] / sumW),
+    }));
+    WDKit.setKnobModulationSources(knobEl, baseNorm, sources);
+  }
+
+  function updateModCollars() {
+    document.querySelectorAll('#knobRow .knob').forEach(k => {
+      const destId = parseInt(k.dataset.destId, 10);
+      applyModCollar(k, k.dataset.paramId, destId, liveDestOffsets[destId] || 0);
+    });
+  }
+  function paintAllKnobsLive() { updateModCollars(); }
+
+  function handleRingChangeDepth(slotIndex, depth, isFinal) {
+    const slot = activeSlots[slotIndex];
+    if (!slot) return;
+    const clamped = clamp(depth, -2.0, 2.0);
+    slot.depth = clamped;
+    const pSl = sl('slot' + (slotIndex + 1) + 'depth');
+    if (pSl) {
+      if (!ringGestureOpen[slotIndex]) {
+        ringGestureOpen[slotIndex] = true;
+        pSl.sliderDragStarted();
+      }
+      pSl.setNormalisedValue((clamped + 2.0) / 4.0);
+      if (isFinal) {
+        ringGestureOpen[slotIndex] = false;
+        pSl.sliderDragEnded();
+      }
+    }
+    const r = matrixContainer.querySelector('[data-slot-index="' + slotIndex + '"]');
+    if (r) {
+      const rng = r.querySelector('input[type="range"]');
+      const valEl = r.querySelector('span.val');
+      if (rng) rng.value = clamped;
+      if (valEl) valEl.textContent = clamped.toFixed(2);
+    }
+    refreshRouteChips();
+  }
+
+  // ------------------------------------------------------------------- init
+  function initAll() {
+    if (window.WDKit && WDKit.bindSliderKnob) {
+      WDKit.bindSliderKnob($('knob_rate'), sl('rate'), { paramId: 'rate', fmt: v => v.toFixed(2) + ' Hz', unit: 'Hz', onValueChange: updateModCollars });
+      WDKit.bindSliderKnob($('knob_depth'), sl('depth'), { paramId: 'depth', fmt: v => Math.round(v * 100) + '%', onValueChange: updateModCollars });
+      WDKit.bindSliderKnob($('knob_feedback'), sl('feedback'), { paramId: 'feedback', fmt: v => (v > 0 ? '+' : '') + Math.round(v * 100) + '%', onValueChange: updateModCollars });
+      WDKit.bindSliderKnob($('knob_mix'), sl('mix'), { paramId: 'mix', fmt: v => Math.round(v * 100) + '%', onValueChange: updateModCollars });
+      WDKit.bindSliderKnob($('knob_stereowidth'), sl('stereowidth'), { paramId: 'stereowidth', fmt: v => Math.round(v) + '°', onValueChange: updateModCollars });
+    }
+
+    if (window.WDKit && WDKit.initPatchCords && !patchCords) {
+      patchCords = WDKit.initPatchCords({
+        sourceSelector: '#sourceList .src[data-source-id]',
+        destSelector: '#knobRow .knob[data-dest-id]',
+        getSourceColor: id => (SRC_META[id] && SRC_META[id].color) || '#38bdf8',
+        getSourceLabel: id => (id === 4 && followerExtSc) ? 'Env (Ext)' : ((SRC_META[id] && SRC_META[id].label) || ('Src ' + id)),
+        getDestLabel: did => labelOf(DEST_OPTIONS, did),
+        getSlotsForDest: did => activeSlots
+          .filter(s => s.dest === did && s.source >= 0)
+          .map(s => ({ index: s.index, source: s.source, dest: s.dest, depth: s.depth, on: s.on })),
+        onConnect(sourceId, destId) {
+          let idx = activeSlots.findIndex(s => s.on && s.source === sourceId && s.dest === destId);
+          if (idx === -1) idx = activeSlots.findIndex(s => !s.on || s.dest === -1);
+          if (idx === -1) {
+            $('routeCount').textContent = 'all 24 slots in use';
+            return;
+          }
+          const slot = activeSlots[idx];
+          const wasConnected = slot.on && slot.source === sourceId && slot.dest === destId;
+          slot.source = sourceId;
+          slot.dest = destId;
+          slot.on = true;
+          if (!wasConnected && Math.abs(slot.depth) < 0.05) {
+            slot.depth = 0.5;
+            const pSl = sl('slot' + (idx + 1) + 'depth');
+            if (pSl) {
+              pSl.sliderDragStarted();
+              pSl.setNormalisedValue((slot.depth + 2.0) / 4.0);
+              pSl.sliderDragEnded();
+            }
+          }
+          saveSlot(idx);
+          applySlotsToRows();
+        },
+        onChangeDepth: handleRingChangeDepth,
+        onToggleSlot(slotIndex, nextOn) {
+          const slot = activeSlots[slotIndex];
+          if (!slot) return;
+          slot.on = !!nextOn;
+          saveSlot(slotIndex);
+          applySlotsToRows();
+        },
+        onRemoveSlot(slotIndex) {
+          const slot = activeSlots[slotIndex];
+          if (!slot) return;
+          slot.source = -1;
+          slot.dest = -1;
+          slot.on = false;
+          slot.depth = 0.0;
+          const pSl = sl('slot' + (slotIndex + 1) + 'depth');
+          if (pSl) {
+            pSl.sliderDragStarted();
+            pSl.setNormalisedValue(0.5);
+            pSl.sliderDragEnded();
+          }
+          saveSlot(slotIndex);
+          applySlotsToRows();
+        },
+      });
+    }
+
+    bindChoicePills($('param_mode'), 'mode', MODE_CHOICES);
+    bindToggle($('param_delta'), 'delta');
+    bindToggle($('param_power'), 'power', v => {
+      const b = $('param_power');
+      if (b) b.lastChild.textContent = v ? 'Engaged' : 'Bypassed';
+    });
+
+    for (let i = 1; i <= 3; ++i) {
+      sl('xlfo' + i + 'rate');
+      sl('xlfo' + i + 'phase');
+      sl('xlfo' + i + 'snap');
+      tg('xlfo' + i + 'balance');
+    }
+    loadXlfoControlsUI();
+    selectSource(0, false);
+    renderFollowerExtBtn();
+  }
+
+  // ------------------------------------------------ self-track & beacon RPC
+  function renderSelfTrackChip() {
+    const chip = $('selfTrackChip');
+    const nameEl = $('selfTrackName');
+    if (nameEl && nameEl.isConnected && !nameEl.querySelector('input'))
+      nameEl.textContent = selfMeta.name || 'Mod 1';
+    if (chip) {
+      const pubName = selfMeta.publishedName || selfMeta.name || 'Mod 1';
+      chip.title = 'Click to rename this Modulation track · Broadcasting on Beacon as "' + pubName + '"';
+    }
+  }
+
+  function startInlineTrackRename(labelEl, currentText) {
+    if (!labelEl || labelEl.querySelector('input')) return;
+    const prev = currentText;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.maxLength = 47;
+    input.className = 'track-name-input';
+    input.value = prev;
+    let done = false;
+    const commit = async keep => {
+      if (done) return;
+      done = true;
+      const next = keep ? input.value.trim() : prev;
+      input.replaceWith(labelEl);
+      if (keep && host) {
+        try {
+          const res = await host.call('setInstanceName', next);
+          if (res && res.ok) {
+            selfMeta.name = res.name || selfMeta.name;
+            selfMeta.customName = res.customName || '';
+            if (typeof res.beaconPublishedName === 'string') selfMeta.publishedName = res.beaconPublishedName;
+            if (typeof res.beaconPublishing === 'boolean') selfMeta.publishing = res.beaconPublishing;
+            renderSelfTrackChip();
+          }
+        } catch (e) {}
+      }
+    };
+    input.addEventListener('keydown', ev => {
+      if (ev.key === 'Enter') { ev.preventDefault(); commit(true); }
+      else if (ev.key === 'Escape') { ev.preventDefault(); commit(false); }
+      ev.stopPropagation();
+    });
+    input.addEventListener('pointerdown', ev => ev.stopPropagation());
+    input.addEventListener('blur', () => commit(true));
+    labelEl.replaceWith(input);
+    input.focus({ preventScroll: true });
+    input.select();
+  }
+
+  {
+    const chip = $('selfTrackChip');
+    if (chip) {
+      chip.addEventListener('click', () => startInlineTrackRename($('selfTrackName'), selfMeta.customName || selfMeta.name));
+    }
+  }
+
+  function renderFollowerExtBtn() {
+    const btn = $('btn_followerExtSc');
+    if (btn) {
+      btn.classList.toggle('on', !!followerExtSc);
+      btn.textContent = followerExtSc ? 'Ext' : 'Int';
+      btn.title = followerExtSc
+        ? 'Envelope follower is keyed from External sidechain (Host Sidechain Bus 1 or selected WD Beacon).'
+        : 'Envelope follower is keyed from Internal main audio.';
+    }
+    const envRow = document.querySelector('#sourceList .src[data-source-id="4"]');
+    if (envRow) envRow.classList.toggle('ext-key', !!followerExtSc);
+    const meterBar = $('srcMeterBar');
+    if (meterBar) meterBar.classList.toggle('ext-key', selectedSourceIdx === 4 && !!followerExtSc);
+    if (selectedSourceIdx === 4) {
+      $('srcMeterLabel').textContent = followerExtSc ? 'Env (Ext)' : 'Envelope';
+    }
+  }
+
+  {
+    const extBtn = $('btn_followerExtSc');
+    if (extBtn) {
+      ['pointerdown', 'mousedown'].forEach(evt =>
+        extBtn.addEventListener(evt, ev => ev.stopPropagation()));
+      extBtn.addEventListener('click', async ev => {
+        ev.stopPropagation();
+        followerExtSc = !followerExtSc;
+        renderFollowerExtBtn();
+        updateBeaconLed();
+        refreshRouteChips();
+        if (host) {
+          try { await host.call('setFollowerExtSc', followerExtSc); } catch (e) {}
+        }
+      });
+    }
+  }
+
+  function updateBeaconLed() {
+    const wrap = $('beaconPickerWrap');
+    if (!wrap) return;
+    const extOn = !!followerExtSc;
+    wrap.classList.remove('receiving', 'waiting', 'mismatch');
+    if (!extOn) {
+      wrap.title = beaconSelected
+        ? `Internal key active — switch Envelope to Ext to receive WD Beacon "${beaconSelected}".`
+        : 'Select an active Werewolf Digital Beacon track for external Envelope Follower keying. Wireless cross-track key — for sample-exact timing at large DAW buffer sizes (1024+), use Off (Host Bus) with a DAW sidechain send.';
+      return;
+    }
+    if (beaconSelected) {
+      if (beaconSrMismatch) {
+        wrap.classList.add('mismatch');
+        wrap.title = `Sample rate mismatch between this track and WD Beacon "${beaconSelected}" — external key input is muted.`;
+      } else if (beaconReceiving) {
+        wrap.classList.add('receiving');
+        wrap.title = `Receiving external key audio from WD Beacon "${beaconSelected}". Wireless cross-track key — for sample-exact timing at large DAW buffer sizes (1024+), use Off (Host Bus) with a DAW sidechain send.`;
+      } else {
+        wrap.classList.add('waiting');
+        wrap.title = `Waiting for WD Beacon "${beaconSelected}" stream (active on Host Bus 1 only if Bus 1 is enabled). Wireless cross-track key — for sample-exact timing at large DAW buffer sizes (1024+), use Off (Host Bus) with a DAW sidechain send.`;
+      }
+    } else if (scActive) {
+      wrap.classList.add('receiving');
+      wrap.title = 'Receiving external sidechain audio from Host Sidechain Bus 1.';
+    } else {
+      wrap.classList.add('waiting');
+      wrap.title = 'External key set to Host Sidechain Bus 1 — waiting for incoming sidechain audio. For sample-exact timing at large DAW buffer sizes (1024+), keep Off (Host Bus) with a DAW sidechain send.';
+    }
+  }
+
+  function renderBeaconSources(res) {
+    const sel = $('beaconSourceSelect');
+    if (!sel || !res || typeof res !== 'object') return;
+    const sources = Array.isArray(res.sources) ? res.sources : [];
+    if (typeof res.selected === 'string') beaconSelected = res.selected;
+    if (!beaconMetersSeen) {
+      if (typeof res.receiving === 'boolean') beaconReceiving = res.receiving;
+      if (typeof res.scActive === 'boolean') scActive = res.scActive;
+    }
+    if (typeof res.srMismatch === 'boolean') beaconSrMismatch = res.srMismatch;
+
+    const sig = sources.map(s => `${s.name}:${s.sr}:${s.ch}`).join('|') + '#' + beaconSelected;
+    updateBeaconLed();
+    if (document.activeElement === sel || sig === lastBeaconSig) return;
+    lastBeaconSig = sig;
+
+    sel.textContent = '';
+    const off = document.createElement('option');
+    off.value = '';
+    off.textContent = 'Off (Host Bus)';
+    sel.appendChild(off);
+
+    let found = (beaconSelected === '');
+    for (const s of sources) {
+      if (!s || typeof s.name !== 'string') continue;
+      const opt = document.createElement('option');
+      opt.value = s.name;
+      const sr = s.sr ? (s.sr / 1000).toFixed(s.sr % 1000 === 0 ? 0 : 1) + 'k' : '?';
+      const ch = s.ch === 1 ? 'Mono' : s.ch === 2 ? 'St' : (s.ch + 'ch');
+      opt.textContent = `${s.name} (${sr} · ${ch})`;
+      if (s.name === beaconSelected) found = true;
+      sel.appendChild(opt);
+    }
+    if (!found && beaconSelected) {
+      const offline = document.createElement('option');
+      offline.value = beaconSelected;
+      offline.textContent = `${beaconSelected} (waiting…)`;
+      sel.appendChild(offline);
+    }
+    sel.value = beaconSelected;
+  }
+
+  async function refreshBeaconSources() {
+    if (!host) return;
+    try {
+      const res = await host.call('getBeaconSources');
+      renderBeaconSources(res);
+    } catch (e) {}
+  }
+
+  {
+    const sel = $('beaconSourceSelect');
+    if (sel) {
+      sel.addEventListener('pointerdown', refreshBeaconSources);
+      sel.addEventListener('focus', refreshBeaconSources);
+      sel.addEventListener('change', async () => {
+        beaconSelected = sel.value || '';
+        beaconSrMismatch = false;
+        if (beaconSelected && !followerExtSc) {
+          followerExtSc = true;
+          renderFollowerExtBtn();
+          refreshRouteChips();
+        }
+        updateBeaconLed();
+        if (host) {
+          try {
+            const res = await host.call('setBeaconSource', beaconSelected);
+            if (res && typeof res.receiving === 'boolean') beaconReceiving = res.receiving;
+            if (res && typeof res.scActive === 'boolean') scActive = res.scActive;
+            if (res && typeof res.srMismatch === 'boolean') beaconSrMismatch = res.srMismatch;
+            updateBeaconLed();
+          } catch (e) {}
+        }
+      });
+    }
+  }
+
+  const beaconEpochWatch = window.WDKit
+    ? window.WDKit.createBeaconEpochWatcher(refreshBeaconSources)
+    : () => {};
+
+  setTimeout(async () => {
+    initAll();
+    if (window.WDKit) {
+      window.WDKit.mountHeaderKit({ host });
+      window.WDKit.syncGlobalTheme(host, applyTheme);
+    }
+
+    for (let s = 0; s < 24; ++s) {
+      const slider = sl('slot' + (s + 1) + 'depth');
+      if (slider) {
+        activeSlots[s].depth = slider.getNormalisedValue() * 4.0 - 2.0;
+        slider.valueChangedEvent.addListener(() => {
+          activeSlots[s].depth = slider.getNormalisedValue() * 4.0 - 2.0;
+          const r = matrixContainer.querySelector('[data-slot-index="' + s + '"]');
+          if (r) {
+            r.querySelector('input[type="range"]').value = activeSlots[s].depth;
+            r.querySelector('span.val').textContent = activeSlots[s].depth.toFixed(2);
+          }
+          refreshRouteChips();
+        });
+      }
+    }
+    applySlotsToRows();
+    fitXCanvas();
+
+    if (host) {
+      try {
+        const state = await Promise.race([
+          host.call('getModState'),
+          new Promise(res => setTimeout(() => res(null), 500))
+        ]);
+        if (state) {
+          if (state.slots) {
+            state.slots.forEach(s => {
+              if (s.index >= 0 && s.index < 24) {
+                Object.assign(activeSlots[s.index], {
+                  index: s.index, source: s.source, dest: s.dest,
+                  curve: s.curve, on: s.on
+                });
+              }
+            });
+          }
+          if (state.xlfos) {
+            state.xlfos.forEach(x => {
+              if (x.index >= 0 && x.index < 3) {
+                const xlfo = xlfosState[x.index];
+                xlfo.numSteps = x.numSteps;
+                xlfo.isSynced = x.isSynced;
+                xlfo.syncRateBeats = x.syncRateBeats;
+                xlfo.retriggerMode = x.retriggerMode;
+                if (x.steps) {
+                  x.steps.forEach(st => {
+                    if (st.index >= 0 && st.index < 32)
+                      xlfo.steps[st.index] = { index: st.index, value: st.value, glide: st.glide, slope: st.slope };
+                  });
+                }
+              }
+            });
+          }
+          if (typeof state.followerExtSc === 'boolean') {
+            followerExtSc = state.followerExtSc;
+            renderFollowerExtBtn();
+            updateBeaconLed();
+            refreshRouteChips();
+          }
+        }
+      } catch (e) { console.error('Failed to get initial mod state:', e); }
+    }
+
+    applySlotsToRows();
+    loadXlfoControlsUI();
+    updateModCollars();
+    uiReady = true;
+
+    if (host) {
+      try {
+        const uiState = await host.call('getUiState');
+        if (uiState) {
+          if (uiState.build) $('buildTag').textContent = uiState.build;
+          if (uiState.sampleRate) $('srTag').textContent = (uiState.sampleRate / 1000).toFixed(1) + ' kHz';
+          if (uiState.selfName) selfMeta.name = uiState.selfName;
+          if (typeof uiState.selfCustomName === 'string') selfMeta.customName = uiState.selfCustomName;
+          if (typeof uiState.beaconPublishedName === 'string') selfMeta.publishedName = uiState.beaconPublishedName;
+          if (typeof uiState.beaconPublishing === 'boolean') selfMeta.publishing = uiState.beaconPublishing;
+          if (typeof uiState.beaconSource === 'string') beaconSelected = uiState.beaconSource;
+          if (typeof uiState.beaconReceiving === 'boolean') beaconReceiving = uiState.beaconReceiving;
+          if (typeof uiState.scActive === 'boolean') scActive = uiState.scActive;
+          if (typeof uiState.beaconSrMismatch === 'boolean') beaconSrMismatch = uiState.beaconSrMismatch;
+          renderSelfTrackChip();
+          updateBeaconLed();
+        }
+      } catch (e) {}
+      await refreshBeaconSources();
+    } else {
+      renderSelfTrackChip();
+      updateBeaconLed();
+    }
+  }, 120);
+
+  // ------------------------------------------------------------ live events
+  if (host) {
+    host.on('modState', data => {
+      if (!data) return;
+      beaconMetersSeen = true;
+      beaconEpochWatch(data);
+      liveSourceVals = Array.isArray(data.sourceVals) ? data.sourceVals : liveSourceVals;
+      liveXlfoPhases = Array.isArray(data.xlfoPhases) ? data.xlfoPhases : liveXlfoPhases;
+      liveSlotVals = Array.isArray(data.slotVals) ? data.slotVals : liveSlotVals;
+      if (data.destOffsets !== undefined) {
+        const arr = Array.isArray(data.destOffsets) ? data.destOffsets : [];
+        liveDestOffsets = arr.length === 5 ? [0].concat(arr) : arr.slice();
+      }
+      if (typeof data.followerExtSc === 'boolean' && data.followerExtSc !== followerExtSc) {
+        followerExtSc = data.followerExtSc;
+        renderFollowerExtBtn();
+        refreshRouteChips();
+      }
+      if (typeof data.beaconReceiving === 'boolean') beaconReceiving = data.beaconReceiving;
+      if (typeof data.scActive === 'boolean') scActive = data.scActive;
+      if (typeof data.beaconSrMismatch === 'boolean') beaconSrMismatch = data.beaconSrMismatch;
+      if (typeof data.beaconSource === 'string' && !beaconSelected) beaconSelected = data.beaconSource;
+      if (typeof data.selfName === 'string' && data.selfName) {
+        selfMeta.name = data.selfName;
+        if (typeof data.selfCustomName === 'string') selfMeta.customName = data.selfCustomName;
+        if (typeof data.beaconPublishedName === 'string') selfMeta.publishedName = data.beaconPublishedName;
+        if (typeof data.beaconPublishing === 'boolean') selfMeta.publishing = data.beaconPublishing;
+        renderSelfTrackChip();
+      }
+      updateBeaconLed();
+      drawXlfoCurve();
+      refreshSourceBars();
+      paintAllKnobsLive();
+    });
+  } else {
+    setInterval(() => {
+      const t = Date.now() * 0.001;
+      liveXlfoPhases[0] = t % 1.0;
+      liveXlfoPhases[1] = (t * 0.5) % 1.0;
+      liveXlfoPhases[2] = (t * 0.25) % 1.0;
+      for (let i = 0; i < 3; ++i) liveSourceVals[i] = patternAt(xlfosState[i], liveXlfoPhases[i]);
+      liveSourceVals[4] = 0.5 + 0.5 * Math.sin(t * 3);
+      liveSourceVals[7] = 0.5 + 0.5 * Math.sin(t * 0.7);
+      for (let d = 1; d <= 5; ++d) liveDestOffsets[d] = 0.5 * Math.sin(t * 4 + d);
+      drawXlfoCurve();
+      refreshSourceBars();
+      paintAllKnobsLive();
+    }, 33);
+  }
+
+})();
+</script>
+</body>
+</html>

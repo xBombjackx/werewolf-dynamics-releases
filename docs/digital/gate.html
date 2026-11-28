@@ -1,0 +1,1667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Werewolf Digital Gate</title>
+<link rel="stylesheet" href="./wd/tokens.css">
+<script src="./demo-bar.js"></script>
+<script src="./modules/gate.js"></script>
+<script src="./wd-plugin-host.js"></script>
+<script src="./wd/kit.js"></script>
+<style>
+  /* ══════════════════════════════════════════════════════════════════════
+     Instrument Panel — the Werewolf Digital chassis.
+
+     This :root block is the WHOLE design language.
+     Gate accent hues: sage #7a8a5e / #34d399 / #3d472b.
+     ════════════════════════════════════════════════════════════════════ */
+  :root {
+    --bg:      #0b0d12;   /* deep studio obsidian chassis */
+    --panel:   #151922;   /* machined slate control bays  */
+    --panel-hi:#1d2330;   /* elevated cap / active surface */
+    --track:   #0d0f15;   /* recessed tracks & beds       */
+    --line:    rgba(255, 255, 255, 0.08);
+    --line-hi: rgba(255, 255, 255, 0.15);
+    --hover-bg:rgba(255, 255, 255, 0.06);
+    --text:    #f2f5fa;
+    --label:   #8b96a8;
+    --muted:   #586274;
+    --well:    #06070a;   /* pure OLED signal surface     */
+    --cream:   #f2f5fa;   /* live plot, on well           */
+
+    --accent:     #7a8a5e;
+    --accent-lit: #34d399;
+    --accent-deep:#3d472b;
+
+    --sage:      #34d399;
+    --sage-tint: rgba(52, 211, 153, 0.14);
+    --sage-deep: #6ee7b7;
+
+    --r-window: 0px;
+    --r-panel: 8px;
+    --r-pill: 5px;
+
+    --font: "Figtree", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    --font-display: "Caprasimo", "Segoe UI Variable Display", "Segoe UI Semibold", system-ui, sans-serif;
+  }
+  :root[data-theme="japandi-dark"] {
+    --bg:      #121316;
+    --panel:   #1b1d21;
+    --panel-hi:#24272d;
+    --track:   #0d0e10;
+    --line:    rgba(242, 237, 228, 0.08);
+    --line-hi: rgba(242, 237, 228, 0.15);
+    --hover-bg:rgba(242, 237, 228, 0.06);
+    --text:    #f2ede4;
+    --label:   #9e978c;
+    --muted:   #666057;
+    --well:    #090a0c;
+    --cream:   #f2ede4;
+    --accent-deep:#4d5a37;
+    --sage:      #7a9171;
+    --sage-tint: rgba(122, 145, 113, 0.18);
+    --sage-deep: #b8cfb0;
+  }
+  :root[data-theme="japandi-light"] {
+    --bg:      #e6e1d8;
+    --panel:   #dbd5c9;
+    --panel-hi:#e4dfd5;
+    --track:   #ccc5b8;
+    --line:    rgba(24, 25, 28, 0.11);
+    --line-hi: rgba(24, 25, 28, 0.20);
+    --hover-bg:rgba(24, 25, 28, 0.06);
+    --text:    #18191c;
+    --label:   #635f58;
+    --muted:   #8c867c;
+    --well:    #17181b;
+    --cream:   #f2ede4;
+    --accent-deep:#3d472b;
+    --sage:      #4d6b47;
+    --sage-tint: rgba(77, 107, 71, 0.16);
+    --sage-deep: #2d4229;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 400 13px/1.45 var(--font);
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  :focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- header ---------- */
+  header {
+    flex: 0 0 auto;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand svg { display: block; }
+  .brand .stack { display: flex; flex-direction: column; gap: 1px; }
+  .brand .line { font: 700 8.5px/1 var(--font); letter-spacing: 0.22em; text-transform: uppercase; color: var(--label); }
+  .brand .name { font-family: var(--font-display); font-size: 19px; line-height: 1; letter-spacing: -0.01em; }
+  .headsep { width: 1px; height: 26px; background: var(--line); }
+  .spacer { flex: 1; }
+  .stat { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  .stat .k { font: 600 9px/1 var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  .stat .v { font: 700 11.5px/1 var(--font); font-variant-numeric: tabular-nums; }
+  #buildTag { font: 500 10px/1.3 var(--font); color: var(--muted); text-align: right; max-width: 150px; }
+
+  .beacon-picker {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 6px 0 8px;
+    border-radius: var(--r-pill);
+    background: var(--track);
+    border: 1px solid var(--line);
+    flex: 0 0 auto;
+  }
+  .beacon-led {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--muted);
+    transition: background-color 0.15s, box-shadow 0.15s;
+  }
+  .beacon-picker.receiving .beacon-led { background: #34d399; box-shadow: 0 0 7px #34d399; }
+  .beacon-picker.waiting .beacon-led { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; }
+  .beacon-picker.mismatch { border-color: #f59e0b; }
+  .beacon-picker.mismatch .beacon-led { background: #ef4444; box-shadow: 0 0 7px #ef4444; }
+  .beacon-lbl {
+    font: 700 9px/1 var(--font);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--label);
+    white-space: nowrap;
+  }
+  .beacon-select {
+    height: 22px;
+    max-width: 140px;
+    min-width: 105px;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font: 600 11px/1 var(--font);
+    cursor: pointer;
+    outline: none;
+  }
+  .beacon-select option { background: var(--panel); color: var(--text); }
+  .beacon-select:disabled { opacity: 0.55; cursor: default; }
+
+  .track-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 26px;
+    padding: 0 8px;
+    border-radius: var(--r-pill);
+    background: var(--track);
+    border: 1px solid var(--line);
+    cursor: pointer;
+    flex: 0 1 124px;
+    min-width: 72px;
+    max-width: 132px;
+    transition: border-color 0.12s, background-color 0.12s;
+  }
+  .track-chip:hover { border-color: var(--line-hi); background: var(--panel-hi); }
+  .track-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-lit); flex: 0 0 auto; }
+  .track-name { flex: 1 1 auto; min-width: 0; font: 700 11px/1 var(--font); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .track-edit-ico { font-size: 10px; color: var(--muted); opacity: 0.65; flex: 0 0 auto; }
+  .track-chip:hover .track-edit-ico { opacity: 1; color: var(--text); }
+  .track-name-input {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    height: 20px;
+    background: var(--well);
+    color: var(--cream);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    font: 600 11px/1 var(--font);
+    padding: 0 5px;
+    outline: none;
+  }
+  .well-hint.key-active { color: #38bdf8; font-weight: 600; }
+  :root[data-theme="japandi-light"] .well-hint.key-active { color: #0284c7; }
+  .mod-title .s.sc-ready { color: #f59e0b; font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+  :root[data-theme="japandi-light"] .mod-title .s.sc-ready { color: #b45309; }
+
+  /* ---------- frame ---------- */
+  .body {
+    flex: 1 1 auto;
+    display: flex;
+    gap: 12px;
+    padding: 14px;
+    min-height: 0;
+  }
+  .col { flex: 1 1 auto; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+
+  /* ---------- wells ---------- */
+  .wells { flex: 1 1 46%; display: flex; gap: 12px; min-height: 140px; min-width: 0; }
+  .well-group { flex: 2 1 0; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+  .well-group.narrow { flex: 1 1 0; min-width: 210px; }
+  .well-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 0 2px;
+    min-height: 22px;
+  }
+  .well-title { font: 700 11px/1 var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--label); }
+  .well-hint { font: 500 11.5px/1 var(--font); color: var(--muted); white-space: nowrap; }
+  .well-hint.accent { color: var(--accent-deep); font-weight: 600; }
+  .well {
+    flex: 1;
+    min-height: 0;
+    border-radius: var(--r-panel);
+    overflow: hidden;
+    background: var(--well);
+    position: relative;
+  }
+  .well canvas { width: 100%; height: 100%; display: block; }
+  .well-readout {
+    position: absolute; left: 12px; bottom: 10px;
+    display: flex; flex-direction: column; gap: 3px; pointer-events: none;
+    background: rgba(18, 17, 14, 0.78); border-radius: 12px; padding: 7px 10px 8px;
+  }
+  .well-readout .k { font: 600 9.5px/1 var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  .well-readout .v { font: 700 22px/1 var(--font); font-variant-numeric: tabular-nums; color: #f9f4ed; }
+  .well-readout.head {
+    left: auto; right: 12px; bottom: auto; top: 8px;
+    flex-direction: column; align-items: flex-end; gap: 3px;
+  }
+
+  /* ---------- panels ---------- */
+  .panel {
+    background: var(--panel);
+    border-radius: var(--r-panel);
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .panel.rail { flex: 0 0 auto; }
+  .rail-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .rail-range { font: 500 11.5px/1 var(--font); color: var(--label); }
+
+  /* ---------- pills ---------- */
+  .pill {
+    height: 32px;
+    padding: 0 14px;
+    border-radius: var(--r-pill);
+    border: 1px solid var(--line);
+    background: transparent;
+    font: 600 12px/1 var(--font);
+    color: var(--label);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background-color 0.12s, color 0.12s;
+    white-space: nowrap;
+  }
+  .pill:hover { background: var(--hover-bg); }
+  .pill:active { background: var(--track); }
+  .pill.on { border-color: transparent; background: var(--accent); color: #f9f4ed; font-weight: 700; }
+  .pill.on:hover { background: var(--accent-deep); }
+  .pill:disabled { opacity: 0.45; cursor: default; }
+  .pill.sm { height: 28px; padding: 0 13px; font-size: 11.5px; }
+  .pill.wide { width: 100%; }
+  .pill.dashed { border-style: dashed; border-color: var(--muted); color: var(--label); }
+  .pill.power { background: var(--well); border-color: transparent; color: #f9f4ed; font-weight: 700; height: 36px; }
+  .pill.power .led {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--muted); transition: background-color 0.12s, box-shadow 0.12s;
+  }
+  .pill.power.on { background: var(--well); color: #f9f4ed; }
+  .pill.power.on .led { background: #34d399; box-shadow: 0 0 7px #34d399; }
+
+  .pillbed { display: flex; gap: 4px; padding: 3px; border-radius: var(--r-pill); background: var(--track); }
+  .pillbed button {
+    height: 26px; padding: 0 14px; border-radius: var(--r-pill); border: 0;
+    background-color: transparent; color: var(--label); font: 600 11.5px/1 var(--font); cursor: pointer;
+    transition: background-color 0.12s, color 0.12s; white-space: nowrap;
+  }
+  .pillbed button:hover:not(:disabled):not(.on) { background-color: var(--hover-bg); }
+  .pillbed.accent > button.on { background-color: var(--accent); color: #f9f4ed; font-weight: 700; }
+  .pillbed.sage > button.on { background-color: var(--sage); color: #f9f4ed; font-weight: 700; }
+  .pillbed > button:disabled { opacity: 0.45; cursor: default; }
+
+  .fieldlabel { font: 600 10.5px/1 var(--font); color: var(--label); }
+
+  /* ---------- knob ---------- */
+  .knob {
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    width: 78px; cursor: ns-resize; touch-action: none;
+    border-radius: 12px; padding: 2px 0;
+  }
+  .knob:hover { background: var(--hover-bg); }
+  .knob .klabel { font: 600 10.5px/1 var(--font); color: var(--label); pointer-events: none; }
+  .knob .v { font: 700 14px/1 var(--font); font-variant-numeric: tabular-nums; pointer-events: none; }
+  .knob svg { display: block; pointer-events: none; }
+  .knob.dragging .v { color: var(--accent-deep); }
+  .knob.lg { width: 92px; }
+  .knob.sm { width: auto; flex-direction: row; align-items: center; gap: 7px; }
+  .knob.sm .kstack { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; }
+  .knob.sm .klabel { font-size: 10px; }
+  .knob.sm .v { font-size: 12.5px; }
+
+  .knob-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .knobs { display: flex; gap: 6px; }
+  .vsep { width: 1px; align-self: stretch; min-height: 46px; background: var(--line); }
+
+  /* ---------- meters ---------- */
+  .meter-row { display: flex; align-items: center; gap: 10px; }
+  .meter-row .k { font: 600 10px/1 var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--label); }
+  .meter {
+    flex: 1; min-width: 90px; height: 9px; border-radius: var(--r-pill);
+    background: var(--track); overflow: hidden; position: relative;
+  }
+  .meter i { position: absolute; left: 0; top: 0; bottom: 0; width: var(--fill, 0%); background: var(--accent-lit); border-radius: var(--r-pill); }
+  .meter-row .v { font: 700 12px/1 var(--font); font-variant-numeric: tabular-nums; min-width: 52px; text-align: right; }
+
+  .vmeter-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .vmeter {
+    flex: 1; min-height: 40px; width: 16px; border-radius: var(--r-pill);
+    background: var(--well); overflow: hidden; position: relative;
+  }
+  .vmeter i {
+    position: absolute; left: 0; right: 0; bottom: 0; height: var(--fill, 0%);
+    background: linear-gradient(0deg, var(--accent), var(--accent-lit));
+    border-radius: var(--r-pill);
+  }
+  .vmeter-wrap .k { font: 600 9.5px/1 var(--font); letter-spacing: 0.1em; text-transform: uppercase; color: var(--label); }
+  .vmeter-wrap .v { font: 700 11.5px/1 var(--font); font-variant-numeric: tabular-nums; }
+
+  /* ---------- master strip ---------- */
+  .master {
+    flex: 0 0 132px;
+    background: var(--panel);
+    border-radius: var(--r-panel);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .master .fill { flex: 1; min-height: 0; }
+  .master .stack { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+
+  /* ---------- sidechain strip ---------- */
+  .mod { flex: 0 0 auto; }
+  .mod-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .mod-title { display: flex; flex-direction: column; gap: 3px; }
+  .mod-title .t { font: 700 10.5px/1 var(--font); letter-spacing: 0.12em; text-transform: uppercase; color: var(--label); }
+  .mod-title .s { font: 500 11px/1 var(--font); color: var(--muted); }
+
+  /* Compact layout adjustments */
+  @media (max-width: 860px) {
+    .panel { padding: 8px 10px; gap: 7px; }
+    .knob { width: 66px; }
+    .knob-row { gap: 8px; }
+  }
+
+  /* ── Precision Instrument Structural & Hardware Refinements ── */
+  header {
+    height: 46px;
+    padding: 0 14px;
+    gap: 10px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent), var(--panel);
+    border-bottom: 1px solid var(--line-hi);
+  }
+  .brand svg { filter: drop-shadow(0 0 5px var(--accent)); }
+  .brand .name { font-size: 16.5px; font-weight: 700; letter-spacing: -0.01em; }
+  .headsep { height: 20px; }
+  #buildTag { font: 500 9.5px/1.2 var(--font); color: var(--muted); max-width: 135px; opacity: 0.75; }
+
+  .theme-strip {
+    display: inline-flex;
+    background: var(--track);
+    border: 1px solid var(--line);
+    border-radius: var(--r-pill);
+    padding: 2px;
+    gap: 2px;
+  }
+  .theme-btn {
+    height: 22px;
+    padding: 0 8px;
+    border: 0;
+    border-radius: calc(var(--r-pill) - 1px);
+    background: transparent;
+    color: var(--label);
+    font: 600 10px/1 var(--font);
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: background-color 0.12s, color 0.12s;
+  }
+  .theme-btn:hover:not(.on) { color: var(--text); background: var(--hover-bg); }
+  .theme-btn.on { background: var(--panel-hi); color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35); }
+
+  .body { gap: 8px; padding: 8px 10px 10px; }
+  .col { gap: 8px; }
+  .wells { gap: 8px; }
+  .well {
+    border: 1px solid var(--line-hi);
+    box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.65);
+  }
+  .well-readout {
+    background: rgba(9, 11, 16, 0.84);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 6px;
+    backdrop-filter: blur(6px);
+  }
+  .panel, .master {
+    border: 1px solid var(--line);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+  .pill {
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--label);
+    border: 1px solid var(--line);
+  }
+  .pill:hover:not(:disabled):not(.on) { background: var(--hover-bg); color: var(--text); }
+  .pill.on { border-color: transparent; background: var(--accent); color: #ffffff; box-shadow: 0 1px 8px rgba(0, 0, 0, 0.35); }
+  .pill.on:hover { filter: brightness(1.1); background: var(--accent); }
+  .pillbed { border: 1px solid var(--line); background: var(--track); }
+  .pillbed button { color: var(--label); }
+  .pillbed button:hover:not(:disabled):not(.on) { background-color: var(--hover-bg); color: var(--text); }
+
+  .vmeter {
+    width: 14px;
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.75);
+  }
+  .vmeter i { border-radius: 2px; }
+
+  @media (max-width: 1180px) {
+    #buildTag, .sep-build { display: none; }
+  }
+  @media (max-width: 1040px) {
+    .stat, .sep-stat { display: none; }
+  }
+  @media (max-width: 720px) {
+    header { padding: 0 10px; gap: 6px; }
+    header .headsep { display: none; }
+    .beacon-lbl { display: none; }
+    .beacon-select { min-width: 76px; max-width: 108px; }
+    #selfTrackChip { flex: 0 1 96px; min-width: 64px; }
+  }
+
+  .knob .karc { filter: drop-shadow(0 0 3px var(--accent)); }
+  .knob .v {
+    pointer-events: auto;
+    cursor: text;
+    padding: 1px 4px;
+    border-radius: 3px;
+    transition: background-color 0.12s, color 0.12s;
+  }
+  .knob .v:hover { background: var(--hover-bg); }
+  .knob input.v {
+    width: 58px;
+    background: var(--well);
+    color: var(--text);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    font: 700 12px/1 var(--font);
+    text-align: center;
+    padding: 2px 3px;
+    outline: none;
+  }
+
+</style>
+</head>
+<body>
+  <header>
+    <button class="pill power header-power-btn" id="param_power" title="Bypass the whole plugin."><span class="led"></span>Engaged</button>
+    <div class="brand">
+      <svg width="20" height="18" viewBox="0 0 20 18">
+        <path d="M2 16.5 L10 1.5 L18 16.5 Z" fill="none" stroke="#7a8a5e" stroke-width="2.2" stroke-linejoin="round"/>
+      </svg>
+      <div class="stack">
+        <div class="line">Werewolf Digital</div>
+        <div class="name">Gate</div>
+      </div>
+    </div>
+    <div class="track-chip" id="selfTrackChip" title="Click to rename this Gate track for Beacon broadcasting">
+      <span class="track-dot" id="selfTrackDot"></span>
+      <span class="track-name" id="selfTrackName">Gate 1</span>
+      <span class="track-edit-ico">✎</span>
+    </div>
+    <div class="beacon-picker" id="beaconPickerWrap" title="Select an active Werewolf Digital Beacon track for external gate/duck detector keying. Wireless cross-track key — for sample-exact timing at large DAW buffer sizes (1024+), use Off (Host Bus) with a DAW sidechain send.">
+      <span class="beacon-led" id="beaconLed"></span>
+      <span class="beacon-lbl">Beacon</span>
+      <select class="beacon-select" id="beaconSourceSelect" aria-label="External WD Beacon source">
+        <option value="">Off (Host Bus)</option>
+      </select>
+    </div>
+    <button class="pill header-audition-pill" id="param_delta" title="Listen to ONLY what the gate is removing.">Delta</button>
+    <div class="spacer"></div>
+    <div class="stat"><div class="k">Sample rate</div><div class="v" id="srTag">—</div></div>
+    <div class="theme-strip" id="themeSwitcher" title="Switch instrument chassis finish">
+      <button class="theme-btn on" data-theme="studio">Studio</button>
+      <button class="theme-btn" data-theme="japandi-dark">Sumi</button>
+      <button class="theme-btn" data-theme="japandi-light">Washi</button>
+    </div>
+    <div class="headsep sep-build"></div>
+    <div id="buildTag">—</div>
+  </header>
+
+  <div class="body">
+    <div class="col">
+
+      <div class="stage-row">
+      <div class="wells">
+        <div class="well-group">
+          <div class="well-head">
+            <div class="well-title">Detector</div>
+            <div class="well-hint" id="historyHint">Drag the threshold</div>
+          </div>
+          <div class="well"><canvas id="historyCanvas"></canvas></div>
+        </div>
+
+        <div class="well-group narrow">
+          <div class="well-head">
+            <div class="well-title">Envelope</div>
+            <div class="well-hint accent" id="envelopeHint">Gate</div>
+          </div>
+          <div class="well">
+            <canvas id="envelopeCanvas"></canvas>
+            <div class="well-readout head"><div class="k">Reduction</div><div class="v" id="envGrVal">—</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="meter-bridge">
+        <div class="vmeter-wrap">
+          <div class="vmeter"><i id="inBar" style="background: linear-gradient(0deg, #0284c7, #38bdf8);"></i></div>
+          <div class="k">In</div>
+          <div class="v" id="inVal">—</div>
+        </div>
+        <div class="vmeter-wrap">
+          <div class="vmeter down"><i id="grBar"></i></div>
+          <div class="k">GR</div>
+          <div class="v" id="grVal">—</div>
+        </div>
+        <div class="vmeter-wrap">
+          <div class="vmeter"><i id="outBar"></i></div>
+          <div class="k">Out</div>
+          <div class="v" id="outVal">—</div>
+        </div>
+      </div>
+      </div>
+
+      <div class="panel rail">
+        <div class="rail-head">
+          <div class="pillbed accent" id="mode-group" title="Gate attenuates below the threshold; Duck attenuates above it.">
+            <button id="mode_gate" data-index="0">Gate</button>
+            <button id="mode_duck" data-index="1">Duck</button>
+          </div>
+          <div class="rail-range" id="modeText">Below the threshold</div>
+          <div class="spacer"></div>
+          <div class="pillbed sage" id="scsource-group" title="What the detector listens to: the input, or the external sidechain bus.">
+            <button id="scsource_internal" data-index="0">Internal</button>
+            <button id="scsource_external" data-index="1">External</button>
+          </div>
+        </div>
+
+        <div class="knob-row">
+          <div class="knobs">
+            <div class="knob" id="param_threshold" data-label="Threshold" title="Level the detector must reach to open the gate."></div>
+            <div class="knob" id="param_ratio" data-label="Ratio" title="How hard the signal is pushed down below the threshold. Fully clockwise is a hard gate."></div>
+            <div class="knob" id="param_range" data-label="Range" title="How far the gate closes. -90 dB is silence; -12 dB is a gentle tuck."></div>
+          </div>
+          <div class="vsep"></div>
+          <div class="knobs">
+            <div class="knob" id="param_hysteresis" data-label="Hysteresis" title="The gate closes this far below the level it opened at, so it does not chatter on the threshold."></div>
+            <div class="knob" id="param_lookahead" data-label="Lookahead" title="Delays the audio so the gate can open before the transient arrives. Adds latency."></div>
+            <div class="knob" id="param_link" data-label="Stereo link" title="100% gates both channels together; 0% gates each channel on its own."></div>
+          </div>
+          <div class="vsep"></div>
+          <div class="knobs">
+            <div class="knob" id="param_attack" data-label="Attack" title="How fast the gate opens."></div>
+            <div class="knob" id="param_hold" data-label="Hold" title="How long the gate stays open after the signal drops below the threshold."></div>
+            <div class="knob" id="param_release" data-label="Release" title="How fast the gate closes after the hold."></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel mod">
+        <div class="mod-head">
+          <div class="mod-title">
+            <div class="t">Sidechain</div>
+            <div class="s" id="scHint">Internal</div>
+          </div>
+          <div class="vsep"></div>
+          <div class="knobs" style="gap: 12px;">
+            <div class="knob sm" id="param_scHp" data-label="Sidechain HP" data-size="38" title="The detector ignores everything below this frequency. Stops kick bleed opening a snare gate."></div>
+            <div class="knob sm" id="param_scLp" data-label="Sidechain LP" data-size="38" title="The detector ignores everything above this frequency."></div>
+            <div class="knob sm" id="param_detector" data-label="Peak / RMS" data-size="38" title="0% follows peaks; 100% follows average level."></div>
+          </div>
+          <div class="spacer"></div>
+          <button class="pill sm" id="param_sclisten" title="Audition the filtered detector sidechain signal.">SC Listen</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  window.addEventListener('error', e => {
+    if (e.message && (e.message.includes('ResizeObserver') || e.message.includes('loop completed with undelivered notifications'))) return;
+    let el = document.getElementById('errBanner');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'errBanner';
+      el.style.cssText = 'position:fixed;left:0;right:0;bottom:0;background:#3d472b;'
+        + 'color:#f2f5fa;font:11px monospace;padding:4px 10px;z-index:99;';
+      document.body.appendChild(el);
+    }
+    el.textContent = 'UI error: ' + e.message + ' @' + (e.lineno || '?');
+  });
+</script>
+
+<script type="module">
+(async () => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+
+  const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const COL = {
+    accent:    cssVar('--accent')     || '#7a8a5e',
+    accentLit: cssVar('--accent-lit') || '#34d399',
+    well:      cssVar('--well')       || '#06070a',
+    cream:     cssVar('--cream')      || '#f2f5fa',
+  };
+  function applyTheme(theme) {
+    const t = theme || 'studio';
+    if (t === 'studio') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', t);
+    COL.accent = cssVar('--accent') || COL.accent;
+    COL.accentLit = cssVar('--accent-lit') || COL.accentLit;
+    COL.well = cssVar('--well') || '#06070a';
+    COL.cream = cssVar('--cream') || '#f2f5fa';
+    const sw = document.getElementById('themeSwitcher');
+    if (sw) {
+      sw.querySelectorAll('.theme-btn').forEach(b => {
+        b.classList.toggle('on', b.dataset.theme === t);
+      });
+    }
+    try { localStorage.setItem('wd_theme', t); } catch (e) {}
+  }
+  {
+    let saved = 'studio';
+    try { saved = localStorage.getItem('wd_theme') || 'studio'; } catch (e) {}
+    applyTheme(saved);
+    const sw = document.getElementById('themeSwitcher');
+    if (sw) {
+      sw.addEventListener('click', e => {
+        const btn = e.target.closest('.theme-btn');
+        if (btn && btn.dataset.theme) {
+          applyTheme(btn.dataset.theme);
+          if (typeof drawHistory === 'function') drawHistory();
+          if (typeof drawEnvelope === 'function') drawEnvelope();
+        }
+      });
+    }
+  }
+  const ink = a => 'rgba(242, 245, 250, ' + a + ')';
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+  // ------------------------------------------------------------------ host
+  let host = null;
+  if (window.__JUCE__ && window.__JUCE__.backend) {
+    try {
+      const lib = await import('./juce/index.js');
+      const be = window.__JUCE__.backend;
+      host = {
+        slider: id => lib.getSliderState(id),
+        combo:  id => lib.getComboBoxState(id),
+        toggle: id => lib.getToggleState(id),
+        call:   (name, ...args) => lib.getNativeFunction(name)(...args),
+        on:     (event, cb) => be.addEventListener(event, cb),
+      };
+    } catch (e) { console.warn('JUCE frontend unavailable:', e); }
+  }
+
+  const sliders = {}, combos = {}, toggles = {};
+  const sl = id => { if (!host) return null; if (!sliders[id]) sliders[id] = host.slider(id); return sliders[id]; };
+  const cb = id => { if (!host) return null; if (!combos[id]) combos[id] = host.combo(id); return combos[id]; };
+  const tg = id => { if (!host) return null; if (!toggles[id]) toggles[id] = host.toggle(id); return toggles[id]; };
+
+  const comboIndex = (id, n) => {
+    const s = cb(id);
+    if (!s) return 0;
+    if (s.properties && Array.isArray(s.properties.choices) && s.properties.choices.length > 0)
+      return clamp(s.getChoiceIndex(), 0, n - 1);
+    return clamp(Math.round((s.value || 0) * (n - 1)), 0, n - 1);
+  };
+  const setComboIndex = (id, i) => { const s = cb(id); if (s && s.setChoiceIndex) s.setChoiceIndex(i); };
+  const scaled = (id, fallback) => { const s = sl(id); return s ? s.getScaledValue() : fallback; };
+
+  // ---------------------------------------------------------------- knobs
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  const ARC_FULL = 'M12.44 43.56 A22 22 0 1 1 43.56 43.56';
+  const ARC_UP   = 'M28 6 A22 22 0 0 1 43.56 43.56';
+  const ARC_DOWN = 'M28 6 A22 22 0 0 0 12.44 43.56';
+  const LEN_FULL = 2 * Math.PI * 22 * 0.75;
+  const LEN_HALF = LEN_FULL / 2;
+
+  function mountKnob(el) {
+    const size = parseInt(el.dataset.size || '56', 10);
+    const bipolar = el.dataset.bipolar === '1';
+    const sw = size < 48 ? 5.5 : 4.5;
+
+    const svg = document.createElementNS(SVGNS, 'svg');
+    svg.setAttribute('viewBox', '0 0 56 56');
+    svg.setAttribute('width', String(size));
+    svg.setAttribute('height', String(size));
+
+    if (size >= 48) {
+      const ticks = document.createElementNS(SVGNS, 'g');
+      for (let i = 0; i <= 10; i++) {
+        const deg = -135 + i * 27;
+        const rad = (deg - 90) * Math.PI / 180;
+        const major = (i === 0 || i === 5 || i === 10);
+        const r1 = 24.0;
+        const r2 = major ? 26.2 : 25.3;
+        const t = document.createElementNS(SVGNS, 'line');
+        t.setAttribute('x1', (28 + Math.cos(rad) * r1).toFixed(2));
+        t.setAttribute('y1', (28 + Math.sin(rad) * r1).toFixed(2));
+        t.setAttribute('x2', (28 + Math.cos(rad) * r2).toFixed(2));
+        t.setAttribute('y2', (28 + Math.sin(rad) * r2).toFixed(2));
+        t.setAttribute('stroke', major ? 'var(--label)' : 'var(--muted)');
+        t.setAttribute('stroke-width', major ? '1.3' : '0.9');
+        t.setAttribute('stroke-linecap', 'round');
+        t.setAttribute('opacity', major ? '0.75' : '0.42');
+        ticks.appendChild(t);
+      }
+      svg.appendChild(ticks);
+    }
+
+    const mk = (d, stroke, width) => {
+      const p = document.createElementNS(SVGNS, 'path');
+      p.setAttribute('d', d);
+      p.setAttribute('fill', 'none');
+      p.setAttribute('stroke', stroke);
+      p.setAttribute('stroke-width', String(width));
+      p.setAttribute('stroke-linecap', 'round');
+      return p;
+    };
+    const track = mk(ARC_FULL, 'var(--track)', sw);
+    const arc = mk(bipolar ? ARC_UP : ARC_FULL, 'var(--accent)', sw);
+    arc.setAttribute('stroke-dasharray', String(bipolar ? LEN_HALF : LEN_FULL));
+    arc.setAttribute('stroke-dashoffset', String(bipolar ? LEN_HALF : LEN_FULL));
+    arc.classList.add('karc');
+    svg.append(track, arc);
+
+    if (bipolar) {
+      const tick = document.createElementNS(SVGNS, 'line');
+      tick.setAttribute('x1', '28'); tick.setAttribute('y1', '3.5');
+      tick.setAttribute('x2', '28'); tick.setAttribute('y2', '8.2');
+      tick.setAttribute('stroke', 'var(--label)');
+      tick.setAttribute('stroke-width', '1.5');
+      tick.setAttribute('stroke-linecap', 'round');
+      svg.appendChild(tick);
+    }
+
+    const collar = document.createElementNS(SVGNS, 'circle');
+    collar.setAttribute('cx', '28'); collar.setAttribute('cy', '28');
+    collar.setAttribute('r', size < 48 ? '15.2' : '16.8');
+    collar.setAttribute('fill', 'rgba(0, 0, 0, 0.35)');
+    collar.setAttribute('stroke', 'var(--line)');
+    svg.appendChild(collar);
+
+    const cap = document.createElementNS(SVGNS, 'circle');
+    cap.setAttribute('cx', '28'); cap.setAttribute('cy', '28');
+    cap.setAttribute('r', size < 48 ? '13.4' : '14.6');
+    cap.setAttribute('fill', 'var(--panel-hi)');
+    cap.setAttribute('stroke', 'var(--line-hi)');
+    svg.appendChild(cap);
+
+    const needle = document.createElementNS(SVGNS, 'line');
+    needle.setAttribute('x1', '28'); needle.setAttribute('y1', size < 48 ? '15.5' : '14.6');
+    needle.setAttribute('x2', '28'); needle.setAttribute('y2', '21.2');
+    needle.setAttribute('stroke', 'var(--text)');
+    needle.setAttribute('stroke-width', size < 48 ? '2.6' : '2.4');
+    needle.setAttribute('stroke-linecap', 'round');
+    needle.classList.add('kneedle');
+    svg.appendChild(needle);
+
+    const lab = document.createElement('div');
+    lab.className = 'klabel';
+    lab.textContent = el.dataset.label || '';
+    const val = document.createElement('span');
+    val.className = 'v';
+    val.textContent = '—';
+
+    el.innerHTML = '';
+    if (el.classList.contains('sm')) {
+      const stack = document.createElement('div');
+      stack.className = 'kstack';
+      stack.append(lab, val);
+      el.append(svg, stack);
+    } else {
+      el.append(lab, svg, val);
+    }
+    paintKnob(el, bipolar ? 0.5 : 0);
+  }
+
+  function paintKnob(el, norm) {
+    const arc = el.querySelector('.karc');
+    const needle = el.querySelector('.kneedle');
+    if (!arc || !needle) return;
+    const n = clamp(norm, 0, 1);
+    if (el.dataset.bipolar === '1') {
+      const p = (n - 0.5) * 2;
+      arc.setAttribute('d', p >= 0 ? ARC_UP : ARC_DOWN);
+      arc.setAttribute('stroke-dashoffset', String(LEN_HALF * (1 - Math.abs(p))));
+    } else {
+      arc.setAttribute('stroke-dashoffset', String(LEN_FULL * (1 - n)));
+    }
+    needle.setAttribute('transform', 'rotate(' + (-135 + n * 270).toFixed(2) + ' 28 28)');
+  }
+
+  // --------------------------------------------------- slider / toggle binds
+  function bindSlider(el, id, fmt, onValueChange = null) {
+    const slider = sl(id);
+    if (!el) return;
+    if (!slider) { return; }
+
+    {
+      const fresh = el.cloneNode(true);
+      el.parentNode.replaceChild(fresh, el);
+      el = fresh;
+    }
+    el.dataset.paramId = id;
+    const span = el.querySelector('.v');
+
+    const toNorm = (scaled) => {
+      const p = slider.properties || { start: 0, end: 1, skew: 1 };
+      const spanRange = (p.end - p.start) || 1;
+      const lin = Math.min(1, Math.max(0, (scaled - p.start) / spanRange));
+      return Math.pow(lin, p.skew || 1);
+    };
+
+    const updateDisplay = () => {
+      const v = slider.getScaledValue();
+      if (span) span.textContent = fmt(v);
+      paintKnob(el, slider.getNormalisedValue());
+      if (onValueChange) onValueChange(v);
+    };
+
+    if (slider.customListener) slider.valueChangedEvent.removeListener(slider.customListener);
+    slider.customListener = updateDisplay;
+    slider.valueChangedEvent.addListener(updateDisplay);
+    updateDisplay();
+
+    el.addEventListener('dblclick', ev => {
+      ev.preventDefault();
+      const def = (slider.properties || {}).defaultValue;
+      if (typeof def !== 'number') return;
+      slider.sliderDragStarted();
+      slider.setNormalisedValue(toNorm(def));
+      slider.sliderDragEnded();
+      updateDisplay();
+    });
+
+    let st = null;
+    el.addEventListener('pointerdown', ev => {
+      if ((ev.button ?? 0) !== 0) return;
+      // Drag + wheel step in NORMALISED (knob-arc) space. Stepping in real units
+      // felt identical on linear knobs but collapsed the low end of skewed log
+      // ranges (attack/Q/rate): everything below ~1 fit in a few px / one wheel
+      // notch, so readouts hopped from 1 straight to the floor (2026-08-30).
+      st = { y: ev.clientY, n: slider.getNormalisedValue() };
+      slider.sliderDragStarted();
+      el.classList.add('dragging');
+      el.setPointerCapture(ev.pointerId);
+      ev.preventDefault();
+    });
+
+    el.addEventListener('pointermove', ev => {
+      if (!st) return;
+      const fine = ev.shiftKey ? 0.1 : 1.0;
+      const delta = (st.y - ev.clientY) * fine / 250.0;
+      slider.setNormalisedValue(Math.min(1, Math.max(0, st.n + delta)));
+      updateDisplay();
+    });
+
+    const endKnobDrag = ev => {
+      if (st) {
+        slider.sliderDragEnded();
+        st = null;
+      }
+      el.classList.remove('dragging');
+      try { el.releasePointerCapture(ev.pointerId); } catch (e) {}
+    };
+    el.addEventListener('pointerup', endKnobDrag);
+    el.addEventListener('pointercancel', endKnobDrag);
+
+    if (window.WDKit) {
+      window.WDKit.attachWheelGesture(el, () => slider, (s, stepNorm) => {
+        s.setNormalisedValue(Math.min(1, Math.max(0, s.getNormalisedValue() + stepNorm)));
+        updateDisplay();
+      });
+    } else {
+      el.addEventListener('wheel', ev => {
+        ev.preventDefault();
+        const fine = ev.shiftKey ? 0.1 : 1.0;
+        const direction = ev.deltaY < 0 ? 1 : -1;
+        const n = slider.getNormalisedValue() + direction * fine / 100.0;
+        slider.sliderDragStarted();
+        slider.setNormalisedValue(Math.min(1, Math.max(0, n)));
+        slider.sliderDragEnded();
+        updateDisplay();
+      }, { passive: false });
+    }
+
+    span.addEventListener('pointerdown', ev => ev.stopPropagation());
+    span.addEventListener('dblclick', ev => ev.stopPropagation());
+    span.addEventListener('click', ev => {
+      ev.stopPropagation();
+      if (!span.isConnected) return;
+      const input = document.createElement('input');
+      input.className = 'v';
+      input.value = String(Number(slider.getScaledValue().toFixed(4)));
+      input.setAttribute('aria-label', el.dataset.label || id);
+      let done = false;
+      const commit = keep => {
+        if (done) return;
+        done = true;
+        if (keep) {
+          const raw = input.value.trim();
+          const unitHint = /ms\s*$/i.test(span.textContent || '') ? 'ms' : (/hz/i.test(span.textContent || '') ? 'Hz' : undefined);
+          const v = window.WDKit
+            ? window.WDKit.parseMusicalValue(raw, { unit: unitHint })
+            : (parseFloat(raw.replace(/k(?:hz)?\s*$/i, '').replace(/[^0-9.+\-eE]/g, '')) * (/k(?:hz)?\s*$/i.test(raw) ? 1000 : 1));
+          if (isFinite(v)) {
+            slider.sliderDragStarted();
+            slider.setNormalisedValue(toNorm(v));
+            slider.sliderDragEnded();
+          }
+        }
+        input.replaceWith(span);
+        updateDisplay();
+      };
+      input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); commit(true); }
+        else if (e.key === 'Escape') { e.preventDefault(); commit(false); }
+        e.stopPropagation();
+      });
+      input.addEventListener('pointerdown', e => e.stopPropagation());
+      input.addEventListener('blur', () => commit(true));
+      span.replaceWith(input);
+      input.focus();
+      input.select();
+    });
+  }
+
+  function bindToggle(el, id, onValueChange = null) {
+    const t = tg(id);
+    if (!el || !t) return;
+    const updateDisplay = () => {
+      const v = !!t.getValue();
+      el.classList.toggle('on', v);
+      if (onValueChange) onValueChange(v);
+    };
+
+    if (t.customListener) t.valueChangedEvent.removeListener(t.customListener);
+    t.customListener = updateDisplay;
+    t.valueChangedEvent.addListener(updateDisplay);
+    updateDisplay();
+
+    const newEl = el.cloneNode(true);
+    el.parentNode.replaceChild(newEl, el);
+    el = newEl;
+    el.addEventListener('click', () => {
+      t.setValue(!t.getValue());
+      updateDisplay();
+    });
+  }
+
+  function bindChoicePills(groupEl, id, choices, onChange = null) {
+    if (!groupEl) return;
+    if (choices) {
+      groupEl.innerHTML = '';
+      choices.forEach((name, i) => {
+        const b = document.createElement('button');
+        b.className = 'pill sm';
+        b.dataset.index = String(i);
+        b.textContent = name;
+        groupEl.appendChild(b);
+      });
+    }
+    const buttons = groupEl.querySelectorAll('button');
+    const n = choices ? choices.length : buttons.length;
+
+    let localIdx = 0;
+    const updateDisplay = (forcedIdx) => {
+      const idx = (typeof forcedIdx === 'number') ? forcedIdx : (s ? comboIndex(id, n) : localIdx);
+      localIdx = idx;
+      buttons.forEach(btn => btn.classList.toggle('on', parseInt(btn.dataset.index, 10) === idx));
+      if (onChange) onChange(idx);
+    };
+
+    const s = cb(id);
+    if (s) {
+      if (s.customListener) s.valueChangedEvent.removeListener(s.customListener);
+      s.customListener = () => updateDisplay();
+      s.valueChangedEvent.addListener(s.customListener);
+    }
+    updateDisplay();
+
+    buttons.forEach(btn => btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.index, 10);
+      setComboIndex(id, idx);
+      updateDisplay(idx);
+    }));
+  }
+
+  // ------------------------------------------------------------- live beacon/key state
+  let scSourceIdx = 0;
+  let scActive = false;
+  let liveScPeakDb = -120;
+  const selfMeta = { name: 'Gate 1', customName: '', publishedName: '', publishing: false };
+  let beaconSelected = '';
+  let beaconReceiving = false;
+  let beaconSrMismatch = false;
+  let beaconMetersSeen = false;
+  let lastBeaconSig = '';
+
+  const isLightTheme = () => document.documentElement.getAttribute('data-theme') === 'japandi-light';
+  const keyCyan = () => (isLightTheme() ? '#0284c7' : '#38bdf8');
+
+  // ------------------------------------------------------------- readouts
+  const fmtDb = v => (v > 0 ? '+' : '') + v.toFixed(1) + ' dB';
+  const fmtRatio = v => v >= 99.0 ? 'Gate' : v.toFixed(1) + ':1';
+  const fmtMs = v => v < 10.0 ? v.toFixed(1) + ' ms' : Math.round(v) + ' ms';
+  const fmtPct = v => Math.round(v) + '%';
+  const fmtHz = v => v < 1000 ? Math.round(v) + ' Hz' : (v / 1000).toFixed(1) + ' kHz';
+  const fmtScLp = v => v > 19999 ? 'Off' : fmtHz(v);
+
+  // ------------------------------------------------------- detector well
+  const historyCanvas = $('historyCanvas');
+  const hCtx = historyCanvas.getContext('2d');
+  let hW = 0, hH = 0, hDpr = 1;
+
+  const FMIN_DB = -80, FMAX_DB = 0;
+  const AXIS = 16;
+  const historyCapacity = 300;
+  const detectorHistory = [], inputHistory = [], grHistory = [];
+
+  let hCount = 0;
+  const hxOf = i => hW * (1 - (hCount - 1 - i) / (historyCapacity - 1));
+  const hPlotH = () => hH - AXIS;
+  const hyOf = db => 8 + (1 - clamp((db - FMIN_DB) / (FMAX_DB - FMIN_DB), 0, 1)) * (hPlotH() - 8);
+  const hDbOf = y => FMIN_DB + (1 - clamp((y - 8) / (hPlotH() - 8), 0, 1)) * (FMAX_DB - FMIN_DB);
+
+  function fitHistoryCanvas() {
+    hDpr = window.devicePixelRatio || 1;
+    const r = historyCanvas.getBoundingClientRect();
+    hW = r.width; hH = r.height;
+    historyCanvas.width = Math.round(hW * hDpr);
+    historyCanvas.height = Math.round(hH * hDpr);
+    hCtx.setTransform(hDpr, 0, 0, hDpr, 0, 0);
+    drawHistory();
+  }
+  new ResizeObserver(fitHistoryCanvas).observe(historyCanvas);
+
+  let dragThreshold = false;
+
+  function drawHistory() {
+    hCtx.clearRect(0, 0, hW, hH);
+    if (hW < 40 || hH < 40) return;
+    const plotH = hPlotH();
+    hCount = detectorHistory.length;
+
+    const threshDb = scaled('threshold', -20);
+    const hystDb = scaled('hysteresis', 0);
+    const tY = hyOf(threshDb);
+    const cY = hyOf(threshDb - hystDb);
+
+    if (inputHistory.length > 1) {
+      hCtx.fillStyle = ink(0.08);
+      hCtx.beginPath();
+      hCtx.moveTo(hxOf(0), plotH);
+      for (let i = 0; i < inputHistory.length; ++i) hCtx.lineTo(hxOf(i), hyOf(inputHistory[i]));
+      hCtx.lineTo(hxOf(inputHistory.length - 1), plotH);
+      hCtx.closePath();
+      hCtx.fill();
+    }
+
+    if (grHistory.length > 1) {
+      hCtx.fillStyle = ink(0.08);
+      hCtx.beginPath();
+      hCtx.moveTo(hxOf(0), 0);
+      for (let i = 0; i < grHistory.length; ++i)
+        hCtx.lineTo(hxOf(i), clamp(-grHistory[i] / 60, 0, 1) * plotH);
+      hCtx.lineTo(hxOf(grHistory.length - 1), 0);
+      hCtx.closePath();
+      hCtx.fill();
+    }
+
+    if (hystDb > 0.05) {
+      hCtx.fillStyle = ink(0.08);
+      hCtx.fillRect(0, tY, hW, cY - tY);
+    }
+
+    hCtx.strokeStyle = dragThreshold ? COL.accentLit : ink(0.4);
+    hCtx.lineWidth = 1.5;
+    hCtx.setLineDash([4, 4]);
+    hCtx.beginPath();
+    hCtx.moveTo(0, tY);
+    hCtx.lineTo(hW, tY);
+    hCtx.stroke();
+    hCtx.setLineDash([]);
+
+    const label = fmtDb(threshDb);
+    hCtx.font = '700 10px ' + cssVar('--font');
+    const tw = hCtx.measureText(label).width + 16;
+    hCtx.fillStyle = dragThreshold ? COL.accentLit : COL.cream;
+    hCtx.beginPath();
+    if (hCtx.roundRect) hCtx.roundRect(10, tY - 10, tw, 20, 10);
+    else hCtx.rect(10, tY - 10, tw, 20);
+    hCtx.fill();
+    hCtx.fillStyle = COL.well;
+    hCtx.textAlign = 'center';
+    hCtx.textBaseline = 'middle';
+    hCtx.fillText(label, 10 + tw / 2, tY + 0.5);
+    hCtx.textBaseline = 'alphabetic';
+
+    if (detectorHistory.length >= 1) {
+      const useCyan = scSourceIdx === 1;
+      if (detectorHistory.length > 1) {
+        hCtx.strokeStyle = useCyan ? keyCyan() : ink(0.92);
+        hCtx.lineWidth = 3.4;
+        hCtx.lineJoin = 'round';
+        hCtx.lineCap = 'round';
+        hCtx.beginPath();
+        for (let i = 0; i < detectorHistory.length; ++i) {
+          const x = hxOf(i), y = hyOf(detectorHistory[i]);
+          i ? hCtx.lineTo(x, y) : hCtx.moveTo(x, y);
+        }
+        hCtx.stroke();
+      }
+      const n = detectorHistory.length - 1;
+      hCtx.fillStyle = useCyan ? keyCyan() : COL.cream;
+      hCtx.beginPath();
+      hCtx.arc(hxOf(n), hyOf(detectorHistory[n]), 4, 0, Math.PI * 2);
+      hCtx.fill();
+    }
+
+    hCtx.font = '600 9px ' + cssVar('--font');
+    hCtx.fillStyle = ink(0.34);
+    hCtx.textAlign = 'center';
+    for (let s = 1; s <= 4; ++s) hCtx.fillText('-' + s + ' s', hW * (1 - s / 5), hH - 4);
+    hCtx.textAlign = 'right';
+    hCtx.fillText('now', hW - 4, hH - 4);
+    hCtx.textAlign = 'left';
+    hCtx.fillText('-5 s', 4, hH - 4);
+  }
+
+  historyCanvas.addEventListener('pointerdown', ev => {
+    if ((ev.button ?? 0) !== 0) return;
+    const slider = sl('threshold');
+    if (!slider) return;
+    const my = ev.clientY - historyCanvas.getBoundingClientRect().top;
+    if (Math.abs(my - hyOf(slider.getScaledValue())) > 14) return;
+    dragThreshold = true;
+    slider.sliderDragStarted();
+    historyCanvas.setPointerCapture(ev.pointerId);
+    drawHistory();
+  });
+  historyCanvas.addEventListener('pointermove', ev => {
+    const slider = sl('threshold');
+    if (!slider) return;
+    const my = ev.clientY - historyCanvas.getBoundingClientRect().top;
+    if (!dragThreshold) {
+      const near = Math.abs(my - hyOf(slider.getScaledValue())) <= 14;
+      historyCanvas.style.cursor = near ? 'ns-resize' : 'default';
+      return;
+    }
+    const p = slider.properties || { start: -80, end: 0, skew: 1 };
+    const lin = (hDbOf(my) - p.start) / ((p.end - p.start) || 1);
+    slider.setNormalisedValue(Math.pow(clamp(lin, 0, 1), p.skew || 1));
+    drawHistory();
+    drawEnvelope();
+  });
+  function endHistoryDrag(ev) {
+    if (!dragThreshold) return;
+    const slider = sl('threshold');
+    if (slider) slider.sliderDragEnded();
+    dragThreshold = false;
+    try { historyCanvas.releasePointerCapture(ev.pointerId); } catch (e) {}
+    drawHistory();
+  }
+  historyCanvas.addEventListener('pointerup', endHistoryDrag);
+  historyCanvas.addEventListener('pointercancel', endHistoryDrag);
+
+  // ------------------------------------------------------- envelope well
+  const envelopeCanvas = $('envelopeCanvas');
+  const eCtx = envelopeCanvas.getContext('2d');
+  let eW = 0, eH = 0, eDpr = 1;
+  const ENV_FLOOR = -60;
+  let liveGr = 0;
+
+  function fitEnvelopeCanvas() {
+    eDpr = window.devicePixelRatio || 1;
+    const r = envelopeCanvas.getBoundingClientRect();
+    eW = r.width; eH = r.height;
+    envelopeCanvas.width = Math.round(eW * eDpr);
+    envelopeCanvas.height = Math.round(eH * eDpr);
+    eCtx.setTransform(eDpr, 0, 0, eDpr, 0, 0);
+    drawEnvelope();
+  }
+  new ResizeObserver(fitEnvelopeCanvas).observe(envelopeCanvas);
+
+  function drawEnvelope() {
+    eCtx.clearRect(0, 0, eW, eH);
+    if (eW < 40 || eH < 40) return;
+
+    const attack = scaled('attack', 1), hold = scaled('hold', 50), release = scaled('release', 100);
+    const range = Math.max(ENV_FLOOR, scaled('range', -90));
+    const total = Math.max(20, attack + hold + release);
+    const lead = total * 0.08;
+    const span = total + lead * 2;
+
+    const pad = 20, top = 20;
+    const plotW = eW - pad * 2;
+    const plotH = eH - top - AXIS - 10;
+    const xOf = t => pad + (t / span) * plotW;
+    const yOf = db => top + (1 - clamp((db - ENV_FLOOR) / -ENV_FLOOR, 0, 1)) * plotH;
+
+    const gClosed = Math.pow(10, range / 20);
+    const gainAt = t => {
+      if (t < lead) return range;
+      const ta = t - lead;
+      let g;
+      if (ta < attack) g = gClosed + (1 - gClosed) * (1 - Math.exp(-3 * ta / Math.max(attack, 1e-4)));
+      else if (ta < attack + hold) g = 1;
+      else if (ta < attack + hold + release)
+        g = 1 - (1 - gClosed) * (1 - Math.exp(-3 * (ta - attack - hold) / Math.max(release, 1e-4)));
+      else g = gClosed;
+      return Math.max(range, 20 * Math.log10(Math.max(g, 1e-6)));
+    };
+
+    eCtx.strokeStyle = COL.accentLit;
+    eCtx.lineWidth = 2.6;
+    eCtx.lineJoin = 'round';
+    eCtx.beginPath();
+    for (let px = 0; px <= plotW; ++px) {
+      const y = yOf(gainAt((px / plotW) * span));
+      px ? eCtx.lineTo(pad + px, y) : eCtx.moveTo(pad + px, y);
+    }
+    eCtx.stroke();
+
+    const gr = Math.max(range, liveGr);
+    const tRel0 = lead + attack + hold;
+    let tTip = tRel0;
+    if (gr < -0.05 && range < -0.05) {
+      const gNow = Math.pow(10, gr / 20);
+      const frac = clamp((1 - gNow) / (1 - gClosed), 0, 0.999);
+      tTip = tRel0 + release * (-Math.log(1 - frac) / 3);
+      tTip = Math.min(tTip, tRel0 + release);
+      const x0 = xOf(tRel0), x1 = xOf(tTip);
+      eCtx.strokeStyle = ink(0.92);
+      eCtx.lineWidth = 3.4;
+      eCtx.lineJoin = 'round';
+      eCtx.beginPath();
+      for (let x = x0; x <= x1; x += 1) {
+        const y = yOf(gainAt(((x - pad) / plotW) * span));
+        x === x0 ? eCtx.moveTo(x, y) : eCtx.lineTo(x, y);
+      }
+      eCtx.stroke();
+    }
+    eCtx.fillStyle = COL.cream;
+    eCtx.beginPath();
+    eCtx.arc(xOf(tTip), yOf(gainAt(tTip)), 4, 0, Math.PI * 2);
+    eCtx.fill();
+
+    eCtx.font = '600 9px ' + cssVar('--font');
+    eCtx.fillStyle = ink(0.34);
+    eCtx.textAlign = 'center';
+    const fmtT = ms => ms >= 1000 ? (ms / 1000).toFixed(1) + ' s' : Math.round(ms) + ' ms';
+    [0.25, 0.5, 0.75].forEach(f => eCtx.fillText(fmtT(f * span), pad + f * plotW, eH - 4));
+  }
+
+  // ------------------------------------------------------------- meters
+  let mGr = 0, mIn = -120, mOut = -120;
+
+  function renderSelfTrackChip() {
+    const chip = $('selfTrackChip');
+    const nameEl = $('selfTrackName');
+    if (nameEl && nameEl.isConnected && !nameEl.querySelector('input'))
+      nameEl.textContent = selfMeta.name || 'Gate 1';
+    if (chip) {
+      const pubName = selfMeta.publishedName || selfMeta.name || 'Gate 1';
+      chip.title = 'Click to rename this Gate track · Broadcasting on Beacon as "' + pubName + '"';
+    }
+  }
+
+  function startInlineTrackRename(labelEl, currentText) {
+    if (!labelEl || labelEl.querySelector('input')) return;
+    const prev = currentText;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.maxLength = 47;
+    input.className = 'track-name-input';
+    input.value = prev;
+    let done = false;
+    const commit = async keep => {
+      if (done) return;
+      done = true;
+      const next = keep ? input.value.trim() : prev;
+      input.replaceWith(labelEl);
+      if (keep && host) {
+        try {
+          const res = await host.call('setInstanceName', next);
+          if (res && res.ok) {
+            selfMeta.name = res.name || selfMeta.name;
+            selfMeta.customName = res.customName || '';
+            if (typeof res.beaconPublishedName === 'string') selfMeta.publishedName = res.beaconPublishedName;
+            if (typeof res.beaconPublishing === 'boolean') selfMeta.publishing = res.beaconPublishing;
+            renderSelfTrackChip();
+            await refreshBeaconSources();
+          }
+        } catch (e) {}
+      }
+    };
+    input.addEventListener('keydown', ev => {
+      if (ev.key === 'Enter') { ev.preventDefault(); commit(true); }
+      else if (ev.key === 'Escape') { ev.preventDefault(); commit(false); }
+      ev.stopPropagation();
+    });
+    input.addEventListener('pointerdown', ev => ev.stopPropagation());
+    input.addEventListener('blur', () => commit(true));
+    labelEl.replaceWith(input);
+    input.focus({ preventScroll: true });
+    input.select();
+  }
+
+  {
+    const chip = $('selfTrackChip');
+    if (chip) {
+      chip.addEventListener('click', () => startInlineTrackRename($('selfTrackName'), selfMeta.customName || selfMeta.name));
+    }
+  }
+
+  function setScSourceIndex(idx) {
+    setComboIndex('scsource', idx);
+    scSourceIdx = idx;
+    document.querySelectorAll('#scsource-group button').forEach(btn => {
+      btn.classList.toggle('on', parseInt(btn.dataset.index, 10) === idx);
+    });
+    updateSidechainUi();
+    updateBeaconLed();
+    drawHistory();
+  }
+
+  function updateSidechainUi() {
+    const h = $('scHint');
+    if (h) {
+      if (scSourceIdx === 1) {
+        h.classList.remove('sc-ready');
+        h.textContent = beaconSelected ? ('Ext · ' + beaconSelected) : (scActive ? 'Ext · Host Bus' : 'External');
+        h.title = '';
+      } else if (scActive || beaconSelected) {
+        h.classList.add('sc-ready');
+        h.textContent = beaconSelected ? 'Beacon ready · Use External' : 'Host SC ready · Use External';
+        h.title = 'Click to switch Sidechain Source to External';
+      } else {
+        h.classList.remove('sc-ready');
+        h.textContent = 'Internal';
+        h.title = '';
+      }
+    }
+    const hh = $('historyHint');
+    if (hh) {
+      if (scSourceIdx === 1) {
+        const srcName = beaconSelected ? beaconSelected : (scActive ? 'Host Bus' : 'External');
+        const dbStr = (Number.isFinite(liveScPeakDb) && liveScPeakDb > -119.5) ? liveScPeakDb.toFixed(1) + ' dB' : '—';
+        hh.textContent = 'Key: ' + srcName + ' · ' + dbStr;
+        hh.classList.add('key-active');
+      } else {
+        hh.textContent = 'Drag the threshold';
+        hh.classList.remove('key-active');
+      }
+    }
+  }
+
+  function updateBeaconLed() {
+    const wrap = $('beaconPickerWrap');
+    if (!wrap) return;
+    wrap.classList.remove('receiving', 'waiting', 'mismatch');
+    const baseTip = 'Select an active Werewolf Digital Beacon track for external gate/duck detector keying. Wireless cross-track key — for sample-exact timing at large DAW buffer sizes (1024+), use Off (Host Bus) with a DAW sidechain send.';
+    if (beaconSelected && beaconSrMismatch) {
+      wrap.classList.add('mismatch');
+      wrap.title = `Sample rate mismatch between this track and WD Beacon "${beaconSelected}" — sidechain input is muted.`;
+    } else if (beaconSelected && scSourceIdx !== 1) {
+      wrap.classList.add('waiting');
+      wrap.title = `Beacon "${beaconSelected}" is selected, but Sidechain is Internal — switch to External so Beacon keys the detector.`;
+    } else if (beaconSelected && scSourceIdx === 1) {
+      wrap.classList.add(beaconReceiving ? 'receiving' : 'waiting');
+      wrap.title = (beaconReceiving
+        ? `Receiving external sidechain audio from WD Beacon "${beaconSelected}". `
+        : `Waiting for audio from WD Beacon "${beaconSelected}". `) + baseTip;
+    } else if (!beaconSelected && scSourceIdx === 1) {
+      wrap.classList.add(scActive ? 'receiving' : 'waiting');
+      wrap.title = scActive
+        ? 'Receiving external sidechain audio from Host Bus 1. ' + baseTip
+        : 'External sidechain is active — waiting for audio on Host Bus 1 or select a WD Beacon source.';
+    } else if (!beaconSelected && scSourceIdx === 0 && scActive) {
+      wrap.classList.add('waiting');
+      wrap.title = 'Host Bus 1 sidechain signal detected while Sidechain is Internal — switch to External to key from Host Bus 1.';
+    } else {
+      wrap.title = baseTip;
+    }
+  }
+
+  function renderBeaconSources(res) {
+    const sel = $('beaconSourceSelect');
+    if (!sel || !res || typeof res !== 'object') return;
+    const sources = Array.isArray(res.sources) ? res.sources : [];
+    if (typeof res.selected === 'string') beaconSelected = res.selected;
+    if (!beaconMetersSeen && typeof res.receiving === 'boolean') beaconReceiving = res.receiving;
+    if (typeof res.srMismatch === 'boolean') beaconSrMismatch = res.srMismatch;
+
+    const sig = sources.map(s => `${s.name}:${s.sr}:${s.ch}`).join('|') + '#' + beaconSelected;
+    updateBeaconLed();
+    if (document.activeElement === sel || sig === lastBeaconSig) return;
+    lastBeaconSig = sig;
+
+    sel.textContent = '';
+    const off = document.createElement('option');
+    off.value = '';
+    off.textContent = 'Off (Host Bus)';
+    sel.appendChild(off);
+
+    let found = (beaconSelected === '');
+    for (const s of sources) {
+      const opt = document.createElement('option');
+      opt.value = s.name;
+      const sr = s.sr ? (s.sr / 1000).toFixed(s.sr % 1000 === 0 ? 0 : 1) + 'k' : '?';
+      const ch = s.ch === 1 ? 'Mono' : s.ch === 2 ? 'St' : (s.ch + 'ch');
+      opt.textContent = `${s.name} (${sr} · ${ch})`;
+      if (s.name === beaconSelected) found = true;
+      sel.appendChild(opt);
+    }
+    if (!found && beaconSelected) {
+      const offline = document.createElement('option');
+      offline.value = beaconSelected;
+      offline.textContent = `${beaconSelected} (waiting…)`;
+      sel.appendChild(offline);
+    }
+    sel.value = beaconSelected;
+  }
+
+  async function refreshBeaconSources() {
+    if (!host) return;
+    try {
+      const res = await host.call('getBeaconSources');
+      renderBeaconSources(res);
+    } catch (e) {}
+  }
+
+  {
+    const sel = $('beaconSourceSelect');
+    if (sel) {
+      sel.addEventListener('pointerdown', refreshBeaconSources);
+      sel.addEventListener('focus', refreshBeaconSources);
+      sel.addEventListener('change', async () => {
+        beaconSelected = sel.value || '';
+        beaconSrMismatch = false;
+        if (beaconSelected) {
+          setScSourceIndex(1);
+        } else {
+          updateSidechainUi();
+          updateBeaconLed();
+          drawHistory();
+        }
+        if (host) {
+          try {
+            const res = await host.call('setBeaconSource', beaconSelected);
+            if (res && typeof res.receiving === 'boolean') beaconReceiving = res.receiving;
+            if (res && typeof res.srMismatch === 'boolean') beaconSrMismatch = res.srMismatch;
+            if (res && typeof res.scActive === 'boolean') scActive = res.scActive;
+            updateSidechainUi();
+            updateBeaconLed();
+          } catch (e) {}
+        }
+      });
+    }
+  }
+
+  const beaconEpochWatch = window.WDKit
+    ? window.WDKit.createBeaconEpochWatcher(refreshBeaconSources)
+    : () => {};
+
+  function updateMeters(meters) {
+    beaconMetersSeen = true;
+    beaconEpochWatch(meters);
+    if (typeof meters.beaconReceiving === 'boolean') beaconReceiving = meters.beaconReceiving;
+    if (typeof meters.beaconSrMismatch === 'boolean') beaconSrMismatch = meters.beaconSrMismatch;
+    if (typeof meters.scActive === 'boolean') scActive = meters.scActive;
+    if (typeof meters.beaconSource === 'string' && !beaconSelected) beaconSelected = meters.beaconSource;
+    if (typeof meters.selfName === 'string' && meters.selfName) selfMeta.name = meters.selfName;
+    if (typeof meters.selfCustomName === 'string') selfMeta.customName = meters.selfCustomName;
+    if (typeof meters.beaconPublishedName === 'string') selfMeta.publishedName = meters.beaconPublishedName;
+    if (typeof meters.beaconPublishing === 'boolean') selfMeta.publishing = meters.beaconPublishing;
+    if (typeof meters.sc === 'number' && Number.isFinite(meters.sc)) liveScPeakDb = meters.sc;
+    else liveScPeakDb = -120;
+    renderSelfTrackChip();
+    updateSidechainUi();
+    updateBeaconLed();
+    const grMax = Math.min(meters.grL || 0, meters.grR || 0);
+    const targetGr = Math.abs(grMax);
+    const inMax = Math.max(Number.isFinite(meters.inL) ? meters.inL : -120, Number.isFinite(meters.inR) ? meters.inR : -120);
+    const outMax = Math.max(Number.isFinite(meters.outL) ? meters.outL : -120, Number.isFinite(meters.outR) ? meters.outR : -120);
+    const detMax = Math.max(Number.isFinite(meters.detectorL) ? meters.detectorL : -120, Number.isFinite(meters.detectorR) ? meters.detectorR : -120);
+
+    mGr += (targetGr - mGr) * 0.8;
+    mIn += (inMax - mIn) * (inMax > mIn ? 0.8 : 0.15);
+    mOut += (outMax - mOut) * (outMax > mOut ? 0.8 : 0.15);
+
+    const grText = mGr < 0.05 ? '0.0 dB' : '-' + mGr.toFixed(1) + ' dB';
+    $('grVal').textContent = grText;
+    $('envGrVal').textContent = grText;
+    $('inVal').textContent = mIn <= -119.5 ? '—' : mIn.toFixed(1);
+    $('outVal').textContent = mOut <= -119.5 ? '—' : mOut.toFixed(1);
+
+    const dbToPct = db => clamp((db + 80) / 80, 0, 1) * 100;
+    $('grBar').style.setProperty('--fill', (clamp(mGr / 60, 0, 1) * 100).toFixed(1) + '%');
+    $('inBar').style.setProperty('--fill', dbToPct(mIn).toFixed(1) + '%');
+    $('outBar').style.setProperty('--fill', dbToPct(mOut).toFixed(1) + '%');
+
+    detectorHistory.push(detMax);
+    inputHistory.push(inMax);
+    grHistory.push(grMax);
+    if (detectorHistory.length > historyCapacity) detectorHistory.shift();
+    if (inputHistory.length > historyCapacity) inputHistory.shift();
+    if (grHistory.length > historyCapacity) grHistory.shift();
+
+    liveGr = -mGr;
+    drawHistory();
+    drawEnvelope();
+  }
+
+  // ------------------------------------------------------------------- init
+  const MODE_TEXT = ['Below the threshold', 'Above the threshold'];
+  const MODE_NAME = ['Gate', 'Duck'];
+  const SC_NAME = ['Internal', 'External'];
+
+  function initAll() {
+    document.querySelectorAll('.knob').forEach(mountKnob);
+
+    const both = () => { drawHistory(); drawEnvelope(); };
+    bindSlider($('param_threshold'), 'threshold', fmtDb, () => drawHistory());
+    bindSlider($('param_ratio'), 'ratio', fmtRatio);
+    bindSlider($('param_range'), 'range', fmtDb, () => drawEnvelope());
+    bindSlider($('param_hysteresis'), 'hysteresis', v => v.toFixed(1) + ' dB', () => drawHistory());
+    bindSlider($('param_attack'), 'attack', fmtMs, () => drawEnvelope());
+    bindSlider($('param_hold'), 'hold', fmtMs, () => drawEnvelope());
+    bindSlider($('param_release'), 'release', fmtMs, () => drawEnvelope());
+    bindSlider($('param_lookahead'), 'lookahead', fmtMs);
+    bindSlider($('param_detector'), 'detector', fmtPct);
+    bindSlider($('param_link'), 'link', fmtPct);
+    bindSlider($('param_scHp'), 'scHp', fmtHz);
+    bindSlider($('param_scLp'), 'scLp', fmtScLp);
+
+    bindChoicePills($('mode-group'), 'mode', null, idx => {
+      $('modeText').textContent = MODE_TEXT[idx] || MODE_TEXT[0];
+      $('envelopeHint').textContent = MODE_NAME[idx] || MODE_NAME[0];
+    });
+    bindChoicePills($('scsource-group'), 'scsource', null, idx => {
+      scSourceIdx = idx;
+      updateSidechainUi();
+      updateBeaconLed();
+      drawHistory();
+    });
+    const scHintEl = $('scHint');
+    if (scHintEl) {
+      scHintEl.addEventListener('click', () => {
+        if (scSourceIdx === 0 && (scActive || beaconSelected)) {
+          setScSourceIndex(1);
+        }
+      });
+    }
+
+    bindToggle($('param_sclisten'), 'sclisten');
+    bindToggle($('param_delta'), 'delta');
+    bindToggle($('param_power'), 'power', v => {
+      const b = $('param_power');
+      if (b) b.lastChild.textContent = v ? 'Engaged' : 'Bypassed';
+    });
+    both();
+  }
+
+  setTimeout(async () => {
+    initAll();
+    if (window.WDKit) {
+      window.WDKit.enhanceAllKnobs(sl);
+      window.WDKit.mountHeaderKit({ host });
+      window.WDKit.syncGlobalTheme(host, applyTheme);
+    }
+    fitHistoryCanvas();
+    fitEnvelopeCanvas();
+
+    if (host) {
+      try {
+        const state = await host.call('getUiState');
+        if (state) {
+          if (state.build) $('buildTag').textContent = state.build;
+          if (state.sampleRate) $('srTag').textContent = (state.sampleRate / 1000).toFixed(1) + ' kHz';
+          if (state.selfName) selfMeta.name = state.selfName;
+          if (typeof state.selfCustomName === 'string') selfMeta.customName = state.selfCustomName;
+          if (typeof state.beaconPublishedName === 'string') selfMeta.publishedName = state.beaconPublishedName;
+          if (typeof state.beaconPublishing === 'boolean') selfMeta.publishing = state.beaconPublishing;
+          if (typeof state.beaconSource === 'string') beaconSelected = state.beaconSource;
+          if (typeof state.beaconReceiving === 'boolean') beaconReceiving = state.beaconReceiving;
+          if (typeof state.beaconSrMismatch === 'boolean') beaconSrMismatch = state.beaconSrMismatch;
+          if (typeof state.scActive === 'boolean') scActive = state.scActive;
+          if (typeof state.sc === 'number' && Number.isFinite(state.sc)) liveScPeakDb = state.sc;
+          renderSelfTrackChip();
+          updateSidechainUi();
+          updateBeaconLed();
+        }
+      } catch (e) { console.warn('getUiState call failed', e); }
+
+      await refreshBeaconSources();
+    } else {
+      renderSelfTrackChip();
+      updateSidechainUi();
+      updateBeaconLed();
+    }
+  }, 120);
+
+  // ------------------------------------------------------------ live events
+  if (host) {
+    host.on('meters', data => updateMeters(data));
+  } else {
+    setInterval(() => {
+      const t = Date.now() * 0.001;
+      const sig = -40 + 30 * Math.sin(t * 1.5) + 5 * Math.sin(t * 12);
+      const open = sig > -25;
+      const gr = open ? 0 : -60;
+      updateMeters({
+        grL: gr, grR: gr, inL: sig, inR: sig,
+        outL: open ? sig : sig - 60, outR: open ? sig : sig - 60,
+        detectorL: sig, detectorR: sig,
+      });
+    }, 33);
+  }
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,2931 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Werewolf Digital Limiter</title>
+<link rel="stylesheet" href="./wd/tokens.css">
+<style>
+  /* ══════════════════════════════════════════════════════════════════════
+     Werewolf Digital — Precision Instrument Architecture
+     Full-stage interactive visualizer, calibrated vertical meter bridge,
+     machined 3-tier rotary hierarchy, and direct canvas manipulation.
+     ════════════════════════════════════════════════════════════════════ */
+
+  /* 1. Studio Obsidian (Default) */
+  :root, :root[data-theme="studio"] {
+    --bg:           #0b0d12;
+    --bg-elev:      #11141c;
+    --panel:        #151922;
+    --panel-hi:     #1b202c;
+    --panel-border: rgba(255, 255, 255, 0.07);
+    --line:         rgba(255, 255, 255, 0.08);
+    --line-strong:  rgba(255, 255, 255, 0.14);
+    --track:        #0d0f15;
+    --well:         #06070a;
+
+    --text:         #f2f5fa;
+    --label:        #8b96a8;
+    --muted:        #525c6e;
+    --cream:        #f0f4fc;
+
+    --accent:       #ff2e5f;   /* Limiter Crimson/Coral */
+    --accent-lit:   #ff5c82;
+    --accent-deep:  #c81642;
+    --accent-glow:  rgba(255, 46, 95, 0.35);
+
+    --cyan:         #00d2ff;   /* Input signal & threshold */
+    --cyan-glow:    rgba(0, 210, 255, 0.28);
+    --amber:        #f59e0b;   /* Clipper ceiling & delta */
+    --amber-glow:   rgba(245, 158, 11, 0.28);
+    --emerald:      #10b981;   /* Engaged / safe headroom */
+
+    --knob-outer:   #0e1017;
+    --knob-cap-top: #232836;
+    --knob-cap-bot: #141720;
+    --knob-rim:     rgba(255, 255, 255, 0.14);
+    --knob-needle:  #ffffff;
+    --knob-tick:    rgba(255, 255, 255, 0.18);
+
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", "Inter", Roboto, sans-serif;
+    --font-display: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI Semibold", "Inter", sans-serif;
+    --font-mono: "JetBrains Mono", "Cascadia Mono", "Consolas", ui-monospace, monospace;
+  }
+
+  /* 2. Dark Japandi: Sumi & Hinoki */
+  :root[data-theme="japandi-dark"] {
+    --bg:           #121417;
+    --bg-elev:      #171a1e;
+    --panel:        #1b1e23;
+    --panel-hi:     #22262d;
+    --panel-border: rgba(242, 237, 228, 0.07);
+    --line:         rgba(242, 237, 228, 0.08);
+    --line-strong:  rgba(242, 237, 228, 0.15);
+    --track:        #101215;
+    --well:         #090b0d;
+
+    --text:         #f2ede4;
+    --label:        #a09a8e;
+    --muted:        #5e5b54;
+    --cream:        #f7f3eb;
+
+    --accent:       #d49b6a;   /* Hinoki Cypress */
+    --accent-lit:   #e8b88a;
+    --accent-deep:  #96663c;
+    --accent-glow:  rgba(212, 155, 106, 0.32);
+
+    --cyan:         #7fa99b;   /* Celadon river stone */
+    --cyan-glow:    rgba(127, 169, 155, 0.25);
+    --amber:        #d9824c;   /* Persimmon lacquer */
+    --amber-glow:   rgba(217, 130, 76, 0.25);
+    --emerald:      #84a577;   /* Matcha moss */
+
+    --knob-outer:   #101215;
+    --knob-cap-top: #262a31;
+    --knob-cap-bot: #181b20;
+    --knob-rim:     rgba(212, 155, 106, 0.25);
+    --knob-needle:  #f2ede4;
+    --knob-tick:    rgba(242, 237, 228, 0.18);
+  }
+
+  /* 3. Light Japandi: Washi & White Oak */
+  :root[data-theme="japandi-light"] {
+    --bg:           #e5e0d5;
+    --bg-elev:      #ece8df;
+    --panel:        #ded8cb;
+    --panel-hi:     #d4cdbe;
+    --panel-border: rgba(24, 25, 28, 0.09);
+    --line:         rgba(24, 25, 28, 0.1);
+    --line-strong:  rgba(24, 25, 28, 0.18);
+    --track:        #cac3b4;
+    --well:         #141619;
+
+    --text:         #18191c;
+    --label:        #68635a;
+    --muted:        #948e82;
+    --cream:        #faf7f0;
+
+    --accent:       #b86b2e;   /* Warm Copper Persimmon */
+    --accent-lit:   #d98847;
+    --accent-deep:  #7d4416;
+    --accent-glow:  rgba(184, 107, 46, 0.28);
+
+    --cyan:         #3b8ea5;
+    --cyan-glow:    rgba(59, 142, 165, 0.25);
+    --amber:        #d97706;
+    --amber-glow:   rgba(217, 119, 6, 0.25);
+    --emerald:      #4d7c43;
+
+    --knob-outer:   #c6bfb0;
+    --knob-cap-top: #ede9e0;
+    --knob-cap-bot: #dad3c5;
+    --knob-rim:     rgba(24, 25, 28, 0.18);
+    --knob-needle:  #18191c;
+    --knob-tick:    rgba(24, 25, 28, 0.24);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 400 12.5px/1.4 var(--font);
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  :focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ══════════════════════════════════════════════════════════════════════
+     TOP INSTRUMENT BAR (46px — Bypass, Brand, Live Chain Telemetry, Utility)
+     ════════════════════════════════════════════════════════════════════ */
+  header {
+    flex: 0 0 46px;
+    height: 46px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 0 12px;
+    background: var(--bg-elev);
+    border-bottom: 1px solid var(--line-strong);
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
+    z-index: 10;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  /* Power / Engaged button integrated into top-left corner */
+  .power-btn {
+    flex-shrink: 0;
+    width: 98px;
+    min-width: 98px;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 5px;
+    border: 1px solid var(--line-strong);
+    background: var(--track);
+    color: var(--label);
+    font: 700 10.5px/1 var(--font);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 7px;
+    cursor: pointer;
+    transition: all 0.14s ease;
+    white-space: nowrap;
+  }
+  .power-btn:hover { border-color: var(--label); color: var(--text); }
+  .power-btn .led {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--muted);
+    transition: all 0.15s ease;
+  }
+  .power-btn.on {
+    border-color: rgba(16, 185, 129, 0.35);
+    color: var(--text);
+  }
+  .power-btn.on .led {
+    background: var(--emerald);
+    box-shadow: 0 0 8px var(--emerald);
+  }
+
+  .brand { display: flex; align-items: baseline; gap: 8px; flex-shrink: 0; white-space: nowrap; }
+  .brand svg { align-self: center; filter: drop-shadow(0 0 5px var(--accent-glow)); }
+  .brand .suite {
+    font: 800 9.5px/1 var(--font);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--label);
+  }
+  .brand .name {
+    font: 700 16px/1 var(--font-display);
+    letter-spacing: -0.01em;
+    color: var(--text);
+  }
+
+  .headsep { flex-shrink: 0; width: 1px; height: 20px; background: var(--line); }
+  .spacer { flex: 1; min-width: 0; }
+
+  /* Live Signal Chain Flow Pill in Header */
+  .chain-hud {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 5px;
+    background: var(--track);
+    border: 1px solid var(--line);
+    font: 600 10.5px/1 var(--font);
+    color: var(--label);
+    white-space: nowrap;
+  }
+  .chain-hud .stage-tag {
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .chain-hud .dot { width: 6px; height: 6px; border-radius: 50%; }
+  .chain-hud .dot.in   { background: var(--cyan); }
+  .chain-hud .dot.clip { background: var(--amber); }
+  .chain-hud .dot.lim  { background: var(--accent); }
+  .chain-hud .chainv {
+    display: inline-block;
+    font: 700 11px/1 var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    width: 42px;
+    min-width: 42px;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .chain-hud .arr { color: var(--muted); font-size: 10px; }
+
+  /* Header Utility Toggles (True Peak, Delta Listen) */
+  .util-group {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .util-btn {
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 5px;
+    border: 1px solid var(--line-strong);
+    background: var(--panel);
+    color: var(--label);
+    font: 700 10.5px/1 var(--font);
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.12s ease;
+    white-space: nowrap;
+  }
+  .util-btn:hover { color: var(--text); border-color: var(--label); }
+  .util-btn .u-led {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--muted);
+  }
+  .util-btn.on {
+    background: var(--panel-hi);
+    border-color: var(--cyan);
+    color: var(--text);
+  }
+  .util-btn.on .u-led {
+    background: var(--cyan);
+    box-shadow: 0 0 6px var(--cyan);
+  }
+  .util-btn.delta-btn.on {
+    background: rgba(245, 158, 11, 0.16);
+    border-color: var(--amber);
+    color: var(--text);
+  }
+  .util-btn.delta-btn.on .u-led {
+    background: var(--amber);
+    box-shadow: 0 0 8px var(--amber);
+  }
+
+  /* Theme Picker */
+  .theme-picker {
+    flex-shrink: 0;
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 5px;
+    background: var(--track);
+    border: 1px solid var(--line);
+  }
+  .theme-btn {
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 3px;
+    border: 0;
+    background: transparent;
+    color: var(--label);
+    font: 700 10px/1 var(--font);
+    cursor: pointer;
+    transition: background-color 0.12s ease, color 0.12s ease;
+  }
+  .theme-btn:hover { color: var(--text); }
+  .theme-btn.active {
+    background: var(--accent);
+    color: #ffffff;
+  }
+
+  /* Subtle telemetry metadata (shrinks gracefully before truncating, never overflows header) */
+  .meta-tags {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 190px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    font: 600 9.5px/1.15 var(--font-mono);
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .meta-tags > div {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: right;
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════
+     MAIN INSTRUMENT WORKSPACE (Stage + Right Calibrated Meter Bridge)
+     ════════════════════════════════════════════════════════════════════ */
+  .instrument-frame {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 212px;
+    grid-template-rows: minmax(210px, 1fr) auto;
+    background: var(--bg);
+  }
+
+  /* ── 1. UPPER LEFT: FULL-WIDTH INTERACTIVE VISUALIZER STAGE ── */
+  .stage-shell {
+    grid-column: 1;
+    grid-row: 1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    margin: 10px 0 10px 10px;
+    border-radius: 8px;
+    background: var(--well);
+    border: 1px solid var(--line-strong);
+    box-shadow: inset 0 2px 16px rgba(0, 0, 0, 0.85);
+    overflow: hidden;
+    min-height: 200px;
+  }
+  .stage-canvas-wrap {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+  #historyScrubMount {
+    flex: 0 0 auto;
+    padding: 6px 8px;
+    border-top: 1px solid var(--line);
+    background: var(--panel);
+  }
+
+  /* Overlay HUD bar inside top of visualizer */
+  .stage-hud-top {
+    position: absolute;
+    top: 10px; left: 12px; right: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    pointer-events: none;
+    z-index: 4;
+  }
+  .hud-left, .hud-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    pointer-events: auto;
+  }
+  .hud-badge {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 24px;
+    padding: 0 9px;
+    border-radius: 4px;
+    background: rgba(12, 14, 20, 0.82);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    font: 700 9.5px/1 var(--font);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #9aa5b6;
+    white-space: nowrap;
+  }
+  .hud-badge .val-readout {
+    display: inline-block;
+    width: 42px;
+    min-width: 42px;
+    text-align: right;
+    font: 700 11.5px/1 var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    color: #f0f4fc;
+    letter-spacing: 0;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .hud-badge .val-readout.cyan { color: var(--cyan); }
+
+  /* Trace Legend in HUD */
+  .trace-legend {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    height: 24px;
+    padding: 0 10px;
+    border-radius: 4px;
+    background: rgba(12, 14, 20, 0.78);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    font: 600 9.5px/1 var(--font);
+    color: #9aa5b6;
+  }
+  .trace-item { display: inline-flex; align-items: center; gap: 5px; }
+  .trace-swatch { width: 10px; height: 2.5px; border-radius: 1px; }
+
+  .hud-toggle {
+    height: 24px;
+    padding: 0 9px;
+    border-radius: 4px;
+    background: rgba(18, 22, 31, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #c5cedb;
+    font: 700 9.5px/1 var(--font);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .hud-toggle:hover { border-color: var(--cyan); color: #ffffff; }
+  .hud-toggle.active {
+    background: rgba(255, 46, 95, 0.22);
+    border-color: var(--accent);
+    color: #ffffff;
+  }
+  .os-hud-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    height: 24px;
+    padding: 0 3px 0 7px;
+    border-radius: 4px;
+    background: rgba(18, 22, 31, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    transition: opacity 0.14s ease;
+  }
+  .os-hud-group .os-lbl {
+    font: 700 9px/1 var(--font);
+    letter-spacing: 0.08em;
+    color: #9aa5b6;
+    margin-right: 4px;
+  }
+  .os-hud-group button {
+    height: 18px;
+    padding: 0 6px;
+    border: 0;
+    border-radius: 3px;
+    background: transparent;
+    color: #9aa5b6;
+    font: 700 9.5px/1 var(--font-mono);
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .os-hud-group button:hover:not(.on) {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.06);
+  }
+  .os-hud-group button.on {
+    background: var(--amber);
+    color: #06090e;
+  }
+
+  /* Main Interactive History Canvas */
+  #historyCanvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: crosshair;
+  }
+
+  /* Floating Transfer Curve PIP Overlay inside Stage (Bottom-Left) */
+  .transfer-pip {
+    position: absolute;
+    left: 12px;
+    bottom: 26px;
+    width: 168px;
+    height: 132px;
+    border-radius: 6px;
+    background: rgba(9, 11, 16, 0.9);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 4;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+  }
+  .transfer-pip.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(8px);
+  }
+  .pip-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 8px 3px;
+    font: 700 8.5px/1 var(--font);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #8b96a8;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .pip-head span.knee-mode { color: var(--accent-lit); }
+  #ceilingCanvas {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* ── 2. RIGHT DOCK: CALIBRATED VERTICAL METER BRIDGE ── */
+  .meter-bridge {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    margin: 10px;
+    min-width: 0;
+    overflow: hidden;
+    border-radius: 8px;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding: 10px 8px;
+    gap: 10px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
+  }
+
+  .bridge-title {
+    font: 800 9px/1 var(--font);
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--label);
+    text-align: center;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+
+  /* Big Digital Peak / Reduction Telemetry Readouts at top of Meter Bridge */
+  .bridge-hero-stats {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 6px;
+  }
+  .hero-stat-box {
+    min-width: 0;
+    overflow: hidden;
+    background: var(--well);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 5px;
+    padding: 6px 6px 5px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+  .hero-stat-box .hs-k {
+    font: 700 8px/1 var(--font);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #8b96a8;
+    white-space: nowrap;
+  }
+  .hero-stat-box .hs-v {
+    display: block;
+    width: 100%;
+    height: 18px;
+    line-height: 18px;
+    text-align: center;
+    font: 700 14px/18px var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .hero-stat-box.gr-box .hs-v { color: var(--accent-lit); }
+
+  /* 4-Column Calibrated Vertical Bargraphs */
+  .vmeter-columns {
+    flex: 1;
+    min-width: 0;
+    min-height: 160px;
+    overflow: hidden;
+    background: var(--well);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 6px;
+    padding: 8px 5px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .vmeter-stage {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 20px minmax(0, 1fr) minmax(0, 1fr);
+    align-items: stretch;
+    gap: 2px;
+  }
+  .m-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    min-height: 0;
+  }
+  .m-bar-track {
+    flex: 1;
+    width: 12px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    position: relative;
+    overflow: hidden;
+  }
+  .m-bar-track i {
+    position: absolute;
+    left: 0; right: 0;
+    border-radius: 2px;
+  }
+  /* Upward-filling level meters (IN, OUT) */
+  .m-bar-track.up i {
+    bottom: 0;
+    height: var(--fill, 0%);
+  }
+  .m-bar-track.in-track i {
+    background: linear-gradient(0deg, #007799, var(--cyan));
+  }
+  .m-bar-track.out-track i {
+    background: linear-gradient(0deg, var(--emerald), #e2f8f0);
+  }
+  /* Downward-hanging attenuation meters (CLIP, LIMIT) */
+  .m-bar-track.down i {
+    top: 0;
+    height: var(--fill, 0%);
+  }
+  .m-bar-track.clip-track i {
+    background: linear-gradient(180deg, var(--amber), #fbbf24);
+  }
+  .m-bar-track.gr-track i {
+    background: linear-gradient(180deg, var(--accent), var(--accent-lit));
+    box-shadow: 0 0 8px var(--accent-glow);
+  }
+
+  /* Center dB Scale Column inside Meter Bridge */
+  .m-scale {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2px 0;
+    font: 600 8px/1 var(--font-mono);
+    color: rgba(240, 244, 252, 0.35);
+    pointer-events: none;
+  }
+
+  /* Column labels and live dB readouts below bars */
+  .m-col-lbl {
+    font: 800 8.5px/1 var(--font);
+    letter-spacing: 0.08em;
+    color: #8b96a8;
+  }
+  .m-col-val {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    height: 12px;
+    font: 700 9px/12px var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    color: #d8e0ec;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════
+     3. BOTTOM CONTROL DECK: TWO MACHINED BAYS (ZERO DEAD SPACE)
+     ════════════════════════════════════════════════════════════════════ */
+  .control-deck {
+    grid-column: 1;
+    grid-row: 2;
+    margin: 0 0 10px 10px;
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap: 10px;
+  }
+
+  .deck-bay {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 10px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  }
+
+  .bay-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--line);
+  }
+  .bay-title {
+    font: 800 9.5px/1 var(--font);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--label);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .bay-title::before {
+    content: "";
+    width: 3px; height: 10px;
+    border-radius: 1.5px;
+    background: var(--accent);
+  }
+  .bay-sub {
+    font: 600 10px/1 var(--font);
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #releaseMode {
+    display: inline-block;
+    width: 62px;
+    text-align: right;
+    color: var(--text);
+    font-weight: 700;
+  }
+
+  /* Primary Knobs Row (Threshold, Clip Split, Ceiling) */
+  .hero-knobs-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    align-items: start;
+    justify-items: center;
+    gap: 8px;
+    padding: 0;
+  }
+
+  .hero-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    width: 100%;
+  }
+
+  .stage-pill {
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 4px;
+    border: 1px solid var(--line);
+    background: var(--track);
+    color: var(--label);
+    font: 700 9.5px/20px var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .stage-pill.amber {
+    color: var(--amber);
+    border-color: rgba(245, 158, 11, 0.32);
+  }
+  .stage-dim {
+    opacity: 0.38;
+    transition: opacity 0.14s ease;
+  }
+
+  /* Secondary Character & Release Layout */
+  .char-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+    justify-content: center;
+  }
+
+  /* Segmented Style / Mode Switcher */
+  .style-switcher {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    padding: 3px;
+    border-radius: 6px;
+    background: var(--track);
+    border: 1px solid var(--line);
+  }
+  .style-switcher.mode-switcher {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 3px;
+  }
+  .style-switcher button {
+    height: 30px;
+    border-radius: 4px;
+    border: 0;
+    background: transparent;
+    color: var(--label);
+    font: 700 11px/1 var(--font);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    transition: all 0.12s ease;
+  }
+  .style-switcher button:hover:not(.on) {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text);
+  }
+  .style-switcher button.on {
+    background: var(--accent);
+    color: #ffffff;
+    box-shadow: 0 2px 10px var(--accent-glow);
+  }
+  .mode-switcher button.on {
+    background: var(--cyan);
+    color: #06090e;
+    box-shadow: 0 2px 10px var(--cyan-glow);
+  }
+  .mode-switcher button.plus.on {
+    background: var(--amber);
+    color: #06090e;
+    box-shadow: 0 2px 10px var(--amber-glow);
+  }
+  :root[data-theme="japandi-light"] .mode-switcher button.on,
+  :root[data-theme="japandi-light"] .mode-switcher button.plus.on {
+    color: #ffffff;
+  }
+
+  .secondary-knobs-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    align-items: start;
+    justify-items: center;
+    gap: 8px;
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════
+     ROTARY DIALS (58px/56px with Scale Ticks & Direct Input)
+     ════════════════════════════════════════════════════════════════════ */
+  .hero-knobs-row .knob {
+    width: 96px;
+    max-width: 100%;
+  }
+  .secondary-knobs-row .knob {
+    width: 92px;
+    max-width: 100%;
+  }
+  .knob {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: ns-resize;
+    touch-action: none;
+    border-radius: 8px;
+    padding: 4px 6px;
+    position: relative;
+    transition: background 0.12s ease;
+  }
+  .knob:hover { background: rgba(255, 255, 255, 0.035); }
+  :root[data-theme="japandi-light"] .knob:hover { background: rgba(0, 0, 0, 0.045); }
+
+  .knob .klabel {
+    font: 800 9.5px/1 var(--font);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--label);
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .knob svg { display: block; pointer-events: none; overflow: visible; }
+
+  /* Readout badge — supports click-to-type numeric entry with zero height shift! */
+  .knob .v {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 20px;
+    min-width: 76px;
+    font: 700 12.5px/16px var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    cursor: text;
+    transition: border-color 0.12s ease, background 0.12s ease, color 0.12s ease;
+    white-space: nowrap;
+    box-sizing: border-box;
+  }
+  .knob .v:hover {
+    border-color: var(--line-strong);
+    background: var(--track);
+  }
+  .knob.dragging .v {
+    color: var(--accent-lit);
+    border-color: var(--accent);
+    background: var(--track);
+  }
+  .knob input.v-edit {
+    font: 700 12px/16px var(--font-mono);
+    width: 76px;
+    height: 20px;
+    padding: 1px 4px;
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    background: var(--track);
+    color: var(--text);
+    text-align: center;
+    outline: none;
+    box-sizing: border-box;
+  }
+
+  /* Auto-threshold linked state (keeps exact 20px box height) */
+  .knob.auto-on svg { opacity: 0.42; }
+  .knob.auto-on .v {
+    color: var(--cyan);
+    font-weight: 700;
+    font-size: 11px;
+    line-height: 16px;
+    height: 20px;
+  }
+
+  /* Compact Rocker Switch for Sub-Control Flags (Auto Thresh, Asym, Auto Rel) */
+  .rocker-btn {
+    height: 22px;
+    padding: 0 9px;
+    border-radius: 4px;
+    border: 1px solid var(--line-strong);
+    background: var(--track);
+    color: var(--label);
+    font: 700 9.5px/1 var(--font);
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.12s ease;
+    white-space: nowrap;
+  }
+  .rocker-btn::before {
+    content: "";
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: all 0.12s ease;
+  }
+  .rocker-btn:hover { color: var(--text); border-color: var(--label); }
+  .rocker-btn.on {
+    background: rgba(0, 210, 255, 0.12);
+    border-color: var(--cyan);
+    color: var(--text);
+  }
+  .rocker-btn.on::before {
+    background: var(--cyan);
+    box-shadow: 0 0 6px var(--cyan);
+  }
+
+  /* Responsive Narrow Layout (fits 640x600 minimum editor cleanly without clipping) */
+  @media (max-width: 1110px) {
+    header { gap: 7px; padding: 0 10px; }
+    #buildTag { display: none; }
+  }
+  @media (max-width: 1040px) {
+    #modeExplain { display: none; }
+  }
+  @media (max-width: 990px) {
+    .meta-tags { display: none; }
+  }
+  @media (max-width: 930px) {
+    .chain-hud, .sep-chain { display: none; }
+  }
+  @media (max-width: 860px) {
+    .instrument-frame {
+      grid-template-columns: 1fr;
+      grid-template-rows: minmax(150px, 1fr) auto auto;
+    }
+    .stage-shell { margin: 8px 8px 0 8px; min-height: 150px; }
+    .control-deck {
+      grid-column: 1;
+      grid-row: 2;
+      margin: 6px 8px 0 8px;
+      grid-template-columns: 1.08fr 1fr;
+      gap: 8px;
+    }
+    .deck-bay { padding: 8px 10px; gap: 6px; }
+    .bay-sub { display: none; }
+    .char-body { gap: 8px; }
+    .hero-knobs-row .knob, .secondary-knobs-row .knob { width: 86px; padding: 2px 3px; }
+    .meter-bridge {
+      grid-column: 1;
+      grid-row: 3;
+      margin: 6px 8px 8px 8px;
+      flex-direction: row;
+      align-items: center;
+      padding: 6px 10px;
+      gap: 8px;
+    }
+    .bridge-hero-stats { flex: 0 0 148px; }
+    .bridge-title, .m-scale { display: none; }
+    .vmeter-columns { min-height: 0; min-width: 0; flex: 1 1 auto; padding: 6px 8px; }
+    .vmeter-stage { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+    .m-col { flex-direction: row; min-width: 0; }
+    .m-col-val { width: 32px; min-width: 32px; flex: 0 0 32px; text-align: right; }
+    .m-bar-track { width: 100%; height: 8px; flex: 1; }
+    .m-bar-track.up i, .m-bar-track.down i {
+      top: 0; bottom: 0; left: 0; right: auto;
+      height: 100% !important;
+      width: var(--fill, 0%);
+    }
+  }
+  @media (max-width: 700px) {
+    .brand .suite { display: none; }
+    .power-btn { width: 88px; min-width: 88px; padding: 0 8px; }
+    .util-btn { padding: 0 8px; }
+  }
+  @media (max-width: 619px) {
+    .control-deck { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       1. TOP PRODUCER & INSTRUMENT BAR
+       ════════════════════════════════════════════════════════════════════ -->
+  <header>
+    <button class="power-btn on" id="param_power" title="Bypass the whole plugin. Crossfades over 30 ms so it never clicks.">
+      <span class="led"></span><span>Engaged</span>
+    </button>
+
+    <div class="brand">
+      <svg width="18" height="16" viewBox="0 0 20 18">
+        <path d="M2 16.5 L10 1.5 L18 16.5 Z" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linejoin="round"/>
+      </svg>
+      <span class="suite">Werewolf</span>
+      <span class="name">Limiter</span>
+    </div>
+
+    <div class="headsep sep-chain"></div>
+
+    <!-- Live Signal Chain HUD -->
+    <div class="chain-hud" title="Live peak flow across the two-stage dynamics path: Input peak → Clipper output → Brickwall Limiter.">
+      <span class="stage-tag"><span class="dot in"></span>In <span id="clipInVal" class="chainv">&mdash;</span></span>
+      <span class="arr">&rarr;</span>
+      <span class="stage-tag" id="chainClipTag"><span class="dot clip"></span>Clip <span id="clipOutVal" class="chainv">&mdash;</span></span>
+      <span class="arr">&rarr;</span>
+      <span class="stage-tag" id="chainLimTag"><span class="dot lim"></span>Limit</span>
+    </div>
+
+    <div class="spacer"></div>
+
+    <!-- Producer Audition & Oversampling Toggles -->
+    <div class="util-group">
+      <button class="util-btn" id="param_truePeak" title="Catch inter-sample peaks — overshoots that appear after conversion to analog or lossy codecs.">
+        <span class="u-led"></span>True Peak
+      </button>
+      <button class="util-btn delta-btn" id="param_delta" title="Listen only to the gain-matched (1:1) difference removed by the clipper and limiter (ignores static Ceiling/Threshold volume).">
+        <span class="u-led"></span>Delta Listen
+      </button>
+    </div>
+
+    <div class="headsep"></div>
+
+    <div class="theme-picker" id="themeSwitcher" title="Switch instrument finish">
+      <button class="theme-btn active" data-theme="studio">Studio</button>
+      <button class="theme-btn" data-theme="japandi-dark">Sumi</button>
+      <button class="theme-btn" data-theme="japandi-light">Washi</button>
+    </div>
+
+    <div class="meta-tags">
+      <div id="srTag">&mdash;</div>
+      <div id="buildTag">&mdash;</div>
+    </div>
+  </header>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       2. MAIN INSTRUMENT WORKSPACE
+       ════════════════════════════════════════════════════════════════════ -->
+  <div class="instrument-frame">
+
+    <!-- ── A. INTERACTIVE STAGE (Full-Width Scrolling Waveform + Draggable Guides) ── -->
+    <section class="stage-shell">
+      <div class="stage-canvas-wrap">
+        <div class="stage-hud-top">
+          <div class="hud-left">
+            <div class="hud-badge" title="Momentary Loudness (400 ms, ITU-R BS.1770)">
+              <span>LUFS-M</span>
+              <span class="val-readout cyan" id="numLufsM">-inf</span>
+            </div>
+            <div class="hud-badge" title="Short-Term Loudness (3 s, ITU-R BS.1770)">
+              <span>LUFS-S</span>
+              <span class="val-readout cyan" id="numLufsS">-inf</span>
+            </div>
+            <button class="hud-toggle active" id="togglePipBtn" title="Show or hide the real-time Clipper/Limiter transfer knee overlay">
+              Knee Curve
+            </button>
+            <div class="os-hud-group" id="clipOsHud" title="Event-selective clipper oversampling: zero loss below threshold, linear-phase alias suppression on peaks">
+              <span class="os-lbl">CLIP OS</span>
+              <button id="os_1x">1x</button>
+              <button id="os_8x">8x</button>
+              <button id="os_16x">16x</button>
+            </div>
+          </div>
+
+          <div class="hud-right">
+            <div class="trace-legend" title="Tip: Drag Threshold, Clip Split, or Ceiling directly on the display!">
+              <span class="trace-item"><i class="trace-swatch" style="background:#00d2ff"></i>In</span>
+              <span class="trace-item"><i class="trace-swatch" style="background:#f59e0b"></i>Clip</span>
+              <span class="trace-item"><i class="trace-swatch" style="background:var(--accent)"></i>GR</span>
+              <span class="trace-item"><i class="trace-swatch" style="background:#ffffff"></i>Out</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Directly interactive history canvas (drag Ceiling, Clip, Threshold handles!) -->
+        <canvas id="historyCanvas"></canvas>
+
+        <!-- Docked Transfer Curve PIP Overlay -->
+        <div class="transfer-pip" id="transferPip">
+          <div class="pip-head">
+            <span>Transfer Law</span>
+            <span class="knee-mode" id="ceilHint">In &rarr; Out</span>
+          </div>
+          <canvas id="ceilingCanvas"></canvas>
+        </div>
+      </div>
+      <div id="historyScrubMount"></div>
+    </section>
+
+    <!-- ── B. CALIBRATED RIGHT-EDGE VERTICAL METER BRIDGE ── -->
+    <aside class="meter-bridge">
+      <div class="bridge-title">Telemetry &amp; Metering</div>
+
+      <div class="bridge-hero-stats">
+        <div class="hero-stat-box" title="Output Peak Level (dBFS)">
+          <span class="hs-k">Out Peak</span>
+          <span class="hs-v" id="numOut">-inf</span>
+        </div>
+        <div class="hero-stat-box gr-box" title="Total Limiter Gain Reduction (dB)">
+          <span class="hs-k">Limit GR</span>
+          <span class="hs-v" id="numGr">&mdash;</span>
+        </div>
+      </div>
+
+      <div class="vmeter-columns">
+        <div class="vmeter-stage">
+          <!-- Input Meter -->
+          <div class="m-col">
+            <div class="m-bar-track up in-track"><i id="inBar"></i></div>
+            <span class="m-col-lbl">IN</span>
+            <span class="m-col-val" id="inVal">-inf</span>
+          </div>
+
+          <!-- Clipper GR Meter (Downward) -->
+          <div class="m-col" id="clipMeterCol">
+            <div class="m-bar-track down clip-track"><i id="clipGrBar"></i></div>
+            <span class="m-col-lbl">CLIP</span>
+            <span class="m-col-val" id="clipGrVal">&mdash;</span>
+          </div>
+
+          <!-- Calibrated dBFS Scale -->
+          <div class="m-scale">
+            <span>0</span>
+            <span>-6</span>
+            <span>-12</span>
+            <span>-24</span>
+            <span>-36</span>
+            <span>-48</span>
+          </div>
+
+          <!-- Limiter GR Meter (Downward) -->
+          <div class="m-col" id="limMeterCol">
+            <div class="m-bar-track down gr-track"><i id="grBar"></i></div>
+            <span class="m-col-lbl">LIM</span>
+            <span class="m-col-val" id="grVal">&mdash;</span>
+          </div>
+
+          <!-- Output Meter -->
+          <div class="m-col">
+            <div class="m-bar-track up out-track"><i id="outBar"></i></div>
+            <span class="m-col-lbl">OUT</span>
+            <span class="m-col-val" id="outVal">-inf</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ── C. BOTTOM CONTROL DECK (2 Balanced Machined Bays) ── -->
+    <section class="control-deck">
+
+      <!-- BAY 1: STAGE MODE & LEVELS -->
+      <div class="deck-bay">
+        <div class="bay-header">
+          <div class="bay-title">Stage Mode &amp; Levels</div>
+          <div class="bay-sub" id="modeExplain">Clipper shaves top Split %, Limiter catches the rest</div>
+        </div>
+
+        <div class="char-body">
+          <div class="style-switcher mode-switcher" id="mode-group" title="Select peak-control architecture: Limit, Clip, adaptive Clip+, Hybrid, or adaptive Hybrid+">
+            <button id="mode_limit" title="Pure lookahead brickwall limiter to Ceiling (clipper bypassed).">Limit</button>
+            <button id="mode_clip" title="Classic ADAA clipper at Threshold made up to Ceiling (zero release pumping).">Clip</button>
+            <button id="mode_clip_plus" class="plus" title="Adaptive anti-sizzle clipper: preserves transient punch while preventing LF-modulated high-frequency sizzle.">Clip+</button>
+            <button id="mode_both" title="Hybrid Clip to Limit: Clipper shaves top Split % first, then True-Peak Limiter catches the rest.">Hybrid</button>
+            <button id="mode_hybrid_plus" class="plus" title="Adaptive Hybrid+: dynamically routes sharp transients to Clip+ and sustained body cleanly into the Limiter.">Hybrid+</button>
+          </div>
+
+          <div class="hero-knobs-row">
+            <div class="hero-slot" id="slotThreshold">
+              <div class="knob hero" id="param_threshold" data-label="Threshold" data-size="58" data-color="cyan"
+                   title="Pull down into the signal to increase loudness. Peaks are controlled at Threshold and automatically made up to Ceiling."></div>
+              <span class="stage-pill" id="makeupHint">Makeup +0.0 dB</span>
+            </div>
+
+            <div class="hero-slot" id="slotSplit">
+              <div class="knob hero" id="param_clipsplit" data-label="Clip Split" data-size="58" data-color="amber"
+                   title="In Clip → Limit mode, sets what percentage of the Threshold depth is shaved by the Clipper before the Limiter finishes the rest (0% = all Limiter, 50% = half &amp; half, 100% = Clip right at Threshold + True-Peak catch)."></div>
+              <span class="stage-pill amber" id="splitHint">Pull Thresh &darr;</span>
+            </div>
+
+            <div class="hero-slot" id="slotCeiling">
+              <div class="knob hero" id="param_ceiling" data-label="Ceiling" data-size="58" data-color="accent"
+                   title="Maximum output level in dBFS (-1.0 dB recommended for streaming True-Peak headroom)."></div>
+              <span class="stage-pill" id="ceilModeHint">True Peak</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BAY 2: CHARACTER, CLIPPER KNEE & RELEASE BALLISTICS -->
+      <div class="deck-bay">
+        <div class="bay-header">
+          <div class="bay-title">Character &amp; Ballistics</div>
+          <div class="bay-sub">Release: <span id="releaseMode">Manual</span></div>
+        </div>
+
+        <div class="char-body">
+          <div class="style-switcher" id="style-group" title="Character of the limiting stage">
+            <button id="style_transparent" title="Cleanest limiting with minimal saturation color.">Transparent</button>
+            <button id="style_punchy" title="Preserves drum and vocal transients before clamping.">Punchy</button>
+            <button id="style_loud" title="Fastest recovery for maximum competitive loudness.">Loud</button>
+          </div>
+
+          <div class="secondary-knobs-row">
+            <div class="hero-slot" id="slotKnee">
+              <div class="knob" id="param_clipshape" data-label="Knee Shape" data-size="56" data-color="amber"
+                   title="0% is hard flat-top clipping; 100% is soft tanh saturation knee."></div>
+              <button class="rocker-btn" id="param_clipasym"
+                      title="Clips negative wave half 2 dB earlier for warm even-order tube harmonics.">
+                Asymmetric
+              </button>
+            </div>
+
+            <div class="hero-slot" id="slotRelease">
+              <div class="knob" id="param_release" data-label="Release" data-size="56"
+                   title="Recovery time after gain reduction (20 ms to 800 ms)."></div>
+              <button class="rocker-btn" id="param_autoRelease"
+                      title="Program-dependent dual-stage release — fast on peaks, smooth on sustained bass.">
+                Auto Release
+              </button>
+            </div>
+
+            <div class="hero-slot" id="slotLink">
+              <div class="knob" id="param_link" data-label="Stereo Link" data-size="56"
+                   title="100% locks L/R gain reduction for rock-solid center image; lower values limit channels independently."></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </div>
+
+<script>
+  window.addEventListener('error', e => {
+    if (e.message && (e.message.includes('ResizeObserver') || e.message.includes('loop completed with undelivered notifications'))) return;
+    let el = document.getElementById('errBanner');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'errBanner';
+      el.style.cssText = 'position:fixed;left:0;right:0;bottom:0;background:#8a2a4c;'
+        + 'color:#f9f4ed;font:11px monospace;padding:4px 10px;z-index:99;';
+      document.body.appendChild(el);
+    }
+    el.textContent = 'UI error: ' + e.message + ' @' + (e.lineno || '?');
+  });
+</script>
+
+<script src="./demo-bar.js"></script>
+<script src="./modules/limiter.js"></script>
+<script src="./wd-plugin-host.js"></script>
+<script src="./wd/kit.js"></script>
+<script type="module">
+(async () => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+
+  const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const COL = {
+    accent:     cssVar('--accent')      || '#ff2e5f',
+    accentLit:  cssVar('--accent-lit')  || '#ff5c82',
+    accentDeep: cssVar('--accent-deep') || '#c81642',
+    well:       cssVar('--well')        || '#06070a',
+    cream:      cssVar('--cream')       || '#f0f4fc',
+    cyan:       cssVar('--cyan')        || '#00d2ff',
+    amber:      cssVar('--amber')       || '#f59e0b',
+    grid:       'rgba(255, 255, 255, 0.055)',
+  };
+  const ink = a => 'rgba(240, 244, 252, ' + a + ')';
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+  // ------------------------------------------------------------------ host
+  let host = null;
+  if (window.__JUCE__ && window.__JUCE__.backend) {
+    try {
+      const lib = await import('./juce/index.js');
+      const be = window.__JUCE__.backend;
+      host = {
+        slider: id => lib.getSliderState(id),
+        combo:  id => lib.getComboBoxState(id),
+        toggle: id => lib.getToggleState(id),
+        call:   (name, ...args) => lib.getNativeFunction(name)(...args),
+        on:     (event, cb) => be.addEventListener(event, cb),
+      };
+    } catch (e) { console.warn('JUCE frontend unavailable:', e); }
+  }
+
+  const sliders = {}, combos = {}, toggles = {};
+  const sl = id => { if (!host) return null; if (!sliders[id]) sliders[id] = host.slider(id); return sliders[id]; };
+  const cb = id => { if (!host) return null; if (!combos[id]) combos[id] = host.combo(id); return combos[id]; };
+  const tg = id => { if (!host) return null; if (!toggles[id]) toggles[id] = host.toggle(id); return toggles[id]; };
+
+  const comboIndex = (id, n) => {
+    const s = cb(id);
+    if (!s) return 0;
+    if (typeof s.getChoiceIndex === 'function' && s.properties && Array.isArray(s.properties.choices) && s.properties.choices.length > 0)
+      return clamp(s.getChoiceIndex(), 0, n - 1);
+    return clamp(Math.round((s.value || 0) * (n - 1)), 0, n - 1);
+  };
+  const setComboIndex = (id, i) => { const s = cb(id); if (s && s.setChoiceIndex) s.setChoiceIndex(i); };
+
+  // ---------------------------------------------------------------- machined knobs
+  // 270-degree sweep (-135 to +135 deg) with precision radial tick marks,
+  // recessed track, colored value arc, and machined cap depth.
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  const ARC_FULL = 'M12.44 43.56 A22 22 0 1 1 43.56 43.56';
+  const ARC_UP   = 'M28 6 A22 22 0 0 1 43.56 43.56';
+  const ARC_DOWN = 'M28 6 A22 22 0 0 0 12.44 43.56';
+  const LEN_FULL = 2 * Math.PI * 22 * 0.75; // 103.67
+  const LEN_HALF = LEN_FULL / 2;
+
+  let knobGradientSeq = 0;
+
+  function mountKnob(el) {
+    const size = parseInt(el.dataset.size || '58', 10);
+    const bipolar = el.dataset.bipolar === '1';
+    const colorRole = el.dataset.color || 'accent';
+    const arcStroke = colorRole === 'cyan'  ? 'var(--cyan)'
+                    : colorRole === 'amber' ? 'var(--amber)'
+                    : 'var(--accent)';
+    const sw = size >= 70 ? 4.4 : 4.8;
+
+    const svg = document.createElementNS(SVGNS, 'svg');
+    svg.setAttribute('viewBox', '0 0 56 56');
+    svg.setAttribute('width', String(size));
+    svg.setAttribute('height', String(size));
+
+    // Machined vertical gradient for rotary cap
+    const gradId = 'kcap_' + (++knobGradientSeq);
+    const defs = document.createElementNS(SVGNS, 'defs');
+    const grad = document.createElementNS(SVGNS, 'linearGradient');
+    grad.setAttribute('id', gradId);
+    grad.setAttribute('x1', '0%'); grad.setAttribute('y1', '0%');
+    grad.setAttribute('x2', '0%'); grad.setAttribute('y2', '100%');
+    const stop1 = document.createElementNS(SVGNS, 'stop');
+    stop1.setAttribute('offset', '0%');
+    stop1.setAttribute('stop-color', 'var(--knob-cap-top)');
+    const stop2 = document.createElementNS(SVGNS, 'stop');
+    stop2.setAttribute('offset', '100%');
+    stop2.setAttribute('stop-color', 'var(--knob-cap-bot)');
+    grad.append(stop1, stop2);
+    defs.appendChild(grad);
+    svg.appendChild(defs);
+
+    // Precision outer scale ticks (11 marks across 270 deg)
+    const tickGroup = document.createElementNS(SVGNS, 'g');
+    const numTicks = size >= 70 ? 11 : 7;
+    for (let i = 0; i < numTicks; ++i) {
+      const norm = i / (numTicks - 1);
+      const deg = -135 + norm * 270;
+      const rad = (deg - 90) * (Math.PI / 180);
+      const rIn = 24.8;
+      const rOut = (i === 0 || i === numTicks - 1 || i === Math.floor(numTicks / 2)) ? 27.4 : 26.4;
+      const line = document.createElementNS(SVGNS, 'line');
+      line.setAttribute('x1', (28 + Math.cos(rad) * rIn).toFixed(2));
+      line.setAttribute('y1', (28 + Math.sin(rad) * rIn).toFixed(2));
+      line.setAttribute('x2', (28 + Math.cos(rad) * rOut).toFixed(2));
+      line.setAttribute('y2', (28 + Math.sin(rad) * rOut).toFixed(2));
+      line.setAttribute('stroke', 'var(--knob-tick)');
+      line.setAttribute('stroke-width', '1.1');
+      line.setAttribute('stroke-linecap', 'round');
+      tickGroup.appendChild(line);
+    }
+    svg.appendChild(tickGroup);
+
+    const mk = (d, stroke, width) => {
+      const p = document.createElementNS(SVGNS, 'path');
+      p.setAttribute('d', d);
+      p.setAttribute('fill', 'none');
+      p.setAttribute('stroke', stroke);
+      p.setAttribute('stroke-width', String(width));
+      p.setAttribute('stroke-linecap', 'round');
+      return p;
+    };
+    const track = mk(ARC_FULL, 'var(--knob-outer)', sw);
+    const arc = mk(bipolar ? ARC_UP : ARC_FULL, arcStroke, sw);
+    arc.setAttribute('stroke-dasharray', String(bipolar ? LEN_HALF : LEN_FULL));
+    arc.setAttribute('stroke-dashoffset', String(bipolar ? LEN_HALF : LEN_FULL));
+    arc.classList.add('karc');
+    svg.append(track, arc);
+
+    // Machined inner cap + specular rim
+    const cap = document.createElementNS(SVGNS, 'circle');
+    cap.setAttribute('cx', '28'); cap.setAttribute('cy', '28');
+    cap.setAttribute('r', '16');
+    cap.setAttribute('fill', `url(#${gradId})`);
+    cap.setAttribute('stroke', 'var(--knob-rim)');
+    cap.setAttribute('stroke-width', '1.2');
+    svg.appendChild(cap);
+
+    // Position indicator needle
+    const needle = document.createElementNS(SVGNS, 'line');
+    needle.setAttribute('x1', '28'); needle.setAttribute('y1', '14.2');
+    needle.setAttribute('x2', '28'); needle.setAttribute('y2', '21.5');
+    needle.setAttribute('stroke', 'var(--knob-needle)');
+    needle.setAttribute('stroke-width', '2.2');
+    needle.setAttribute('stroke-linecap', 'round');
+    needle.classList.add('kneedle');
+    svg.appendChild(needle);
+
+    const lab = document.createElement('div');
+    lab.className = 'klabel';
+    lab.textContent = el.dataset.label || '';
+    const val = document.createElement('span');
+    val.className = 'v';
+    val.textContent = '—';
+
+    el.innerHTML = '';
+    el.append(lab, svg, val);
+    paintKnob(el, bipolar ? 0.5 : 0);
+  }
+
+  function paintKnob(el, norm) {
+    const arc = el.querySelector('.karc');
+    const needle = el.querySelector('.kneedle');
+    if (!arc || !needle) return;
+    const n = clamp(norm, 0, 1);
+    if (el.dataset.bipolar === '1') {
+      const p = (n - 0.5) * 2;
+      arc.setAttribute('d', p >= 0 ? ARC_UP : ARC_DOWN);
+      arc.setAttribute('stroke-dashoffset', String(LEN_HALF * (1 - Math.abs(p))));
+    } else {
+      arc.setAttribute('stroke-dashoffset', String(LEN_FULL * (1 - n)));
+    }
+    needle.setAttribute('transform', 'rotate(' + (-135 + n * 270).toFixed(2) + ' 28 28)');
+  }
+
+  // Helper to write a real-world scaled value into a JUCE slider state
+  function setSliderScaled(id, scaledVal, notifyCb = null) {
+    const slider = sl(id);
+    if (!slider) return;
+    const p = slider.properties || { start: -24, end: 6, skew: 1 };
+    const spanRange = (p.end - p.start) || 1;
+    const lin = clamp((scaledVal - p.start) / spanRange, 0, 1);
+    const norm = Math.pow(lin, p.skew || 1);
+    slider.setNormalisedValue(norm);
+    if (slider.customListener) slider.customListener();
+    if (notifyCb) notifyCb(scaledVal);
+  }
+
+  // --------------------------------------------------- slider / toggle binds
+  function bindSlider(el, id, fmt, onValueChange = null) {
+    const slider = sl(id);
+    if (!el || !slider) return;
+
+    {
+      const fresh = el.cloneNode(true);
+      el.parentNode.replaceChild(fresh, el);
+      el = fresh;
+    }
+    el.dataset.paramId = id;
+    const span = el.querySelector('.v');
+
+    const toNorm = scaled => {
+      const p = slider.properties || { start: 0, end: 1, skew: 1 };
+      const spanRange = (p.end - p.start) || 1;
+      const lin = clamp((scaled - p.start) / spanRange, 0, 1);
+      return Math.pow(lin, p.skew || 1);
+    };
+
+    const updateDisplay = () => {
+      const v = slider.getScaledValue();
+      span.textContent = fmt(v);
+      paintKnob(el, slider.getNormalisedValue());
+      if (onValueChange) onValueChange(v);
+    };
+
+    if (slider.customListener) slider.valueChangedEvent.removeListener(slider.customListener);
+    slider.customListener = updateDisplay;
+    slider.valueChangedEvent.addListener(updateDisplay);
+    updateDisplay();
+
+    // Click-to-type numeric entry on the value readout badge
+    span.addEventListener('pointerdown', ev => {
+      ev.stopPropagation();
+    });
+    span.addEventListener('click', ev => {
+      ev.stopPropagation();
+      if (el.querySelector('input.v-edit')) return;
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'v-edit value-entry';
+      input.value = String(Number(slider.getScaledValue().toFixed(2)));
+      span.style.display = 'none';
+      el.appendChild(input);
+      input.focus({ preventScroll: true });
+      input.select();
+
+      let committed = false;
+      const commit = (apply) => {
+        if (committed) return;
+        committed = true;
+        if (apply) {
+          const raw = input.value.trim();
+          const parsed = window.WDKit
+            ? window.WDKit.parseMusicalValue(raw)
+            : (parseFloat(raw.replace(/k(?:hz)?\s*$/i, '').replace(/[^0-9.+\-eE]/g, '')) * (/k(?:hz)?\s*$/i.test(raw) ? 1000 : 1));
+          if (isFinite(parsed)) {
+            const p = slider.properties || { start: 0, end: 1 };
+            const clamped = clamp(parsed, p.start ?? -100, p.end ?? 100);
+            slider.sliderDragStarted();
+            slider.setNormalisedValue(toNorm(clamped));
+            slider.sliderDragEnded();
+          }
+        }
+        input.remove();
+        span.style.display = '';
+        updateDisplay();
+      };
+      input.addEventListener('keydown', kev => {
+        kev.stopPropagation();
+        if (kev.key === 'Enter') { kev.preventDefault(); commit(true); }
+        else if (kev.key === 'Escape') { kev.preventDefault(); commit(false); }
+      });
+      input.addEventListener('blur', () => commit(true));
+    });
+
+    // Double-click dial to reset to DSP default
+    el.addEventListener('dblclick', ev => {
+      if (ev.target === span) return;
+      ev.preventDefault();
+      const def = (slider.properties || {}).defaultValue;
+      if (typeof def !== 'number') return;
+      slider.sliderDragStarted();
+      slider.setNormalisedValue(toNorm(def));
+      slider.sliderDragEnded();
+      updateDisplay();
+    });
+
+    let st = null;
+    el.addEventListener('pointerdown', ev => {
+      if ((ev.button ?? 0) !== 0) return;
+      if (ev.target === span || ev.target.tagName === 'INPUT') return;
+      st = { y: ev.clientY, n: slider.getNormalisedValue() };
+      slider.sliderDragStarted();
+      el.classList.add('dragging');
+      el.setPointerCapture(ev.pointerId);
+      ev.preventDefault();
+    });
+
+    el.addEventListener('pointermove', ev => {
+      if (!st) return;
+      const fine = ev.shiftKey ? 0.1 : 1.0;
+      const delta = (st.y - ev.clientY) * fine / 250.0;
+      slider.setNormalisedValue(clamp(st.n + delta, 0, 1));
+      updateDisplay();
+    });
+
+    const endKnobDrag = ev => {
+      if (st) {
+        slider.sliderDragEnded();
+        st = null;
+      }
+      el.classList.remove('dragging');
+      try { el.releasePointerCapture(ev.pointerId); } catch (e) {}
+    };
+    el.addEventListener('pointerup', endKnobDrag);
+    el.addEventListener('pointercancel', endKnobDrag);
+
+    if (window.WDKit) {
+      window.WDKit.attachWheelGesture(el, () => slider, (s, stepNorm) => {
+        s.setNormalisedValue(clamp(s.getNormalisedValue() + stepNorm, 0, 1));
+        updateDisplay();
+      });
+    } else {
+      el.addEventListener('wheel', ev => {
+        ev.preventDefault();
+        const fine = ev.shiftKey ? 0.1 : 1.0;
+        const direction = ev.deltaY < 0 ? 1 : -1;
+        const n = slider.getNormalisedValue() + direction * fine / 100.0;
+        slider.sliderDragStarted();
+        slider.setNormalisedValue(clamp(n, 0, 1));
+        slider.sliderDragEnded();
+        updateDisplay();
+      }, { passive: false });
+    }
+  }
+
+  function bindToggle(el, id, onValueChange = null) {
+    const t = tg(id);
+    if (!el || !t) return;
+    const updateDisplay = () => {
+      const v = !!t.getValue();
+      el.classList.toggle('on', v);
+      if (onValueChange) onValueChange(v);
+    };
+
+    if (t.customListener) t.valueChangedEvent.removeListener(t.customListener);
+    t.customListener = updateDisplay;
+    t.valueChangedEvent.addListener(updateDisplay);
+    updateDisplay();
+
+    const newEl = el.cloneNode(true);
+    el.parentNode.replaceChild(newEl, el);
+    el = newEl;
+    el.addEventListener('click', () => {
+      t.setValue(!t.getValue());
+      updateDisplay();
+    });
+  }
+
+  function bindChoiceGroup(buttonIds, id, defaultIdx = 0, onChange = null) {
+    const buttons = buttonIds.map(bid => $(bid)).filter(Boolean);
+    if (!buttons.length) return () => defaultIdx;
+    let localIdx = defaultIdx;
+    const n = buttons.length;
+    const s = cb(id);
+
+    const updateDisplay = (forcedIdx) => {
+      const idx = (typeof forcedIdx === 'number')
+        ? clamp(forcedIdx, 0, n - 1)
+        : (s ? comboIndex(id, n) : localIdx);
+      localIdx = idx;
+      buttons.forEach((btn, i) => btn.classList.toggle('on', i === idx));
+      if (onChange) onChange(idx);
+    };
+
+    if (s) {
+      if (s.customListener) s.valueChangedEvent.removeListener(s.customListener);
+      s.customListener = () => updateDisplay();
+      s.valueChangedEvent.addListener(s.customListener);
+    }
+    updateDisplay();
+
+    buttons.forEach((btn, i) => {
+      const fresh = btn.cloneNode(true);
+      btn.parentNode.replaceChild(fresh, btn);
+      fresh.addEventListener('click', () => {
+        localIdx = i;
+        setComboIndex(id, i);
+        updateDisplay(i);
+      });
+      buttons[i] = fresh;
+    });
+    return () => (s ? comboIndex(id, n) : localIdx);
+  }
+
+  // -------------------------------------------------------------- formats
+  const fmtDb = v => {
+    const abs = Math.abs(v) < 0.05 ? 0 : v;
+    return (abs > 0 ? '+' : '') + abs.toFixed(1) + ' dB';
+  };
+  const fmtMs = v => Math.round(v) + ' ms';
+  const fmtPct = v => Math.round(v) + '%';
+
+  // --------------------------------------------------- mode & split marks
+  let getMode = () => 2;
+  let getAdaptive = () => false;
+  let getClipOs = () => 0;
+  let truePeakOn = true;
+
+  // Offline demo marks when running standalone in browser
+  const demoMarks = { ceil: -1.0, thr: -8.0, split: 50.0, shape: 40.0, adaptive: false, clipOs: 0 };
+
+  function readMarks() {
+    const mode = getMode();
+    const adaptive = !!getAdaptive();
+    const clipOs = getClipOs();
+    if (host) {
+      let ceil = -1.0, thr = 0.0, split = 50.0, shape = 0.0;
+      const sC = sl('ceiling');   if (sC) ceil  = sC.getScaledValue();
+      const sT = sl('threshold'); if (sT) thr   = sT.getScaledValue();
+      const sP = sl('clipsplit'); if (sP) split = sP.getScaledValue();
+      const sS = sl('clipshape'); if (sS) shape = sS.getScaledValue();
+      const clipActive = (mode === 1) || (mode === 2 && thr < -0.05 && split > 0.5);
+      const limActive = (mode !== 1);
+      const clip = (mode === 1) ? thr : (clipActive ? (split * 0.01 * thr) : 6.0);
+      return { mode, adaptive, clipOs, ceil, thr, split, clip, clipActive, limActive, shape };
+    }
+    const thr = demoMarks.thr;
+    const split = demoMarks.split;
+    const clipActive = (mode === 1) || (mode === 2 && thr < -0.05 && split > 0.5);
+    const limActive = (mode !== 1);
+    const clip = (mode === 1) ? thr : (clipActive ? (split * 0.01 * thr) : 6.0);
+    return { mode, adaptive, clipOs, ceil: demoMarks.ceil, thr, split, clip, clipActive, limActive, shape: demoMarks.shape };
+  }
+
+  function syncModeUi() {
+    const { mode, adaptive, clipActive, limActive, ceil, thr, split, clip } = readMarks();
+
+    const explainEl = $('modeExplain');
+    if (explainEl) {
+      explainEl.textContent = mode === 0
+        ? 'Brickwall limiting only — clean peak control'
+        : mode === 1
+          ? (adaptive
+              ? 'Adaptive Clip+ — punchy transients without LF sizzle'
+              : 'Classic ADAA clipping — zero release envelope')
+          : (adaptive
+              ? 'Dynamic Hybrid+ — transients hit Clip+, sustain flows to Limiter'
+              : 'Hybrid: Clipper shaves top Split %, Limiter catches the rest');
+    }
+
+    const makeupEl = $('makeupHint');
+    if (makeupEl) makeupEl.textContent = 'Makeup ' + fmtDb(ceil - thr);
+
+    const splitEl = $('splitHint');
+    if (splitEl) {
+      if (mode === 0)        splitEl.textContent = 'Limiter Only';
+      else if (mode === 1)   splitEl.textContent = adaptive ? '100% Clip+' : '100% Clipper';
+      else if (thr >= -0.05) splitEl.textContent = 'Pull Thresh ↓';
+      else if (split <= 0.5) splitEl.textContent = '0% · Clip Off';
+      else                   splitEl.textContent = (adaptive ? 'Bias @ ' : 'Clip @ ') + fmtDb(clip);
+    }
+
+    const ceilModeEl = $('ceilModeHint');
+    if (ceilModeEl) {
+      ceilModeEl.textContent = mode === 1 ? (adaptive ? 'Clip+ Ceiling' : 'Clip Ceiling') : (truePeakOn ? 'True Peak' : 'Sample Peak');
+    }
+
+    const pipModeEl = $('ceilHint');
+    if (pipModeEl) {
+      pipModeEl.textContent = mode === 0
+        ? 'Limit'
+        : mode === 1
+          ? (adaptive ? 'Clip+' : 'Clip')
+          : (adaptive ? 'Hybrid+' : 'Hybrid');
+    }
+
+    const thrEl = $('param_threshold');
+    if (thrEl) {
+      const klabel = thrEl.querySelector('.klabel');
+      if (klabel) klabel.textContent = mode === 1 ? (adaptive ? 'Clip+ Thresh' : 'Clip Thresh') : 'Threshold';
+      const karc = thrEl.querySelector('.karc');
+      if (karc) karc.setAttribute('stroke', mode === 1 ? 'var(--amber)' : 'var(--cyan)');
+    }
+
+    const dim = (id, off) => {
+      const el = $(id);
+      if (el) el.classList.toggle('stage-dim', off);
+    };
+    dim('slotSplit', mode !== 2);
+    dim('slotKnee', !clipActive && mode === 0);
+    dim('clipMeterCol', mode === 0);
+    dim('clipOsHud', mode === 0);
+    dim('chainClipTag', mode === 0);
+    dim('style-group', !limActive);
+    dim('slotRelease', !limActive);
+    dim('slotLink', !limActive);
+    dim('param_truePeak', !limActive);
+    dim('limMeterCol', !limActive);
+    dim('chainLimTag', !limActive);
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // INTERACTIVE HISTORY STAGE (With Direct Handle Dragging on Canvas!)
+  // ══════════════════════════════════════════════════════════════════════
+  const canvas = $('historyCanvas');
+  const ctx = canvas.getContext('2d');
+  let W = 0, H = 0, dpr = 1;
+  let histPixelW = 0, histPixelH = 0, histDpr = 0;
+  const AXIS = 22;
+  const PAD = { l: 0, r: 36, t: 42, b: AXIS };
+
+  const VIEW_MIN_SPAN = 18;
+  const VIEW_MAX_SPAN = 54;
+  const VIEW_SLEW = 0.18;
+  let viewHi = 3, viewLo = -24;
+
+  // Interactive handle drag state on historyCanvas
+  let activeGuide = null; // 'ceiling' | 'clipsplit' | 'threshold'
+  let hoveredGuide = null;
+
+  function computeTargetViewRange(m) {
+    const vals = Array.isArray(m)
+      ? m
+      : [m.ceil, m.thr, ...(m.clipActive ? [m.clip] : [])];
+    const finite = vals.filter(v => isFinite(v));
+    const maxMark = finite.length ? Math.max(...finite) : 0;
+    const minMark = finite.length ? Math.min(...finite) : -12;
+    let hi = maxMark > 1.5 ? 6 : 3;
+    let lo = clamp(Math.min(-24, Math.floor((minMark - 12) / 6) * 6), -48, -24);
+    if (hi - lo < VIEW_MIN_SPAN) lo = hi - VIEW_MIN_SPAN;
+    if (hi - lo > VIEW_MAX_SPAN) lo = hi - VIEW_MAX_SPAN;
+    return { hi, lo };
+  }
+
+  function snapViewRange(marks) {
+    const { hi, lo } = computeTargetViewRange(marks);
+    viewHi = hi;
+    viewLo = lo;
+  }
+
+  function stepViewRange(marks, dt60 = 1) {
+    if (activeGuide) return false; // Lock vertical scale while user is actively dragging a line!
+    const { hi, lo } = computeTargetViewRange(marks);
+    const dHi = hi - viewHi;
+    const dLo = lo - viewLo;
+    if (Math.abs(dHi) < 0.02 && Math.abs(dLo) < 0.02) {
+      viewHi = hi;
+      viewLo = lo;
+      return false;
+    }
+    const alpha = 1 - Math.pow(1 - VIEW_SLEW, dt60);
+    viewHi += dHi * alpha;
+    viewLo += dLo * alpha;
+    return true;
+  }
+
+  const HISTORY_CAPACITY = 600;
+  const HISTORY_HZ = 60;
+  const historyBuf = (window.WDKit && WDKit.createHistoryBuffer)
+    ? WDKit.createHistoryBuffer({
+        capacity: HISTORY_CAPACITY,
+        cloneFrame: (src, dst) => {
+          const f = dst || {};
+          f.inn = src.inn;
+          f.clipOut = src.clipOut;
+          f.gr = src.gr;
+          f.out = src.out;
+          f.clipIn = src.clipIn;
+          f.clipGr = src.clipGr;
+          f.effClip = src.effClip;
+          f.lufsM = src.lufsM;
+          f.lufsS = src.lufsS;
+          return f;
+        }
+      })
+    : null;
+
+  function hasNonFloorHistory() {
+    if (!historyBuf || historyBuf.length() === 0) return false;
+    const n = historyBuf.length();
+    for (let i = 0; i < n; ++i) {
+      const f = historyBuf.getFrameAt(i);
+      if (f && (f.inn > -119.5 || f.clipOut > -119.5 || Math.abs(f.gr || 0) > 0.02))
+        return true;
+    }
+    return false;
+  }
+
+  // Forward declarations initialized in the Animation & Meters section below
+  let animRafId = 0;
+  let lastAnimMs = 0;
+  let wellsDirty = true;
+  const reqFrame = window.requestAnimationFrame || (fn => setTimeout(() => fn(performance.now()), 16));
+  function ensureAnimLoop() {
+    if (animRafId) return;
+    lastAnimMs = performance.now();
+    animRafId = reqFrame(tickAnim);
+  }
+  function markWellsDirty() {
+    wellsDirty = true;
+    ensureAnimLoop();
+  }
+
+  const xOf = i => PAD.l + (i / Math.max(1, HISTORY_CAPACITY - 1)) * (W - PAD.l - PAD.r);
+  const yOf = db => {
+    const plotH = H - PAD.t - PAD.b;
+    const span = Math.max(1e-6, viewHi - viewLo);
+    return H - PAD.b - clamp((db - viewLo) / span, 0, 1) * plotH;
+  };
+  const dbOfY = y => {
+    const plotH = Math.max(1, H - PAD.t - PAD.b);
+    const norm = clamp((H - PAD.b - y) / plotH, 0, 1);
+    return viewLo + norm * (viewHi - viewLo);
+  };
+
+  function fitCanvas() {
+    const nextDpr = window.devicePixelRatio || 1;
+    const r = canvas.getBoundingClientRect();
+    const nextW = r.width, nextH = r.height;
+    const nextPxW = Math.round(nextW * nextDpr);
+    const nextPxH = Math.round(nextH * nextDpr);
+    if (nextPxW === histPixelW && nextPxH === histPixelH && nextDpr === histDpr) return;
+    dpr = histDpr = nextDpr;
+    W = nextW; H = nextH;
+    histPixelW = nextPxW; histPixelH = nextPxH;
+    canvas.width = nextPxW;
+    canvas.height = nextPxH;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    wellsDirty = true;
+    drawHistory();
+  }
+  new ResizeObserver(fitCanvas).observe(canvas.parentElement || canvas);
+
+  function drawHistory() {
+    ctx.clearRect(0, 0, W, H);
+    const plotW = W - PAD.l - PAD.r, plotH = H - PAD.t - PAD.b;
+    if (plotW < 40 || plotH < 40) return;
+
+    const { mode, adaptive, ceil, thr, split, clip, clipActive, limActive } = readMarks();
+
+    ctx.lineJoin = 'miter';
+    ctx.lineCap = 'butt';
+
+    // 0. Calibrated dBFS Horizontal Grid + Right-Edge Scale Ticks
+    const span = viewHi - viewLo;
+    const step = span > 39 ? 12 : 6;
+    const startDb = Math.ceil(viewLo / step) * step;
+    ctx.font = '600 9px ' + cssVar('--font-mono');
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    for (let db = startDb; db <= viewHi; db += step) {
+      const y = yOf(db);
+      ctx.strokeStyle = db === 0 ? 'rgba(255, 255, 255, 0.14)' : COL.grid;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W - PAD.r, y);
+      ctx.stroke();
+
+      ctx.fillStyle = ink(0.35);
+      ctx.fillText((db > 0 ? '+' : '') + db, W - 6, y);
+    }
+
+    // Visual zone shading in Clip → Limit mode (0 dB → Clip Split amber, Clip Split → Threshold cyan)
+    if (mode === 2 && thr < -0.1 && split > 0.5) {
+      const y0 = yOf(0);
+      const yClip = yOf(clip);
+      const yThr = yOf(thr);
+      ctx.fillStyle = 'rgba(245, 158, 11, 0.055)';
+      ctx.fillRect(PAD.l, y0, W - PAD.l - PAD.r, Math.max(0, yClip - y0));
+      ctx.fillStyle = 'rgba(0, 210, 255, 0.045)';
+      ctx.fillRect(PAD.l, yClip, W - PAD.l - PAD.r, Math.max(0, yThr - yClip));
+    }
+
+    const n = historyBuf ? historyBuf.length() : 0;
+    const xOffset = HISTORY_CAPACITY - n;
+
+    // 1. Input Track: Luminous Cyan Line + Subtle Floor Grounding
+    if (n > 1) {
+      ctx.beginPath();
+      ctx.moveTo(xOf(xOffset), H - PAD.b);
+      for (let i = 0; i < n; ++i) {
+        const f = historyBuf.getFrameAt(i);
+        ctx.lineTo(xOf(xOffset + i), yOf(f ? f.inn : -120));
+      }
+      ctx.lineTo(xOf(xOffset + n - 1), H - PAD.b);
+      ctx.closePath();
+      const grad = ctx.createLinearGradient(0, PAD.t, 0, H - PAD.b);
+      grad.addColorStop(0, 'rgba(0, 210, 255, 0.11)');
+      grad.addColorStop(1, 'rgba(0, 210, 255, 0.01)');
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      ctx.beginPath();
+      for (let i = 0; i < n; ++i) {
+        const f = historyBuf.getFrameAt(i);
+        const y = yOf(f ? f.inn : -120);
+        i === 0 ? ctx.moveTo(xOf(xOffset + i), y) : ctx.lineTo(xOf(xOffset + i), y);
+      }
+      ctx.strokeStyle = COL.cyan;
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+    }
+
+    // 2. Clipping Track: Amber Line
+    if (n > 1 && clipActive) {
+      ctx.beginPath();
+      for (let i = 0; i < n; ++i) {
+        const f = historyBuf.getFrameAt(i);
+        const y = yOf(f ? f.clipOut : -120);
+        i === 0 ? ctx.moveTo(xOf(xOffset + i), y) : ctx.lineTo(xOf(xOffset + i), y);
+      }
+      ctx.strokeStyle = COL.amber;
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+
+      // 2b. Live Hybrid+ Adaptive Clip Threshold Contour
+      if (mode === 2 && adaptive) {
+        ctx.save();
+        ctx.beginPath();
+        for (let i = 0; i < n; ++i) {
+          const f = historyBuf.getFrameAt(i);
+          const ec = (f && Number.isFinite(f.effClip) && f.effClip < 5.5) ? f.effClip : clip;
+          const y = yOf(ec);
+          i === 0 ? ctx.moveTo(xOf(xOffset + i), y) : ctx.lineTo(xOf(xOffset + i), y);
+        }
+        ctx.strokeStyle = 'rgba(245, 158, 11, 0.72)';
+        ctx.lineWidth = 1.4;
+        ctx.setLineDash([3, 3]);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    // 3. Limiting Track: Coral/Crimson Gain Reduction Ribbon Hanging from Ceiling
+    if (n > 1 && limActive) {
+      const ceilY = yOf(ceil);
+      ctx.beginPath();
+      ctx.moveTo(xOf(xOffset), ceilY);
+      for (let i = 0; i < n; ++i) {
+        const f = historyBuf.getFrameAt(i);
+        const grDb = Math.abs(f ? f.gr : 0);
+        const grY = grDb > 0.05 ? yOf(ceil - grDb) : ceilY;
+        ctx.lineTo(xOf(xOffset + i), grY);
+      }
+      ctx.lineTo(xOf(xOffset + n - 1), ceilY);
+      ctx.closePath();
+      const grGrad = ctx.createLinearGradient(0, ceilY, 0, ceilY + 48);
+      grGrad.addColorStop(0, 'rgba(255, 46, 95, 0.34)');
+      grGrad.addColorStop(1, 'rgba(255, 46, 95, 0.02)');
+      ctx.fillStyle = grGrad;
+      ctx.fill();
+
+      ctx.beginPath();
+      for (let i = 0; i < n; ++i) {
+        const f = historyBuf.getFrameAt(i);
+        const grDb = Math.abs(f ? f.gr : 0);
+        const grY = grDb > 0.05 ? yOf(ceil - grDb) : ceilY;
+        i === 0 ? ctx.moveTo(xOf(xOffset + i), grY) : ctx.lineTo(xOf(xOffset + i), grY);
+      }
+      ctx.strokeStyle = COL.accent;
+      ctx.lineWidth = 2.0;
+      ctx.stroke();
+    }
+
+    // 4. Output Track: Crisp White Peak Line
+    if (n > 1) {
+      ctx.beginPath();
+      for (let i = 0; i < n; ++i) {
+        const f = historyBuf.getFrameAt(i);
+        const grDb = limActive ? Math.abs((f && f.gr) || 0) : 0;
+        const clipVal = f && f.clipOut != null ? f.clipOut : (f ? f.inn : -120);
+        const outDb = (mode === 1)
+          ? (Math.min(clipVal, thr) + (ceil - thr))
+          : (Math.min(clipVal, thr) + (ceil - thr) - grDb);
+        i === 0 ? ctx.moveTo(xOf(xOffset + i), yOf(outDb)) : ctx.lineTo(xOf(xOffset + i), yOf(outDb));
+      }
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.0;
+      ctx.stroke();
+
+      const lastF = historyBuf.getFrameAt(n - 1);
+      const grDb = limActive ? Math.abs((lastF && lastF.gr) || 0) : 0;
+      const clipVal = lastF && lastF.clipOut != null ? lastF.clipOut : (lastF ? lastF.inn : -120);
+      const tipOutDb = (mode === 1)
+        ? (Math.min(clipVal, thr) + (ceil - thr))
+        : (Math.min(clipVal, thr) + (ceil - thr) - grDb);
+      if (tipOutDb > viewLo + 0.5) {
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(xOf(xOffset + n - 1), yOf(tipOutDb), 3.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    if (historyBuf && historyBuf.isFrozen() && n > 0) {
+      const sx = xOf(xOffset + historyBuf.getScrubIndex());
+      ctx.strokeStyle = COL.amber || '#f59e0b';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(sx, PAD.t);
+      ctx.lineTo(sx, H - PAD.b);
+      ctx.stroke();
+    }
+
+    // 5. Interactive Draggable Guides (Ceiling, Clip Split, Threshold)
+    const drawInteractiveGuide = (id, db, label, alignMode, color) => {
+      const y = yOf(db);
+      const isHot = (activeGuide === id || hoveredGuide === id);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = isHot ? 2.0 : 1.2;
+      ctx.setLineDash(isHot ? [] : [4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(PAD.l, y);
+      ctx.lineTo(W - PAD.r, y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      const text = '↕ ' + label + '  ' + (db > 0 ? '+' : '') + db.toFixed(1) + ' dB';
+      ctx.font = '700 9.5px ' + cssVar('--font');
+      const tw = ctx.measureText(text).width + 16;
+      const bx = alignMode === 'right'
+        ? (W - PAD.r - tw - 10)
+        : alignMode === 'mid'
+          ? clamp(PAD.l + 320, PAD.l + 188, W - PAD.r - tw - 120)
+          : (PAD.l + 188);
+
+      ctx.fillStyle = isHot ? color : 'rgba(11, 13, 18, 0.92)';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = isHot ? 1.5 : 1;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(bx, y - 9.5, tw, 19, 4);
+      else ctx.rect(bx, y - 9.5, tw, 19);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = isHot ? '#090a0d' : '#ffffff';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, bx + 8, y);
+    };
+
+    drawInteractiveGuide('threshold', thr, mode === 1 ? 'Clip Thresh' : 'Threshold', 'right', mode === 1 ? COL.amber : COL.cyan);
+    drawInteractiveGuide('ceiling', ceil, 'Ceiling', 'left', COL.accent);
+    if (mode === 2 && thr < -0.25)
+      drawInteractiveGuide('clipsplit', clip, 'Clip Split ' + Math.round(split) + '%', 'mid', COL.amber);
+
+    // 6. Bottom Timeline Axis (10-second window)
+    ctx.font = '600 9px ' + cssVar('--font-mono');
+    ctx.fillStyle = ink(0.32);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    for (let s = 2; s <= 8; s += 2) {
+      ctx.fillText('-' + s + 's', xOf(Math.round(HISTORY_CAPACITY * (1 - s / 10))), H - 6);
+    }
+    ctx.textAlign = 'right';
+    ctx.fillText('NOW', W - PAD.r - 4, H - 6);
+  }
+
+  // Hit-test which guide line is nearest the pointer Y
+  function hitTestGuide(my) {
+    const { mode, ceil, thr, clip } = readMarks();
+    const candidates = [
+      { id: 'ceiling',    y: yOf(ceil), dist: Math.abs(my - yOf(ceil)) },
+      { id: 'threshold',  y: yOf(thr),  dist: Math.abs(my - yOf(thr))  },
+    ];
+    if (mode === 2 && thr < -0.25) {
+      candidates.push({ id: 'clipsplit', y: yOf(clip), dist: Math.abs(my - yOf(clip)) });
+    }
+    candidates.sort((a, b) => a.dist - b.dist);
+    return (candidates[0] && candidates[0].dist <= 13) ? candidates[0].id : null;
+  }
+
+  canvas.addEventListener('pointerdown', ev => {
+    if ((ev.button ?? 0) !== 0) return;
+    const r = canvas.getBoundingClientRect();
+    const my = ev.clientY - r.top;
+    const hit = hitTestGuide(my);
+    if (!hit) return;
+
+    activeGuide = hit;
+    const s = sl(activeGuide);
+    if (s) s.sliderDragStarted();
+    canvas.setPointerCapture(ev.pointerId);
+    ev.preventDefault();
+    drawHistory();
+  });
+
+  canvas.addEventListener('dblclick', ev => {
+    const r = canvas.getBoundingClientRect();
+    const hit = hitTestGuide(ev.clientY - r.top);
+    if (!hit) return;
+    const s = sl(hit);
+    const def = s && s.properties ? s.properties.defaultValue : undefined;
+    if (typeof def === 'number') {
+      s.sliderDragStarted();
+      setSliderScaled(hit, def, syncModeUi);
+      s.sliderDragEnded();
+      markWellsDirty();
+    }
+  });
+
+  canvas.addEventListener('pointermove', ev => {
+    const r = canvas.getBoundingClientRect();
+    const my = ev.clientY - r.top;
+
+    if (!activeGuide) {
+      const hit = hitTestGuide(my);
+      if (hit !== hoveredGuide) {
+        hoveredGuide = hit;
+        canvas.style.cursor = hit ? 'ns-resize' : 'crosshair';
+        markWellsDirty();
+      }
+      return;
+    }
+
+    const newDb = dbOfY(my);
+    const { thr } = readMarks();
+    if (host) {
+      if (activeGuide === 'ceiling')   setSliderScaled('ceiling', clamp(newDb, -12, 0), syncModeUi);
+      if (activeGuide === 'threshold') setSliderScaled('threshold', clamp(newDb, -24, 0), syncModeUi);
+      if (activeGuide === 'clipsplit' && thr < -0.25) {
+        setSliderScaled('clipsplit', clamp((newDb / thr) * 100, 0, 100), syncModeUi);
+      }
+    } else {
+      if (activeGuide === 'ceiling')   demoMarks.ceil = clamp(newDb, -12, 0);
+      if (activeGuide === 'threshold') demoMarks.thr  = clamp(newDb, -24, 0);
+      if (activeGuide === 'clipsplit' && thr < -0.25) {
+        demoMarks.split = clamp((newDb / thr) * 100, 0, 100);
+      }
+      syncModeUi();
+    }
+    markWellsDirty();
+  });
+
+  const endGuideDrag = ev => {
+    if (!activeGuide) return;
+    const s = sl(activeGuide);
+    if (s) s.sliderDragEnded();
+    activeGuide = null;
+    try { canvas.releasePointerCapture(ev.pointerId); } catch (e) {}
+    markWellsDirty();
+  };
+  canvas.addEventListener('pointerup', endGuideDrag);
+  canvas.addEventListener('pointercancel', endGuideDrag);
+  canvas.addEventListener('pointerleave', () => {
+    if (!activeGuide && hoveredGuide) {
+      hoveredGuide = null;
+      canvas.style.cursor = 'crosshair';
+      markWellsDirty();
+    }
+  });
+
+  // ══════════════════════════════════════════════════════════════════════
+  // TRANSFER CURVE PIP OVERLAY (ceilingCanvas)
+  // ══════════════════════════════════════════════════════════════════════
+  const ceilCanvas = $('ceilingCanvas');
+  const cctx = ceilCanvas.getContext('2d');
+  let cW = 0, cH = 0, cDpr = 1;
+  let ceilPixelW = 0, ceilPixelH = 0, ceilDpr = 0;
+  const XF_LO = -36, XF_HI = 6;
+
+  function fitCeilCanvas() {
+    const nextDpr = window.devicePixelRatio || 1;
+    const r = ceilCanvas.getBoundingClientRect();
+    const nextW = r.width, nextH = r.height;
+    const nextPxW = Math.round(nextW * nextDpr);
+    const nextPxH = Math.round(nextH * nextDpr);
+    if (nextPxW === ceilPixelW && nextPxH === ceilPixelH && nextDpr === ceilDpr) return;
+    cDpr = ceilDpr = nextDpr;
+    cW = nextW; cH = nextH;
+    ceilPixelW = nextPxW; ceilPixelH = nextPxH;
+    ceilCanvas.width = nextPxW;
+    ceilCanvas.height = nextPxH;
+    cctx.setTransform(cDpr, 0, 0, cDpr, 0, 0);
+    wellsDirty = true;
+    drawCeiling();
+  }
+  new ResizeObserver(fitCeilCanvas).observe(ceilCanvas.parentElement || ceilCanvas);
+
+  const dbToLin = db => Math.pow(10, db / 20);
+  const linToDb = x => 20 * Math.log10(Math.max(1e-9, x));
+
+  function transferDb(inDb, m) {
+    if (m.mode === 0) {
+      return Math.min(inDb, m.thr) + (m.ceil - m.thr);
+    }
+    const C = dbToLin(m.mode === 1 ? m.thr : m.clip);
+    const s = (!m.clipActive) ? 0 : clamp(m.shape / 100, 0, 1);
+    const x = dbToLin(inDb);
+    const clipped = m.clipActive
+      ? ((1 - s) * Math.min(x, C) + s * C * Math.tanh(x / C))
+      : x;
+    const clippedDb = linToDb(clipped);
+    if (m.mode === 1) {
+      return clippedDb + (m.ceil - m.thr);
+    }
+    return Math.min(clippedDb, m.thr) + (m.ceil - m.thr);
+  }
+
+  let liveInDb = -120;
+
+  function drawCeiling() {
+    cctx.clearRect(0, 0, cW, cH);
+    if (cW < 30 || cH < 30) return;
+
+    const m = readMarks();
+    const pad = 10;
+    const drawW = cW - pad * 2;
+    const drawH = cH - pad * 2 - 8;
+    const xFor = db => pad + ((db - XF_LO) / (XF_HI - XF_LO)) * drawW;
+    const yFor = db => pad + drawH - (clamp((db - XF_LO) / (XF_HI - XF_LO), 0, 1) * drawH);
+
+    // Subtle grid
+    cctx.strokeStyle = COL.grid;
+    cctx.lineWidth = 1;
+    [-24, -12, 0].forEach(db => {
+      const x = xFor(db);
+      cctx.beginPath(); cctx.moveTo(x, pad); cctx.lineTo(x, pad + drawH); cctx.stroke();
+    });
+
+    // 1:1 Unity reference diagonal
+    cctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
+    cctx.setLineDash([2, 3]);
+    cctx.beginPath();
+    cctx.moveTo(pad, yFor(XF_LO));
+    cctx.lineTo(pad + drawW, yFor(XF_HI));
+    cctx.stroke();
+    cctx.setLineDash([]);
+
+    // Static transfer curve
+    cctx.strokeStyle = COL.accentLit;
+    cctx.lineWidth = 2.0;
+    cctx.beginPath();
+    for (let px = 0; px <= drawW; ++px) {
+      const inDb = XF_LO + (px / drawW) * (XF_HI - XF_LO);
+      const y = yFor(transferDb(inDb, m));
+      px ? cctx.lineTo(pad + px, y) : cctx.moveTo(pad + px, y);
+    }
+    cctx.stroke();
+
+    // Live operating point ball
+    if (liveInDb > XF_LO) {
+      const top = Math.min(liveInDb, XF_HI);
+      const toPx = Math.round(((top - XF_LO) / (XF_HI - XF_LO)) * drawW);
+      cctx.strokeStyle = '#ffffff';
+      cctx.lineWidth = 2.2;
+      cctx.beginPath();
+      for (let px = 0; px <= toPx; ++px) {
+        const inDb = XF_LO + (px / drawW) * (XF_HI - XF_LO);
+        const y = yFor(transferDb(inDb, m));
+        px ? cctx.lineTo(pad + px, y) : cctx.moveTo(pad + px, y);
+      }
+      cctx.stroke();
+
+      cctx.fillStyle = '#ffffff';
+      cctx.beginPath();
+      cctx.arc(pad + toPx, yFor(transferDb(top, m)), 3.2, 0, Math.PI * 2);
+      cctx.fill();
+    }
+  }
+
+  // ------------------------------------------------------------ bindings
+  const redrawWells = () => { drawHistory(); drawCeiling(); };
+  let applyTheme = () => {};
+
+  function initAll() {
+    document.querySelectorAll('.knob').forEach(mountKnob);
+
+    bindSlider($('param_clipsplit'), 'clipsplit', fmtPct, () => { syncModeUi(); markWellsDirty(); });
+    bindSlider($('param_clipshape'), 'clipshape', fmtPct, markWellsDirty);
+    bindSlider($('param_threshold'), 'threshold', fmtDb, () => { syncModeUi(); markWellsDirty(); });
+    bindSlider($('param_ceiling'), 'ceiling', fmtDb, () => { syncModeUi(); markWellsDirty(); });
+    bindSlider($('param_release'), 'release', fmtMs);
+    bindSlider($('param_link'), 'link', fmtPct);
+
+    bindToggle($('param_clipasym'), 'clipasym');
+
+    {
+      const modeDefs = [
+        ['mode_limit',       0, false],
+        ['mode_clip',        1, false],
+        ['mode_clip_plus',   1, true],
+        ['mode_both',        2, false],
+        ['mode_hybrid_plus', 2, true],
+      ];
+      let localMode = 2;
+      let localAdaptive = false;
+      const mCb = cb('mode');
+      const aTg = tg('adaptive');
+      const btns = modeDefs.map(([id]) => $(id));
+
+      const sync5Modes = () => {
+        const curMode = mCb ? comboIndex('mode', 3) : localMode;
+        const curAdap = aTg ? !!aTg.getValue() : localAdaptive;
+        localMode = curMode;
+        localAdaptive = curAdap;
+        btns.forEach((btn, idx) => {
+          if (!btn) return;
+          const [, bm, ba] = modeDefs[idx];
+          const on = (bm === 0) ? (curMode === 0) : (curMode === bm && curAdap === ba);
+          btn.classList.toggle('on', on);
+        });
+        syncModeUi();
+        markWellsDirty();
+      };
+
+      if (mCb) {
+        if (mCb.customListener) mCb.valueChangedEvent.removeListener(mCb.customListener);
+        mCb.customListener = sync5Modes;
+        mCb.valueChangedEvent.addListener(sync5Modes);
+      }
+      if (aTg) {
+        if (aTg.customListener) aTg.valueChangedEvent.removeListener(aTg.customListener);
+        aTg.customListener = sync5Modes;
+        aTg.valueChangedEvent.addListener(sync5Modes);
+      }
+
+      modeDefs.forEach(([id, nextMode, nextAdap], idx) => {
+        const btn = btns[idx];
+        if (!btn) return;
+        const fresh = btn.cloneNode(true);
+        btn.parentNode.replaceChild(fresh, btn);
+        btns[idx] = fresh;
+        fresh.addEventListener('click', () => {
+          localMode = nextMode;
+          localAdaptive = nextAdap;
+          if (mCb) setComboIndex('mode', nextMode);
+          if (aTg) aTg.setValue(nextAdap);
+          sync5Modes();
+        });
+      });
+
+      getMode = () => (mCb ? comboIndex('mode', 3) : localMode);
+      getAdaptive = () => (aTg ? !!aTg.getValue() : localAdaptive);
+      sync5Modes();
+    }
+
+    getClipOs = bindChoiceGroup(['os_1x', 'os_8x', 'os_16x'], 'clipos', 0, () => {
+      syncModeUi();
+    });
+    bindChoiceGroup(['style_transparent', 'style_punchy', 'style_loud'], 'style', 0);
+
+    bindToggle($('param_autoRelease'), 'autoRelease', v => {
+      const s = $('releaseMode');
+      if (s) s.textContent = v ? 'Automatic' : 'Manual';
+    });
+    bindToggle($('param_truePeak'), 'truePeak', v => {
+      truePeakOn = v;
+      syncModeUi();
+    });
+    bindToggle($('param_delta'), 'delta');
+    bindToggle($('param_power'), 'power', v => {
+      const b = $('param_power');
+      if (b && b.lastElementChild) b.lastElementChild.textContent = v ? 'Engaged' : 'Bypassed';
+    });
+
+    syncModeUi();
+
+    // PIP Transfer Curve Toggle
+    const pipBtn = $('togglePipBtn');
+    const pipBox = $('transferPip');
+    if (pipBtn && pipBox) {
+      pipBtn.addEventListener('click', () => {
+        const hidden = pipBox.classList.toggle('hidden');
+        pipBtn.classList.toggle('active', !hidden);
+        if (!hidden) {
+          fitCeilCanvas();
+          markWellsDirty();
+        }
+      });
+    }
+
+    // Theme Switcher
+    function updateTheme(themeName) {
+      document.documentElement.dataset.theme = themeName;
+      document.querySelectorAll('.theme-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.theme === themeName);
+      });
+      try { localStorage.setItem('wd_theme', themeName); } catch (e) {}
+
+      COL.accent     = cssVar('--accent')      || '#ff2e5f';
+      COL.accentLit  = cssVar('--accent-lit')  || '#ff5c82';
+      COL.accentDeep = cssVar('--accent-deep') || '#c81642';
+      COL.well       = cssVar('--well')        || '#06070a';
+      COL.cream      = cssVar('--cream')       || '#f0f4fc';
+      COL.cyan       = cssVar('--cyan')        || '#00d2ff';
+      COL.amber      = cssVar('--amber')       || '#f59e0b';
+
+      markWellsDirty();
+    }
+    applyTheme = updateTheme;
+
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+      btn.addEventListener('click', () => updateTheme(btn.dataset.theme));
+    });
+    let savedTheme = 'studio';
+    try { savedTheme = localStorage.getItem('wd_theme') || 'studio'; } catch (e) {}
+    if (savedTheme && savedTheme !== 'studio') updateTheme(savedTheme);
+
+    snapViewRange(readMarks());
+  }
+
+  // ---------------------------------------------------------------- meters
+  let mGr = 0, mIn = -120, mOut = -120, mClipGr = 0;
+  const meterTarget = {
+    in: -120, out: -120, gr: 0, clipIn: -120, clipOut: -120, clipGr: 0, effClip: 6, lufsM: -100, lufsS: -100,
+  };
+  const pendingGrSamples = [];
+  const readoutWin = [];
+  let lastReadoutRefresh = 0;
+  let lastMeterPacketMs = 0;
+  let histStepAccum = 0;
+
+  const cachedText = new Map();
+  const cachedFill = new Map();
+  function setText(id, str) {
+    if (cachedText.get(id) === str) return;
+    cachedText.set(id, str);
+    const el = $(id);
+    if (el) el.textContent = str;
+  }
+  function setFill(id, pctStr) {
+    if (cachedFill.get(id) === pctStr) return;
+    cachedFill.set(id, pctStr);
+    const el = $(id);
+    if (el) el.style.setProperty('--fill', pctStr);
+  }
+  function setFloorReadouts() {
+    setText('clipInVal', '—');
+    setText('clipOutVal', '—');
+    setText('clipGrVal', '0.0');
+    setText('grVal', '0.0');
+    setText('inVal', '-inf');
+    setText('outVal', '-inf');
+    setText('numGr', '0.0');
+    setText('numOut', '-inf');
+    setText('numLufsM', '-inf');
+    setText('numLufsS', '-inf');
+  }
+
+  const fmtNum = v => (Math.abs(v) < 0.05 ? 0 : v).toFixed(1);
+
+  function refreshReadouts(now) {
+    while (readoutWin.length && now - readoutWin[0].t > 500) readoutWin.shift();
+    if (!readoutWin.length) return;
+    const mean = k => readoutWin.reduce((a, f) => a + f[k], 0) / readoutWin.length;
+    const aGr = mean('gr'), aIn = mean('inn'), aOut = mean('out');
+    const aLm = mean('lufsM'), aLs = mean('lufsS');
+    const aClipIn = mean('clipIn'), aClipOut = mean('clipOut');
+    const aClipGr = mean('clipGr');
+
+    setText('clipInVal',  aClipIn  <= -99 ? '—' : fmtNum(aClipIn));
+    setText('clipOutVal', aClipOut <= -99 ? '—' : fmtNum(aClipOut));
+    setText('clipGrVal',  aClipGr  < 0.05 ? '0.0' : '-' + aClipGr.toFixed(1));
+    setText('grVal',      aGr      < 0.05 ? '0.0' : '-' + aGr.toFixed(1));
+    setText('inVal',      aIn      <= -119.5 ? '-inf' : fmtNum(aIn));
+    setText('outVal',     aOut     <= -119.5 ? '-inf' : fmtNum(aOut));
+    setText('numGr',      aGr      < 0.05 ? '0.0' : '-' + aGr.toFixed(1));
+    setText('numOut',     aOut     <= -119.5 ? '-inf' : fmtNum(aOut));
+    setText('numLufsM',   aLm      <= -99 ? '-inf' : fmtNum(aLm));
+    setText('numLufsS',   aLs      <= -99 ? '-inf' : fmtNum(aLs));
+  }
+
+  function applyFrameToReadouts(frame) {
+    if (!frame) return;
+    const grAbs = Math.abs(Number.isFinite(frame.gr) ? frame.gr : 0);
+    const clipGrAbs = Math.abs(Number.isFinite(frame.clipGr) ? frame.clipGr : 0);
+    const inn = Number.isFinite(frame.inn) ? frame.inn : -120;
+    const out = Number.isFinite(frame.out) ? frame.out : -120;
+    const clipIn = Number.isFinite(frame.clipIn) ? frame.clipIn : -120;
+    const clipOut = Number.isFinite(frame.clipOut) ? frame.clipOut : -120;
+    const lufsM = Number.isFinite(frame.lufsM) ? frame.lufsM : -100;
+    const lufsS = Number.isFinite(frame.lufsS) ? frame.lufsS : -100;
+
+    mGr = grAbs;
+    mClipGr = clipGrAbs;
+    mIn = inn;
+    mOut = out;
+    liveInDb = inn;
+
+    const dbToPct = db => clamp((db + 60) / 60, 0, 1) * 100;
+    setFill('clipGrBar', (clamp(mClipGr / 18.0, 0, 1) * 100).toFixed(1) + '%');
+    setFill('grBar',     (clamp(mGr / 18.0, 0, 1) * 100).toFixed(1) + '%');
+    setFill('inBar',     dbToPct(mIn).toFixed(1) + '%');
+    setFill('outBar',    dbToPct(mOut).toFixed(1) + '%');
+
+    setText('clipInVal',  clipIn  <= -99 ? '—' : fmtNum(clipIn));
+    setText('clipOutVal', clipOut <= -99 ? '—' : fmtNum(clipOut));
+    setText('clipGrVal',  mClipGr < 0.05 ? '0.0' : '-' + mClipGr.toFixed(1));
+    setText('grVal',      mGr     < 0.05 ? '0.0' : '-' + mGr.toFixed(1));
+    setText('inVal',      mIn     <= -119.5 ? '-inf' : fmtNum(mIn));
+    setText('outVal',     mOut    <= -119.5 ? '-inf' : fmtNum(mOut));
+    setText('numGr',      mGr     < 0.05 ? '0.0' : '-' + mGr.toFixed(1));
+    setText('numOut',     mOut    <= -119.5 ? '-inf' : fmtNum(mOut));
+    setText('numLufsM',   lufsM   <= -99 ? '-inf' : fmtNum(lufsM));
+    setText('numLufsS',   lufsS   <= -99 ? '-inf' : fmtNum(lufsS));
+  }
+
+  const scrubTimeline = (window.WDKit && WDKit.mountScrubTimeline && historyBuf)
+    ? WDKit.mountScrubTimeline({
+        container: $('historyScrubMount'),
+        historyBuffer: historyBuf,
+        hz: HISTORY_HZ,
+        label: 'WdLimiter 10-second history scrub',
+        onToggleHold: (frozen, frame) => {
+          if (frozen && historyBuf.length() === 0) {
+            historyBuf.setFrozen(false);
+            if (scrubTimeline) scrubTimeline.update();
+            return;
+          }
+          if (frozen && frame) {
+            applyFrameToReadouts(frame);
+            redrawWells();
+          } else if (!frozen) {
+            histStepAccum = 0;
+            pendingGrSamples.length = 0;
+            lastAnimMs = performance.now();
+            ensureAnimLoop();
+            redrawWells();
+          }
+        },
+        onScrub: (frame, _age, frozen) => {
+          if (frozen && historyBuf.length() === 0) {
+            historyBuf.setFrozen(false);
+            if (scrubTimeline) scrubTimeline.update();
+            return;
+          }
+          if (frozen && frame) {
+            applyFrameToReadouts(frame);
+            redrawWells();
+          } else if (!frozen) {
+            histStepAccum = 0;
+            lastAnimMs = performance.now();
+            ensureAnimLoop();
+            redrawWells();
+          }
+        }
+      })
+    : null;
+
+  function tickAnim(now) {
+    animRafId = 0;
+    const dtSec = clamp((now - (lastAnimMs || now)) * 0.001, 0.001, 0.05);
+    lastAnimMs = now;
+    const dt60 = dtSec * 60.0;
+
+    if (historyBuf && historyBuf.isFrozen()) {
+      const rangeAnimating = stepViewRange(readMarks(), dt60);
+      if (wellsDirty || rangeAnimating) {
+        wellsDirty = false;
+        redrawWells();
+      }
+      if (wellsDirty || rangeAnimating) {
+        animRafId = reqFrame(tickAnim);
+      }
+      return;
+    }
+
+    if (host && lastMeterPacketMs > 0 && (now - lastMeterPacketMs) > 120) {
+      meterTarget.in = -120;
+      meterTarget.out = -120;
+      meterTarget.gr = 0;
+      meterTarget.clipIn = -120;
+      meterTarget.clipOut = -120;
+      meterTarget.clipGr = 0;
+      meterTarget.lufsM = -100;
+      meterTarget.lufsS = -100;
+    }
+
+    const follow = rate => 1 - Math.pow(1 - rate, dt60);
+    const prevIn = mIn, prevOut = mOut, prevGr = mGr, prevClipGr = mClipGr;
+
+    mGr     += (meterTarget.gr     - mGr)     * follow(meterTarget.gr     > mGr     ? 0.85 : 0.35);
+    mClipGr += (meterTarget.clipGr - mClipGr) * follow(meterTarget.clipGr > mClipGr ? 0.90 : 0.12);
+    mIn     += (meterTarget.in     - mIn)     * follow(meterTarget.in     > mIn     ? 0.85 : 0.18);
+    mOut    += (meterTarget.out    - mOut)    * follow(meterTarget.out    > mOut    ? 0.85 : 0.18);
+
+    if (meterTarget.gr <= 0.01 && mGr < 0.01) mGr = 0;
+    if (meterTarget.clipGr <= 0.01 && mClipGr < 0.01) mClipGr = 0;
+    if (meterTarget.in <= -119.5 && mIn <= -119.0) mIn = -120;
+    if (meterTarget.out <= -119.5 && mOut <= -119.0) mOut = -120;
+    liveInDb = mIn;
+
+    const dbToPct = db => clamp((db + 60) / 60, 0, 1) * 100;
+    setFill('clipGrBar', (clamp(mClipGr / 18.0, 0, 1) * 100).toFixed(1) + '%');
+    setFill('grBar',     (clamp(mGr / 18.0, 0, 1) * 100).toFixed(1) + '%');
+    setFill('inBar',     dbToPct(mIn).toFixed(1) + '%');
+    setFill('outBar',    dbToPct(mOut).toFixed(1) + '%');
+
+    const signalActive = (meterTarget.in > -118 || meterTarget.out > -118
+                          || meterTarget.gr > 0.02 || meterTarget.clipGr > 0.02
+                          || meterTarget.lufsM > -99 || meterTarget.lufsS > -99
+                          || pendingGrSamples.length > 0);
+    const barsMoving = (Math.abs(mIn - prevIn) > 0.02 || Math.abs(mOut - prevOut) > 0.02
+                        || Math.abs(mGr - prevGr) > 0.005 || Math.abs(mClipGr - prevClipGr) > 0.005
+                        || mIn > -119.5 || mOut > -119.5 || mGr > 0.01 || mClipGr > 0.01);
+
+    if (signalActive || barsMoving) {
+      if (now - lastReadoutRefresh >= 200) {
+        lastReadoutRefresh = now;
+        refreshReadouts(now);
+      }
+    } else if (readoutWin.length > 0) {
+      readoutWin.length = 0;
+      setFloorReadouts();
+    }
+
+    let historyScrolled = false;
+    if (signalActive || hasNonFloorHistory()) {
+      histStepAccum += dt60;
+      if (pendingGrSamples.length > 4) histStepAccum = Math.max(histStepAccum, 1.0);
+      const steps = Math.min(3, Math.floor(histStepAccum));
+      if (steps > 0) {
+        histStepAccum -= steps;
+        for (let s = 0; s < steps; ++s) {
+          const nextGr = pendingGrSamples.length > 0
+            ? pendingGrSamples.shift()
+            : (meterTarget.gr > 0 ? -meterTarget.gr : 0);
+          if (historyBuf) {
+            historyBuf.push({
+              inn: meterTarget.in,
+              clipOut: meterTarget.clipOut,
+              gr: nextGr,
+              out: meterTarget.out,
+              clipIn: meterTarget.clipIn,
+              clipGr: meterTarget.clipGr,
+              effClip: meterTarget.effClip,
+              lufsM: meterTarget.lufsM,
+              lufsS: meterTarget.lufsS,
+            });
+          }
+        }
+        if (scrubTimeline) scrubTimeline.update();
+        historyScrolled = true;
+      }
+    } else {
+      histStepAccum = 0;
+    }
+
+    const rangeAnimating = stepViewRange(readMarks(), dt60);
+
+    if (wellsDirty || historyScrolled || barsMoving || rangeAnimating) {
+      wellsDirty = false;
+      redrawWells();
+    }
+
+    if (wellsDirty || signalActive || hasNonFloorHistory() || barsMoving || rangeAnimating) {
+      animRafId = reqFrame(tickAnim);
+    }
+  }
+
+  function updateMeters(meters) {
+    const now = performance.now();
+    lastMeterPacketMs = now;
+    if (historyBuf && historyBuf.isFrozen()) return;
+    const grMax = Math.max(Math.abs(meters.grL || 0), Math.abs(meters.grR || 0));
+    const inMax = Math.max(Number.isFinite(meters.inL) ? meters.inL : -120, Number.isFinite(meters.inR) ? meters.inR : -120);
+    const outMax = Math.max(Number.isFinite(meters.outL) ? meters.outL : -120, Number.isFinite(meters.outR) ? meters.outR : -120);
+    const clipInMax = Math.max(Number.isFinite(meters.clipInL) ? meters.clipInL : -120, Number.isFinite(meters.clipInR) ? meters.clipInR : -120);
+    const clipOutMax = Math.max(Number.isFinite(meters.clipOutL) ? meters.clipOutL : -120, Number.isFinite(meters.clipOutR) ? meters.clipOutR : -120);
+    const clipGrMax = Math.max(Math.abs(meters.clipGrL || 0), Math.abs(meters.clipGrR || 0));
+    const lufsM = (typeof meters.lufsM === 'number' && Number.isFinite(meters.lufsM)) ? meters.lufsM : -100;
+    const lufsS = (typeof meters.lufsS === 'number' && Number.isFinite(meters.lufsS)) ? meters.lufsS : -100;
+
+    meterTarget.in = inMax;
+    meterTarget.out = outMax;
+    meterTarget.gr = grMax;
+    meterTarget.clipIn = clipInMax;
+    meterTarget.clipOut = clipOutMax;
+    meterTarget.clipGr = clipGrMax;
+    meterTarget.effClip = (typeof meters.effClipThresh === 'number' && Number.isFinite(meters.effClipThresh))
+      ? meters.effClipThresh : 6;
+    meterTarget.lufsM = lufsM;
+    meterTarget.lufsS = lufsS;
+
+    const packetActive = (inMax > -118 || outMax > -118 || grMax > 0.02 || clipGrMax > 0.02
+                          || lufsM > -99 || lufsS > -99
+                          || (Array.isArray(meters.grSamples) && meters.grSamples.some(s => Math.abs(s) > 0.02)));
+
+    if (packetActive) {
+      if (Array.isArray(meters.grSamples)) {
+        for (const s of meters.grSamples) {
+          if (pendingGrSamples.length < 10) pendingGrSamples.push(s);
+        }
+      }
+      readoutWin.push({
+        t: now, gr: grMax, inn: inMax, out: outMax, clipGr: clipGrMax,
+        clipIn: clipInMax, clipOut: clipOutMax, lufsM, lufsS
+      });
+      while (readoutWin.length > 64) readoutWin.shift();
+      ensureAnimLoop();
+    } else if (mIn > -119.5 || mOut > -119.5 || mGr > 0.01 || mClipGr > 0.01 || hasNonFloorHistory()) {
+      ensureAnimLoop();
+    } else {
+      readoutWin.length = 0;
+      setFloorReadouts();
+    }
+  }
+
+  // ------------------------------------------------------------------- init
+  setTimeout(async () => {
+    initAll();
+    fitCanvas();
+    fitCeilCanvas();
+    setFloorReadouts();
+    wellsDirty = false;
+
+    if (host) {
+      try {
+        const state = await host.call('getUiState');
+        if (state) {
+          if (state.build) $('buildTag').textContent = state.build;
+          if (state.sampleRate) $('srTag').textContent = (state.sampleRate / 1000).toFixed(1) + ' kHz';
+        }
+      } catch (e) { console.warn('getUiState call failed', e); }
+    }
+    if (window.WDKit) {
+      window.WDKit.mountHeaderKit({ host });
+      window.WDKit.syncGlobalTheme(host, applyTheme);
+      window.WDKit.enhanceAllKnobs(id => sl(id));
+    }
+  }, 120);
+
+  // ------------------------------------------------------------ live events
+  if (host) {
+    host.on('meters', data => updateMeters(data));
+  } else {
+    // Realistic multi-layered audio track simulator (kick, snare, hat, bassline)
+    let beatTime = 0;
+    let simGr = 0;
+    let lastTick = performance.now();
+
+    setInterval(() => {
+      const now = performance.now();
+      const dt = Math.min(0.06, (now - lastTick) * 0.001);
+      lastTick = now;
+      beatTime = (beatTime + dt) % 1.92;
+
+      const kickDist = Math.min(Math.abs(beatTime - 0.0), Math.abs(beatTime - 0.96));
+      const kickEnv = Math.exp(-kickDist * 32.0);
+      const kickDb = kickEnv > 0.005 ? (-2.5 + kickEnv * 4.5) : -70;
+
+      const snareDist = Math.min(Math.abs(beatTime - 0.48), Math.abs(beatTime - 1.44));
+      const snareEnv = Math.exp(-snareDist * 24.0);
+      const snareNoise = (Math.random() - 0.5) * 2.5;
+      const snareDb = snareEnv > 0.005 ? (-1.5 + snareEnv * 5.0 + snareNoise) : -70;
+
+      const hat16 = (beatTime % 0.12);
+      const hatEnv = Math.exp(-hat16 * 75.0);
+      const hatDb = hatEnv > 0.01 ? (-13.0 + hatEnv * 4.0) : -70;
+
+      const bassEnv = -16.0 + 3.5 * Math.sin(beatTime * 6.5) + (Math.random() - 0.5) * 1.5;
+
+      const linSignal = Math.pow(10, kickDb / 20) + Math.pow(10, snareDb / 20) + Math.pow(10, hatDb / 20) + Math.pow(10, bassEnv / 20);
+      const inputPeakDb = 20 * Math.log10(Math.max(1e-4, linSignal));
+
+      const { mode, adaptive, ceil, thr, clip, clipActive } = readMarks();
+      const effClipDemo = (mode === 2 && adaptive)
+        ? (thr * clamp(0.2 + 0.72 * Math.max(kickEnv, snareEnv), 0.12, 0.96))
+        : clip;
+      const clipOutDb = clipActive ? Math.min(inputPeakDb, effClipDemo) : inputPeakDb;
+      const clipGr = clipActive ? Math.max(0, inputPeakDb - clipOutDb) : 0;
+
+      const targetGr = (mode !== 1 && clipOutDb > thr) ? (clipOutDb - thr) : 0.0;
+      if (targetGr > simGr) simGr = targetGr;
+      else simGr = simGr * Math.exp(-dt * 16.0);
+      if (mode === 1) simGr = 0;
+
+      const outPeakDb = (mode === 1)
+        ? (clipOutDb + (ceil - thr))
+        : Math.min(ceil, clipOutDb - simGr + (ceil - thr));
+
+      updateMeters({
+        grL: simGr, grR: simGr,
+        inL: inputPeakDb, inR: inputPeakDb,
+        outL: outPeakDb, outR: outPeakDb,
+        clipInL: inputPeakDb, clipInR: inputPeakDb,
+        clipOutL: clipOutDb, clipOutR: clipOutDb,
+        clipGrL: clipGr, clipGrR: clipGr,
+        effClipThresh: effClipDemo,
+        lufsM: outPeakDb - 6.5,
+        lufsS: outPeakDb - 8.2
+      });
+    }, 20);
+  }
+
+})();
+</script>
+</body>
+</html>

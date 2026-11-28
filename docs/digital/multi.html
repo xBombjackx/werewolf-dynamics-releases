@@ -1,0 +1,2190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Werewolf Digital Multiband Dynamics</title>
+<link rel="stylesheet" href="./wd/tokens.css">
+<script src="./demo-bar.js"></script>
+<script src="./modules/multi.js"></script>
+<script src="./wd-plugin-host.js"></script>
+<script src="./wd/kit.js"></script>
+<style>
+  /* ══════════════════════════════════════════════════════════════════════
+     Instrument Panel — the Werewolf Digital chassis.
+
+     This :root block is the WHOLE design language.
+     Multiband accent hue: fern #4f9070 / #82c2a1 / #245b41.
+     ════════════════════════════════════════════════════════════════════ */
+  :root {
+    --bg:      #0b0d12;   /* deep studio obsidian chassis */
+    --panel:   #151922;   /* machined slate control bays  */
+    --panel-hi:#1d2330;   /* elevated cap / active surface */
+    --track:   #0d0f15;   /* recessed tracks & beds       */
+    --line:    rgba(255, 255, 255, 0.08);
+    --line-hi: rgba(255, 255, 255, 0.15);
+    --hover-bg:rgba(255, 255, 255, 0.06);
+    --text:    #f2f5fa;
+    --label:   #8b96a8;
+    --muted:   #586274;
+    --well:    #06070a;   /* pure OLED signal surface     */
+    --cream:   #f2f5fa;   /* live plot, on well           */
+
+    --accent:     #4f9070;
+    --accent-lit: #82c2a1;
+    --accent-deep:#245b41;
+
+    --sage:      #34d399;
+    --sage-tint: rgba(52, 211, 153, 0.14);
+    --sage-deep: #6ee7b7;
+
+    --r-window: 0px;
+    --r-panel: 8px;
+    --r-pill: 5px;
+
+    --font: "Figtree", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    --font-display: "Figtree", "Segoe UI Variable Display", "Segoe UI Semibold", system-ui, sans-serif;
+  }
+  :root[data-theme="japandi-dark"] {
+    --bg:      #121316;
+    --panel:   #1b1d21;
+    --panel-hi:#24272d;
+    --track:   #0d0e10;
+    --line:    rgba(242, 237, 228, 0.08);
+    --line-hi: rgba(242, 237, 228, 0.15);
+    --hover-bg:rgba(242, 237, 228, 0.06);
+    --text:    #f2ede4;
+    --label:   #9e978c;
+    --muted:   #666057;
+    --well:    #090a0c;
+    --cream:   #f2ede4;
+    --accent-deep:#2d6e4e;
+    --sage:      #7a9171;
+    --sage-tint: rgba(122, 145, 113, 0.18);
+    --sage-deep: #b8cfb0;
+  }
+  :root[data-theme="japandi-light"] {
+    --bg:      #e6e1d8;
+    --panel:   #dbd5c9;
+    --panel-hi:#e4dfd5;
+    --track:   #ccc5b8;
+    --line:    rgba(24, 25, 28, 0.11);
+    --line-hi: rgba(24, 25, 28, 0.20);
+    --hover-bg:rgba(24, 25, 28, 0.06);
+    --text:    #18191c;
+    --label:   #635f58;
+    --muted:   #8c867c;
+    --well:    #17181b;
+    --cream:   #f2ede4;
+    --accent-deep:#245b41;
+    --sage:      #4d6b47;
+    --sage-tint: rgba(77, 107, 71, 0.16);
+    --sage-deep: #2d4229;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 400 13px/1.45 var(--font);
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  :focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- header ---------- */
+  header {
+    flex: 0 0 auto;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand svg { display: block; }
+  .brand .stack { display: flex; flex-direction: column; gap: 1px; }
+  .brand .line { font: 700 8.5px/1 var(--font); letter-spacing: 0.22em; text-transform: uppercase; color: var(--label); }
+  .brand .name { font-family: var(--font-display); font-size: 19px; line-height: 1; letter-spacing: -0.01em; }
+  .headsep { width: 1px; height: 26px; background: var(--line); }
+  .spacer { flex: 1; }
+  .stat { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  .stat .k { font: 600 9px/1 var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  .stat .v { font: 700 11.5px/1 var(--font); font-variant-numeric: tabular-nums; }
+  #buildTag { font: 500 10px/1.3 var(--font); color: var(--muted); text-align: right; max-width: 150px; }
+
+  .beacon-picker {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 6px 0 8px;
+    border-radius: var(--r-pill);
+    background: var(--track);
+    border: 1px solid var(--line);
+    flex: 0 0 auto;
+  }
+  .beacon-led {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--muted);
+    transition: background-color 0.15s, box-shadow 0.15s;
+  }
+  .beacon-picker.receiving .beacon-led { background: #34d399; box-shadow: 0 0 7px #34d399; }
+  .beacon-picker.waiting .beacon-led { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; }
+  .beacon-picker.mismatch { border-color: #f59e0b; }
+  .beacon-picker.mismatch .beacon-led { background: #ef4444; box-shadow: 0 0 7px #ef4444; }
+  .beacon-lbl {
+    font: 700 9px/1 var(--font);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--label);
+    white-space: nowrap;
+  }
+  .beacon-select {
+    height: 22px;
+    max-width: 140px;
+    min-width: 105px;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font: 600 11px/1 var(--font);
+    cursor: pointer;
+    outline: none;
+  }
+  .beacon-select option { background: var(--panel); color: var(--text); }
+  .beacon-select:disabled { opacity: 0.55; cursor: default; }
+
+  .track-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 26px;
+    padding: 0 8px;
+    border-radius: var(--r-pill);
+    background: var(--track);
+    border: 1px solid var(--line);
+    cursor: pointer;
+    flex: 0 1 124px;
+    min-width: 72px;
+    max-width: 132px;
+    transition: border-color 0.12s, background-color 0.12s;
+  }
+  .track-chip:hover { border-color: var(--line-hi); background: var(--panel-hi); }
+  .track-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-lit); flex: 0 0 auto; }
+  .track-name { flex: 1 1 auto; min-width: 0; font: 700 11px/1 var(--font); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .track-edit-ico { font-size: 10px; color: var(--muted); opacity: 0.65; flex: 0 0 auto; }
+  .track-chip:hover .track-edit-ico { opacity: 1; color: var(--text); }
+  .track-name-input {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    height: 20px;
+    background: var(--well);
+    color: var(--cream);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    font: 600 11px/1 var(--font);
+    padding: 0 5px;
+    outline: none;
+  }
+  .spec-legend {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font: 600 10.5px/1 var(--font);
+    color: var(--muted);
+    min-width: 0;
+  }
+  .spec-legend .lg-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+  }
+  .spec-legend .sw {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+  }
+  .spec-legend .sw.in { background: rgba(242, 245, 250, 0.50); }
+  .spec-legend .sw.out { background: var(--accent-lit); }
+  .spec-legend .lg-item.key {
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.12);
+    border: 1px solid rgba(56, 189, 248, 0.28);
+    padding: 2px 7px;
+    border-radius: 99px;
+    max-width: 170px;
+  }
+  .spec-legend .lg-item.key[hidden] { display: none; }
+  .spec-legend .sw.key { background: #38bdf8; }
+  .spec-legend .lg-item.key span { overflow: hidden; text-overflow: ellipsis; }
+  :root[data-theme="japandi-light"] .spec-legend .lg-item.key {
+    color: #0284c7;
+    background: rgba(2, 132, 199, 0.12);
+    border-color: rgba(2, 132, 199, 0.28);
+  }
+  :root[data-theme="japandi-light"] .spec-legend .sw.key { background: #0284c7; }
+  :root[data-theme="japandi-light"] .spec-legend .sw.in { background: rgba(24, 25, 28, 0.45); }
+
+  /* ---------- frame ---------- */
+  .body {
+    flex: 1 1 auto;
+    display: flex;
+    gap: 12px;
+    padding: 14px;
+    min-height: 0;
+  }
+  .col { flex: 1 1 auto; display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; }
+
+  /* ---------- wells: dark surfaces ---------- */
+  .wells { flex: 1 1 auto; display: flex; gap: 8px; min-height: 118px; min-width: 0; }
+  .well-group { flex: 2 1 0; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .well-group.narrow { flex: 1 1 0; min-width: 176px; }
+  .well-group.inactive .well { opacity: 0.45; }
+  .well-group.inactive .well-title { color: var(--muted); }
+  .well-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 0 2px;
+    min-height: 22px;
+    flex-wrap: wrap;
+  }
+  .well-title { font: 700 11px/1 var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--label); }
+  .well-hint { font: 500 11.5px/1 var(--font); color: var(--muted); white-space: nowrap; }
+  .well-hint.accent { color: var(--accent-deep); font-weight: 600; }
+  .well {
+    flex: 1;
+    min-height: 0;
+    border-radius: var(--r-panel);
+    overflow: hidden;
+    background: var(--well);
+    position: relative;
+  }
+  .well canvas { width: 100%; height: 100%; display: block; }
+  .well-readout {
+    position: absolute; left: 12px; bottom: 10px;
+    display: flex; flex-direction: column; gap: 3px; pointer-events: none;
+    background: rgba(18, 17, 14, 0.78); border-radius: 12px; padding: 7px 10px 8px;
+  }
+  .well-readout .k { font: 600 9.5px/1 var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  .well-readout .v { font: 700 22px/1 var(--font); font-variant-numeric: tabular-nums; color: #f9f4ed; }
+
+  /* ---------- panels ---------- */
+  .panel {
+    background: var(--panel);
+    border-radius: var(--r-panel);
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .panel.rail { flex: 0 0 auto; min-height: 0; }
+  .rail-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .rail-range { font: 500 11.5px/1 var(--font); color: var(--label); }
+
+  /* ---------- pills ---------- */
+  .pill {
+    height: 32px;
+    padding: 0 14px;
+    border-radius: var(--r-pill);
+    border: 1px solid var(--line);
+    background: transparent;
+    font: 600 12px/1 var(--font);
+    color: var(--label);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background-color 0.12s, color 0.12s;
+    white-space: nowrap;
+  }
+  .pill:hover { background: var(--hover-bg); }
+  .pill:active { background: var(--track); }
+  .pill.on { border-color: transparent; background: var(--accent); color: #f9f4ed; font-weight: 700; }
+  .pill.on:hover { background: var(--accent-deep); }
+  .pill:disabled { opacity: 0.45; cursor: default; }
+  .pill.sm { height: 28px; padding: 0 13px; font-size: 11.5px; }
+  .pill.wide { width: 100%; }
+  .pill.dashed { border-style: dashed; border-color: var(--muted); color: var(--label); }
+  .pill.power { background: var(--well); border-color: transparent; color: #f9f4ed; font-weight: 700; height: 36px; }
+  .pill.power .led {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--muted); transition: background-color 0.12s, box-shadow 0.12s;
+  }
+  .pill.power.on { background: var(--well); color: #f9f4ed; }
+  .pill.power.on .led { background: #34d399; box-shadow: 0 0 7px #34d399; }
+
+  .pillbed { display: flex; gap: 4px; padding: 3px; border-radius: var(--r-pill); background: var(--track); }
+  .pillbed button {
+    height: 26px; padding: 0 12px; border-radius: var(--r-pill); border: 0;
+    background-color: transparent; color: var(--label); font: 600 11.5px/1 var(--font); cursor: pointer;
+    transition: background-color 0.12s, color 0.12s; white-space: nowrap;
+  }
+  .pillbed button:hover:not(:disabled):not(.on) { background-color: var(--hover-bg); }
+  .pillbed.accent > button.on { background-color: var(--accent); color: #f9f4ed; font-weight: 700; }
+  #bandcount-group > button.on, #band-selector > button.on {
+    background-color: var(--accent); color: #f9f4ed; font-weight: 700;
+  }
+  .pillbed > button:disabled { opacity: 0.45; cursor: default; }
+
+  .fieldlabel { font: 600 10.5px/1 var(--font); color: var(--label); }
+
+  /* ---------- knob ---------- */
+  .knob {
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    width: 74px; cursor: ns-resize; touch-action: none;
+    border-radius: 12px; padding: 2px 0;
+  }
+  .knob:hover { background: var(--hover-bg); }
+  .knob .klabel { font: 600 10.5px/1 var(--font); color: var(--label); pointer-events: none; }
+  .knob .v { font: 700 14px/1 var(--font); font-variant-numeric: tabular-nums; pointer-events: none; }
+  .knob svg { display: block; pointer-events: none; }
+  .knob.dragging .v { color: var(--accent-deep); }
+  .knob.lg { width: 92px; }
+  .knob.sm { width: auto; flex-direction: row; align-items: center; gap: 7px; }
+  .knob.sm .kstack { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; }
+  .knob.sm .klabel { font-size: 10px; }
+  .knob.sm .v { font-size: 12.5px; }
+
+  /* ---------- meters ---------- */
+  .meter-row { display: flex; align-items: center; gap: 10px; }
+  .meter-row .k { font: 600 10px/1 var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--label); }
+  .meter {
+    flex: 1; min-width: 90px; height: 9px; border-radius: var(--r-pill);
+    background: var(--track); overflow: hidden; position: relative;
+  }
+  .meter i { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: var(--accent); border-radius: var(--r-pill); }
+  .meter-row .v { font: 700 12px/1 var(--font); font-variant-numeric: tabular-nums; min-width: 52px; text-align: right; }
+
+  .vmeter-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .vmeter {
+    flex: 1; min-height: 40px; width: 16px; border-radius: var(--r-pill);
+    background: var(--well); overflow: hidden; position: relative;
+  }
+  .vmeter i {
+    position: absolute; left: 0; right: 0; bottom: 0; height: var(--fill, 0%);
+    background: linear-gradient(0deg, var(--sage), var(--accent-lit));
+    border-radius: var(--r-pill);
+  }
+  .vmeter-wrap .k { font: 600 9.5px/1 var(--font); letter-spacing: 0.1em; text-transform: uppercase; color: var(--label); }
+  .vmeter-wrap .v { font: 700 11.5px/1 var(--font); font-variant-numeric: tabular-nums; }
+
+  /* ---------- master strip ---------- */
+  .master {
+    flex: 0 0 132px;
+    background: var(--panel);
+    border-radius: var(--r-panel);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .master .fill { flex: 1; min-height: 0; }
+  .master .stack { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+
+  /* ---------- band panes ---------- */
+  #band_panes_container { flex: 1 1 auto; min-height: 0; display: flex; }
+  .pane { display: none; width: 100%; }
+  .pane.active { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .vsep { width: 1px; align-self: stretch; min-height: 46px; background: var(--line); }
+  .knobs { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+  .bandacts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+
+  /* ---------- global strip ---------- */
+  .mod { flex: 0 0 auto; }
+  .mod-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .mod-title { display: flex; flex-direction: column; gap: 3px; }
+  .mod-title .t { font: 700 10.5px/1 var(--font); letter-spacing: 0.12em; text-transform: uppercase; color: var(--label); }
+  .mod-title .s { font: 500 11px/1 var(--font); color: var(--muted); }
+
+  /* Declared-but-not-yet-implemented controls */
+  .na { opacity: 0.35; pointer-events: none; }
+
+  @media (max-width: 820px) {
+    .well-group.narrow { min-width: 148px; }
+    .knob { width: 64px; }
+  }
+
+  /* ── Precision Instrument Structural & Hardware Refinements ── */
+  header {
+    height: 46px;
+    padding: 0 14px;
+    gap: 10px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent), var(--panel);
+    border-bottom: 1px solid var(--line-hi);
+  }
+  .brand svg { filter: drop-shadow(0 0 5px var(--accent)); }
+  .brand .name { font-size: 16.5px; font-weight: 700; letter-spacing: -0.01em; }
+  .headsep { height: 20px; }
+  #buildTag { font: 500 9.5px/1.2 var(--font); color: var(--muted); max-width: 135px; opacity: 0.75; }
+
+  .theme-strip {
+    display: inline-flex;
+    background: var(--track);
+    border: 1px solid var(--line);
+    border-radius: var(--r-pill);
+    padding: 2px;
+    gap: 2px;
+  }
+  .theme-btn {
+    height: 22px;
+    padding: 0 8px;
+    border: 0;
+    border-radius: calc(var(--r-pill) - 1px);
+    background: transparent;
+    color: var(--label);
+    font: 600 10px/1 var(--font);
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: background-color 0.12s, color 0.12s;
+  }
+  .theme-btn:hover:not(.on) { color: var(--text); background: var(--hover-bg); }
+  .theme-btn.on { background: var(--panel-hi); color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35); }
+
+  .body { gap: 8px; padding: 8px 10px 10px; }
+  .col { gap: 8px; }
+  .wells { gap: 8px; }
+  .well {
+    border: 1px solid var(--line-hi);
+    box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.65);
+  }
+  .well-readout {
+    background: rgba(9, 11, 16, 0.84);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 6px;
+    backdrop-filter: blur(6px);
+  }
+  .panel, .master {
+    border: 1px solid var(--line);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+  .pill {
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--label);
+    border: 1px solid var(--line);
+  }
+  .pill:hover:not(:disabled):not(.on) { background: var(--hover-bg); color: var(--text); }
+  .pill.on { border-color: transparent; background: var(--accent); color: #ffffff; box-shadow: 0 1px 8px rgba(0, 0, 0, 0.35); }
+  .pill.on:hover { filter: brightness(1.1); background: var(--accent); }
+  .pillbed { border: 1px solid var(--line); background: var(--track); }
+  .pillbed button { color: var(--label); }
+  .pillbed button:hover:not(:disabled):not(.on) { background-color: var(--hover-bg); color: var(--text); }
+
+  .vmeter {
+    width: 14px;
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.75);
+  }
+  .vmeter i { border-radius: 2px; }
+
+  @media (max-width: 1180px) {
+    #buildTag, .sep-build { display: none; }
+  }
+  @media (max-width: 1040px) {
+    .stat, .sep-stat { display: none; }
+  }
+  @media (max-width: 720px) {
+    header { padding: 0 10px; gap: 6px; }
+    header .headsep { display: none; }
+    .beacon-lbl { display: none; }
+    .beacon-select { min-width: 76px; max-width: 108px; }
+    #selfTrackChip { flex: 0 1 96px; min-width: 64px; }
+  }
+
+  .knob .karc { filter: drop-shadow(0 0 3px var(--accent)); }
+  .knob .v {
+    pointer-events: auto;
+    cursor: text;
+    padding: 1px 4px;
+    border-radius: 3px;
+    transition: background-color 0.12s, color 0.12s;
+  }
+  .knob .v:hover { background: var(--hover-bg); }
+  .knob input.v {
+    width: 58px;
+    background: var(--well);
+    color: var(--text);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    font: 700 12px/1 var(--font);
+    text-align: center;
+    padding: 2px 3px;
+    outline: none;
+  }
+
+</style>
+</head>
+<body>
+  <header>
+    <button class="pill power header-power-btn" id="param_power" title="Bypass the whole plugin. Crossfades so it never clicks."><span class="led"></span><span>Engaged</span></button>
+    <div class="brand">
+      <svg width="20" height="18" viewBox="0 0 20 18">
+        <path d="M2 16.5 L10 1.5 L18 16.5 Z" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linejoin="round"/>
+      </svg>
+      <div class="stack">
+        <div class="line">Werewolf Digital</div>
+        <div class="name">Multiband</div>
+      </div>
+    </div>
+    <div class="track-chip" id="selfTrackChip" title="Click to rename this Multiband track for Beacon broadcasting">
+      <span class="track-dot" id="selfTrackDot"></span>
+      <span class="track-name" id="selfTrackName">Multi 1</span>
+      <span class="track-edit-ico">✎</span>
+    </div>
+    <div class="beacon-picker" id="beaconPickerWrap" title="Select an active Werewolf Digital Beacon track for external multiband sidechain keying. Wireless cross-track key — for sample-exact timing at large DAW buffer sizes (1024+), use Off (Host Bus) with a DAW sidechain send.">
+      <span class="beacon-led" id="beaconLed"></span>
+      <span class="beacon-lbl">Beacon</span>
+      <select class="beacon-select" id="beaconSourceSelect" aria-label="External WD Beacon source">
+        <option value="">Off (Host Bus)</option>
+      </select>
+    </div>
+    <div class="spacer"></div>
+    <button class="pill sm header-audition-pill" id="param_msMode" title="Compress mid and side instead of left and right.">Mid/Side</button>
+    <button class="pill sm header-audition-pill" id="param_delta" title="Listen to ONLY what the dynamics are changing — output minus input.">Delta</button>
+    <div class="stat"><div class="k">Sample rate</div><div class="v" id="srTag">—</div></div>
+    <div class="headsep sep-stat"></div>
+    <div class="theme-strip" id="themeSwitcher" title="Switch instrument chassis finish">
+      <button class="theme-btn on" data-theme="studio">Studio</button>
+      <button class="theme-btn" data-theme="japandi-dark">Sumi</button>
+      <button class="theme-btn" data-theme="japandi-light">Washi</button>
+    </div>
+    <div class="headsep sep-build"></div>
+    <div id="buildTag">—</div>
+  </header>
+
+  <div class="body">
+    <div class="col">
+
+      <div class="stage-row">
+        <div class="wells">
+          <div class="well-group" id="crossoverContainer">
+            <div class="well-head">
+              <div class="well-title">Bands</div>
+              <div class="pillbed accent" id="bandcount-group" title="Split the signal into this many frequency bands and compress each one separately.">
+                <button data-step="1">1</button><button data-step="2">2</button><button data-step="3">3</button><button data-step="4">4</button><button data-step="5">5</button><button data-step="6">6</button>
+              </div>
+              <div class="spec-legend" id="specLegend">
+                <span class="lg-item"><i class="sw in"></i>In</span>
+                <span class="lg-item"><i class="sw out"></i>Out</span>
+                <span class="lg-item key" id="specKeyBadge" hidden><i class="sw key"></i><span id="specKeyLabel">Key</span></span>
+              </div>
+              <div class="well-hint" id="crossoverHint">Drag split · Drag band for Level (Shift = Thresh)</div>
+            </div>
+            <div class="well"><canvas id="spectrumCanvas"></canvas></div>
+          </div>
+
+          <div class="well-group narrow">
+            <div class="well-head">
+              <div class="well-title" id="curve_title">Band 1 transfer</div>
+              <div class="well-hint accent" id="bandGrLabel">Band 1</div>
+            </div>
+            <div class="well">
+              <canvas id="curveCanvas"></canvas>
+              <div class="well-readout"><div class="k" id="bandGrMode">Reduction</div><div class="v" id="bandGrVal">—</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="meter-bridge">
+          <div class="vmeter-wrap">
+            <div class="vmeter"><i id="outMeterBar"></i></div>
+            <div class="k">Out</div>
+            <div class="v" id="outMeterVal">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel rail">
+        <div class="rail-head">
+          <div class="pillbed accent" id="band-selector">
+            <button id="sel_band_1">Band 1</button>
+            <button id="sel_band_2">Band 2</button>
+            <button id="sel_band_3">Band 3</button>
+            <button id="sel_band_4">Band 4</button>
+            <button id="sel_band_5">Band 5</button>
+            <button id="sel_band_6">Band 6</button>
+          </div>
+          <div class="rail-range" id="active_band_title">20 Hz – 20 kHz</div>
+        </div>
+
+        <div id="band_panes_container">
+          <div class="pane" id="band_pane_1">
+            <div class="knobs">
+              <div class="knob" id="param_threshold1" data-label="Threshold" title="Level above which this band starts to be reduced."></div>
+              <div class="knob" id="param_ratio1" data-label="Ratio" title="How much the band is reduced once over the threshold."></div>
+              <div class="knob" id="param_knee1" data-label="Knee" title="How gradually the compression comes in around the threshold."></div>
+              <div class="knob" id="param_range1" data-label="Range" title="The most gain reduction this band is allowed to apply."></div>
+              <div class="knob" id="param_attack1" data-label="Attack" title="How fast the band reacts to a rise in level."></div>
+              <div class="knob" id="param_release1" data-label="Release" title="How fast the band recovers after the level drops."></div>
+              <div class="knob" id="param_level1" data-label="Level" data-bipolar="1" title="Level trim for this band after compression."></div>
+            </div>
+            <div class="vsep"></div>
+            <div class="bandacts">
+              <button class="pill" id="param_autoRelease1" title="Release follows the programme instead of the knob.">Auto release</button>
+              <button class="pill" id="param_upward1" title="Raise quiet signal toward the threshold instead of reducing loud signal.">Upward</button>
+              <button class="pill" id="param_extKey1" title="Key this band from the sidechain input.">Ext key</button>
+              <button class="pill" id="param_solo1" title="Hear this band on its own.">Solo</button>
+              <button class="pill" id="param_bypass1" title="Leave this band uncompressed.">Bypass</button>
+            </div>
+          </div>
+
+          <div class="pane" id="band_pane_2">
+            <div class="knobs">
+              <div class="knob" id="param_threshold2" data-label="Threshold" title="Level above which this band starts to be reduced."></div>
+              <div class="knob" id="param_ratio2" data-label="Ratio" title="How much the band is reduced once over the threshold."></div>
+              <div class="knob" id="param_knee2" data-label="Knee" title="How gradually the compression comes in around the threshold."></div>
+              <div class="knob" id="param_range2" data-label="Range" title="The most gain reduction this band is allowed to apply."></div>
+              <div class="knob" id="param_attack2" data-label="Attack" title="How fast the band reacts to a rise in level."></div>
+              <div class="knob" id="param_release2" data-label="Release" title="How fast the band recovers after the level drops."></div>
+              <div class="knob" id="param_level2" data-label="Level" data-bipolar="1" title="Level trim for this band after compression."></div>
+            </div>
+            <div class="vsep"></div>
+            <div class="bandacts">
+              <button class="pill" id="param_autoRelease2" title="Release follows the programme instead of the knob.">Auto release</button>
+              <button class="pill" id="param_upward2" title="Raise quiet signal toward the threshold instead of reducing loud signal.">Upward</button>
+              <button class="pill" id="param_extKey2" title="Key this band from the sidechain input.">Ext key</button>
+              <button class="pill" id="param_solo2" title="Hear this band on its own.">Solo</button>
+              <button class="pill" id="param_bypass2" title="Leave this band uncompressed.">Bypass</button>
+            </div>
+          </div>
+
+          <div class="pane" id="band_pane_3">
+            <div class="knobs">
+              <div class="knob" id="param_threshold3" data-label="Threshold" title="Level above which this band starts to be reduced."></div>
+              <div class="knob" id="param_ratio3" data-label="Ratio" title="How much the band is reduced once over the threshold."></div>
+              <div class="knob" id="param_knee3" data-label="Knee" title="How gradually the compression comes in around the threshold."></div>
+              <div class="knob" id="param_range3" data-label="Range" title="The most gain reduction this band is allowed to apply."></div>
+              <div class="knob" id="param_attack3" data-label="Attack" title="How fast the band reacts to a rise in level."></div>
+              <div class="knob" id="param_release3" data-label="Release" title="How fast the band recovers after the level drops."></div>
+              <div class="knob" id="param_level3" data-label="Level" data-bipolar="1" title="Level trim for this band after compression."></div>
+            </div>
+            <div class="vsep"></div>
+            <div class="bandacts">
+              <button class="pill" id="param_autoRelease3" title="Release follows the programme instead of the knob.">Auto release</button>
+              <button class="pill" id="param_upward3" title="Raise quiet signal toward the threshold instead of reducing loud signal.">Upward</button>
+              <button class="pill" id="param_extKey3" title="Key this band from the sidechain input.">Ext key</button>
+              <button class="pill" id="param_solo3" title="Hear this band on its own.">Solo</button>
+              <button class="pill" id="param_bypass3" title="Leave this band uncompressed.">Bypass</button>
+            </div>
+          </div>
+
+          <div class="pane" id="band_pane_4">
+            <div class="knobs">
+              <div class="knob" id="param_threshold4" data-label="Threshold" title="Level above which this band starts to be reduced."></div>
+              <div class="knob" id="param_ratio4" data-label="Ratio" title="How much the band is reduced once over the threshold."></div>
+              <div class="knob" id="param_knee4" data-label="Knee" title="How gradually the compression comes in around the threshold."></div>
+              <div class="knob" id="param_range4" data-label="Range" title="The most gain reduction this band is allowed to apply."></div>
+              <div class="knob" id="param_attack4" data-label="Attack" title="How fast the band reacts to a rise in level."></div>
+              <div class="knob" id="param_release4" data-label="Release" title="How fast the band recovers after the level drops."></div>
+              <div class="knob" id="param_level4" data-label="Level" data-bipolar="1" title="Level trim for this band after compression."></div>
+            </div>
+            <div class="vsep"></div>
+            <div class="bandacts">
+              <button class="pill" id="param_autoRelease4" title="Release follows the programme instead of the knob.">Auto release</button>
+              <button class="pill" id="param_upward4" title="Raise quiet signal toward the threshold instead of reducing loud signal.">Upward</button>
+              <button class="pill" id="param_extKey4" title="Key this band from the sidechain input.">Ext key</button>
+              <button class="pill" id="param_solo4" title="Hear this band on its own.">Solo</button>
+              <button class="pill" id="param_bypass4" title="Leave this band uncompressed.">Bypass</button>
+            </div>
+          </div>
+
+          <div class="pane" id="band_pane_5">
+            <div class="knobs">
+              <div class="knob" id="param_threshold5" data-label="Threshold" title="Level above which this band starts to be reduced."></div>
+              <div class="knob" id="param_ratio5" data-label="Ratio" title="How much the band is reduced once over the threshold."></div>
+              <div class="knob" id="param_knee5" data-label="Knee" title="How gradually the compression comes in around the threshold."></div>
+              <div class="knob" id="param_range5" data-label="Range" title="The most gain reduction this band is allowed to apply."></div>
+              <div class="knob" id="param_attack5" data-label="Attack" title="How fast the band reacts to a rise in level."></div>
+              <div class="knob" id="param_release5" data-label="Release" title="How fast the band recovers after the level drops."></div>
+              <div class="knob" id="param_level5" data-label="Level" data-bipolar="1" title="Level trim for this band after compression."></div>
+            </div>
+            <div class="vsep"></div>
+            <div class="bandacts">
+              <button class="pill" id="param_autoRelease5" title="Release follows the programme instead of the knob.">Auto release</button>
+              <button class="pill" id="param_upward5" title="Raise quiet signal toward the threshold instead of reducing loud signal.">Upward</button>
+              <button class="pill" id="param_extKey5" title="Key this band from the sidechain input.">Ext key</button>
+              <button class="pill" id="param_solo5" title="Hear this band on its own.">Solo</button>
+              <button class="pill" id="param_bypass5" title="Leave this band uncompressed.">Bypass</button>
+            </div>
+          </div>
+
+          <div class="pane" id="band_pane_6">
+            <div class="knobs">
+              <div class="knob" id="param_threshold6" data-label="Threshold" title="Level above which this band starts to be reduced."></div>
+              <div class="knob" id="param_ratio6" data-label="Ratio" title="How much the band is reduced once over the threshold."></div>
+              <div class="knob" id="param_knee6" data-label="Knee" title="How gradually the compression comes in around the threshold."></div>
+              <div class="knob" id="param_range6" data-label="Range" title="The most gain reduction this band is allowed to apply."></div>
+              <div class="knob" id="param_attack6" data-label="Attack" title="How fast the band reacts to a rise in level."></div>
+              <div class="knob" id="param_release6" data-label="Release" title="How fast the band recovers after the level drops."></div>
+              <div class="knob" id="param_level6" data-label="Level" data-bipolar="1" title="Level trim for this band after compression."></div>
+            </div>
+            <div class="vsep"></div>
+            <div class="bandacts">
+              <button class="pill" id="param_autoRelease6" title="Release follows the programme instead of the knob.">Auto release</button>
+              <button class="pill" id="param_upward6" title="Raise quiet signal toward the threshold instead of reducing loud signal.">Upward</button>
+              <button class="pill" id="param_extKey6" title="Key this band from the sidechain input.">Ext key</button>
+              <button class="pill" id="param_solo6" title="Hear this band on its own.">Solo</button>
+              <button class="pill" id="param_bypass6" title="Leave this band uncompressed.">Bypass</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel mod">
+        <div class="mod-head">
+          <div class="mod-title">
+            <div class="t">Global</div>
+            <div class="s">All bands</div>
+          </div>
+          <div class="vsep"></div>
+          <div class="knobs" style="gap: 12px;">
+            <div class="knob sm" id="param_mix" data-label="Mix" data-size="38" title="Blend between the untouched signal and the compressed one. Above 100% pushes the compressed signal harder."></div>
+            <div class="knob sm" id="param_stereoLink" data-label="Stereo link" data-size="38" title="How much the two channels share one detector."></div>
+          </div>
+          <button class="pill sm" id="param_sclisten" title="Audition the external sidechain input.">SC Listen</button>
+          <div class="deck-master-bay">
+            <div class="knob sm" id="param_output" data-size="42" data-label="Output" data-bipolar="1" title="Final level out, after every band is summed. Match levels so you judge the dynamics rather than the loudness."></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  window.addEventListener('error', e => {
+    if (e.message && (e.message.includes('ResizeObserver') || e.message.includes('loop completed with undelivered notifications'))) return;
+    let el = document.getElementById('errBanner');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'errBanner';
+      el.style.cssText = 'position:fixed;left:0;right:0;bottom:0;background:#245b41;'
+        + 'color:#f9f4ed;font:11px monospace;padding:4px 10px;z-index:99;';
+      document.body.appendChild(el);
+    }
+    el.textContent = 'UI error: ' + e.message + ' @' + (e.lineno || '?');
+  });
+</script>
+
+<script type="module">
+(async () => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+
+  const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const COL = {
+    accent:    cssVar('--accent')     || '#4f9070',
+    accentLit: cssVar('--accent-lit') || '#82c2a1',
+    well:      cssVar('--well')       || '#06070a',
+    cream:     cssVar('--cream')      || '#f2f5fa',
+  };
+  function applyTheme(theme) {
+    const t = theme || 'studio';
+    if (t === 'studio') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', t);
+    COL.accent = cssVar('--accent') || COL.accent;
+    COL.accentLit = cssVar('--accent-lit') || COL.accentLit;
+    COL.well = cssVar('--well') || '#06070a';
+    COL.cream = cssVar('--cream') || '#f2f5fa';
+    const sw = document.getElementById('themeSwitcher');
+    if (sw) {
+      sw.querySelectorAll('.theme-btn').forEach(b => {
+        b.classList.toggle('on', b.dataset.theme === t);
+      });
+    }
+    try { localStorage.setItem('wd_theme', t); } catch (e) {}
+  }
+  {
+    let saved = 'studio';
+    try { saved = localStorage.getItem('wd_theme') || 'studio'; } catch (e) {}
+    applyTheme(saved);
+    const sw = document.getElementById('themeSwitcher');
+    if (sw) {
+      sw.addEventListener('click', e => {
+        const btn = e.target.closest('.theme-btn');
+        if (btn && btn.dataset.theme) {
+          applyTheme(btn.dataset.theme);
+          if (typeof drawCurve === 'function') drawCurve();
+          if (typeof drawSplits === 'function') drawSplits();
+        }
+      });
+    }
+  }
+  const ink = a => 'rgba(242, 245, 250, ' + a + ')';
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+  // ------------------------------------------------------------------ host
+  let host = null;
+  if (window.__JUCE__ && window.__JUCE__.backend) {
+    try {
+      const lib = await import('./juce/index.js');
+      const be = window.__JUCE__.backend;
+      host = {
+        slider: id => lib.getSliderState(id),
+        combo:  id => lib.getComboBoxState(id),
+        toggle: id => lib.getToggleState(id),
+        call:   (name, ...args) => lib.getNativeFunction(name)(...args),
+        on:     (event, cb) => be.addEventListener(event, cb),
+      };
+    } catch (e) { console.warn('JUCE frontend unavailable:', e); }
+  }
+
+  const sliders = {}, toggles = {};
+  const sl = id => { if (!host) return null; if (!sliders[id]) sliders[id] = host.slider(id); return sliders[id]; };
+  const tg = id => { if (!host) return null; if (!toggles[id]) toggles[id] = host.toggle(id); return toggles[id]; };
+
+  // ------------------------------------------------------------------ state
+  const MAX_BANDS = 6;
+  let selectedBand = 1;      // 1..6
+  let bandCount = 3;
+  let splitsHz = [80.0, 250.0, 1000.0, 4000.0, 12000.0];
+  let preSpectrumData = null;
+  let postSpectrumData = null;
+  let scSpectrumData = null;
+  let bandGrDbs = [0, 0, 0, 0, 0, 0];
+  let liveBandDetDbs = [-100, -100, -100, -100, -100, -100];
+  let mBandGr = 0;
+  let staticCurve = null;    // { band, inVals, outVals }
+  const selfMeta = { name: 'Multi 1', customName: '', publishedName: '', publishing: false };
+  let beaconSelected = '';
+  let beaconReceiving = false;
+  let beaconSrMismatch = false;
+  let beaconMetersSeen = false;
+  let scActive = false;
+  let lastBeaconSig = '';
+
+  const isLightTheme = () => document.documentElement.getAttribute('data-theme') === 'japandi-light';
+  const keyCyan = () => (isLightTheme() ? '#0284c7' : '#38bdf8');
+  const isBandExtKeyOn = b => {
+    const t = tg('extKey' + b);
+    return t ? !!t.getValue() : !!$('param_extKey' + b)?.classList.contains('on');
+  };
+  const anyExtKeyOn = () => {
+    const limit = clamp(bandCount, 1, MAX_BANDS);
+    for (let b = 1; b <= limit; ++b) {
+      if (isBandExtKeyOn(b)) return true;
+    }
+    return false;
+  };
+  const isScListenOn = () => {
+    const t = tg('sclisten');
+    return t ? !!t.getValue() : !!$('param_sclisten')?.classList.contains('on');
+  };
+
+  // ---------------------------------------------------------------- knobs
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  const ARC_FULL = 'M12.44 43.56 A22 22 0 1 1 43.56 43.56';
+  const ARC_UP   = 'M28 6 A22 22 0 0 1 43.56 43.56';
+  const ARC_DOWN = 'M28 6 A22 22 0 0 0 12.44 43.56';
+  const LEN_FULL = 2 * Math.PI * 22 * 0.75;
+  const LEN_HALF = LEN_FULL / 2;
+
+  function mountKnob(el) {
+    const size = parseInt(el.dataset.size || '56', 10);
+    const bipolar = el.dataset.bipolar === '1';
+    const sw = size < 48 ? 5.5 : 4.5;
+
+    const svg = document.createElementNS(SVGNS, 'svg');
+    svg.setAttribute('viewBox', '0 0 56 56');
+    svg.setAttribute('width', String(size));
+    svg.setAttribute('height', String(size));
+
+    if (size >= 48) {
+      const ticks = document.createElementNS(SVGNS, 'g');
+      for (let i = 0; i <= 10; i++) {
+        const deg = -135 + i * 27;
+        const rad = (deg - 90) * Math.PI / 180;
+        const major = (i === 0 || i === 5 || i === 10);
+        const r1 = 24.0;
+        const r2 = major ? 26.2 : 25.3;
+        const t = document.createElementNS(SVGNS, 'line');
+        t.setAttribute('x1', (28 + Math.cos(rad) * r1).toFixed(2));
+        t.setAttribute('y1', (28 + Math.sin(rad) * r1).toFixed(2));
+        t.setAttribute('x2', (28 + Math.cos(rad) * r2).toFixed(2));
+        t.setAttribute('y2', (28 + Math.sin(rad) * r2).toFixed(2));
+        t.setAttribute('stroke', major ? 'var(--label)' : 'var(--muted)');
+        t.setAttribute('stroke-width', major ? '1.3' : '0.9');
+        t.setAttribute('stroke-linecap', 'round');
+        t.setAttribute('opacity', major ? '0.75' : '0.42');
+        ticks.appendChild(t);
+      }
+      svg.appendChild(ticks);
+    }
+
+    const mk = (d, stroke, width) => {
+      const p = document.createElementNS(SVGNS, 'path');
+      p.setAttribute('d', d);
+      p.setAttribute('fill', 'none');
+      p.setAttribute('stroke', stroke);
+      p.setAttribute('stroke-width', String(width));
+      p.setAttribute('stroke-linecap', 'round');
+      return p;
+    };
+    const track = mk(ARC_FULL, 'var(--track)', sw);
+    const arc = mk(bipolar ? ARC_UP : ARC_FULL, 'var(--accent)', sw);
+    arc.setAttribute('stroke-dasharray', String(bipolar ? LEN_HALF : LEN_FULL));
+    arc.setAttribute('stroke-dashoffset', String(bipolar ? LEN_HALF : LEN_FULL));
+    arc.classList.add('karc');
+    svg.append(track, arc);
+
+    if (bipolar) {
+      const tick = document.createElementNS(SVGNS, 'line');
+      tick.setAttribute('x1', '28'); tick.setAttribute('y1', '3.5');
+      tick.setAttribute('x2', '28'); tick.setAttribute('y2', '8.2');
+      tick.setAttribute('stroke', 'var(--label)');
+      tick.setAttribute('stroke-width', '1.5');
+      tick.setAttribute('stroke-linecap', 'round');
+      svg.appendChild(tick);
+    }
+
+    const collar = document.createElementNS(SVGNS, 'circle');
+    collar.setAttribute('cx', '28'); collar.setAttribute('cy', '28');
+    collar.setAttribute('r', size < 48 ? '15.2' : '16.8');
+    collar.setAttribute('fill', 'rgba(0, 0, 0, 0.35)');
+    collar.setAttribute('stroke', 'var(--line)');
+    svg.appendChild(collar);
+
+    const cap = document.createElementNS(SVGNS, 'circle');
+    cap.setAttribute('cx', '28'); cap.setAttribute('cy', '28');
+    cap.setAttribute('r', size < 48 ? '13.4' : '14.6');
+    cap.setAttribute('fill', 'var(--panel-hi)');
+    cap.setAttribute('stroke', 'var(--line-hi)');
+    svg.appendChild(cap);
+
+    const needle = document.createElementNS(SVGNS, 'line');
+    needle.setAttribute('x1', '28'); needle.setAttribute('y1', size < 48 ? '15.5' : '14.6');
+    needle.setAttribute('x2', '28'); needle.setAttribute('y2', '21.2');
+    needle.setAttribute('stroke', 'var(--text)');
+    needle.setAttribute('stroke-width', size < 48 ? '2.6' : '2.4');
+    needle.setAttribute('stroke-linecap', 'round');
+    needle.classList.add('kneedle');
+    svg.appendChild(needle);
+
+    const lab = document.createElement('div');
+    lab.className = 'klabel';
+    lab.textContent = el.dataset.label || '';
+    const val = document.createElement('span');
+    val.className = 'v';
+    val.textContent = '—';
+
+    el.innerHTML = '';
+    if (el.classList.contains('sm')) {
+      const stack = document.createElement('div');
+      stack.className = 'kstack';
+      stack.append(lab, val);
+      el.append(svg, stack);
+    } else {
+      el.append(lab, svg, val);
+    }
+    paintKnob(el, bipolar ? 0.5 : 0);
+  }
+
+  function paintKnob(el, norm) {
+    const arc = el.querySelector('.karc');
+    const needle = el.querySelector('.kneedle');
+    if (!arc || !needle) return;
+    const n = clamp(norm, 0, 1);
+    if (el.dataset.bipolar === '1') {
+      const p = (n - 0.5) * 2;
+      arc.setAttribute('d', p >= 0 ? ARC_UP : ARC_DOWN);
+      arc.setAttribute('stroke-dashoffset', String(LEN_HALF * (1 - Math.abs(p))));
+    } else {
+      arc.setAttribute('stroke-dashoffset', String(LEN_FULL * (1 - n)));
+    }
+    needle.setAttribute('transform', 'rotate(' + (-135 + n * 270).toFixed(2) + ' 28 28)');
+  }
+
+  // --------------------------------------------------- slider / toggle binds
+  function bindSlider(el, id, fmt, onValueChange = null) {
+    const slider = sl(id);
+    if (!el) return;
+    if (!slider) { return; }
+
+    {
+      const fresh = el.cloneNode(true);
+      el.parentNode.replaceChild(fresh, el);
+      el = fresh;
+    }
+    el.dataset.paramId = id;
+    const span = el.querySelector('.v');
+
+    const toNorm = (scaled) => {
+      const p = slider.properties || { start: 0, end: 1, skew: 1 };
+      const spanRange = (p.end - p.start) || 1;
+      const lin = Math.min(1, Math.max(0, (scaled - p.start) / spanRange));
+      return Math.pow(lin, p.skew || 1);
+    };
+
+    const updateDisplay = () => {
+      const v = slider.getScaledValue();
+      if (span.isConnected) span.textContent = fmt(v);
+      paintKnob(el, slider.getNormalisedValue());
+      if (onValueChange) onValueChange(v);
+    };
+
+    if (slider.customListener) slider.valueChangedEvent.removeListener(slider.customListener);
+    slider.customListener = updateDisplay;
+    slider.valueChangedEvent.addListener(updateDisplay);
+    updateDisplay();
+
+    el.addEventListener('dblclick', ev => {
+      ev.preventDefault();
+      const def = (slider.properties || {}).defaultValue;
+      if (typeof def !== 'number') return;
+      slider.sliderDragStarted();
+      slider.setNormalisedValue(toNorm(def));
+      slider.sliderDragEnded();
+      updateDisplay();
+    });
+
+    let st = null;
+    el.addEventListener('pointerdown', ev => {
+      if ((ev.button ?? 0) !== 0) return;
+      // Drag + wheel step in NORMALISED (knob-arc) space. Stepping in real units
+      // felt identical on linear knobs but collapsed the low end of skewed log
+      // ranges (attack/Q/rate): everything below ~1 fit in a few px / one wheel
+      // notch, so readouts hopped from 1 straight to the floor (2026-08-30).
+      st = { y: ev.clientY, n: slider.getNormalisedValue() };
+      slider.sliderDragStarted();
+      el.classList.add('dragging');
+      el.setPointerCapture(ev.pointerId);
+      ev.preventDefault();
+    });
+
+    el.addEventListener('pointermove', ev => {
+      if (!st) return;
+      const fine = ev.shiftKey ? 0.1 : 1.0;
+      const delta = (st.y - ev.clientY) * fine / 250.0;
+      slider.setNormalisedValue(Math.min(1, Math.max(0, st.n + delta)));
+      updateDisplay();
+    });
+
+    const endKnobDrag = ev => {
+      if (st) {
+        slider.sliderDragEnded();
+        st = null;
+      }
+      el.classList.remove('dragging');
+      try { el.releasePointerCapture(ev.pointerId); } catch (e) {}
+    };
+    el.addEventListener('pointerup', endKnobDrag);
+    el.addEventListener('pointercancel', endKnobDrag);
+
+    if (window.WDKit && WDKit.attachWheelGesture) {
+      WDKit.attachWheelGesture(el, () => slider, (s, stepNorm) => {
+        s.setNormalisedValue(clamp(s.getNormalisedValue() + stepNorm, 0, 1));
+        updateDisplay();
+      });
+    } else {
+      el.addEventListener('wheel', ev => {
+        ev.preventDefault();
+        const fine = ev.shiftKey ? 0.1 : 1.0;
+        const direction = ev.deltaY < 0 ? 1 : -1;
+        const n = slider.getNormalisedValue() + direction * fine / 100.0;
+        slider.sliderDragStarted();
+        slider.setNormalisedValue(Math.min(1, Math.max(0, n)));
+        slider.sliderDragEnded();
+        updateDisplay();
+      }, { passive: false });
+    }
+
+    span.addEventListener('pointerdown', ev => ev.stopPropagation());
+    span.addEventListener('dblclick', ev => ev.stopPropagation());
+    span.addEventListener('click', ev => {
+      ev.stopPropagation();
+      if (!span.isConnected) return;
+      const input = document.createElement('input');
+      input.className = 'v';
+      input.value = String(Number(slider.getScaledValue().toFixed(4)));
+      input.setAttribute('aria-label', el.dataset.label || id);
+      let done = false;
+      const commit = keep => {
+        if (done) return;
+        done = true;
+        if (keep) {
+          const raw = input.value.trim();
+          const unitHint = /attack|release/i.test(id) ? 'ms' : '';
+          const v = (window.WDKit && WDKit.parseMusicalValue)
+            ? WDKit.parseMusicalValue(raw, { unit: unitHint })
+            : parseFloat(raw.replace(/[^0-9.+\-eE]/g, ''));
+          if (isFinite(v)) {
+            slider.sliderDragStarted();
+            slider.setNormalisedValue(toNorm(v));
+            slider.sliderDragEnded();
+          }
+        }
+        input.replaceWith(span);
+        updateDisplay();
+      };
+      input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); commit(true); }
+        else if (e.key === 'Escape') { e.preventDefault(); commit(false); }
+        e.stopPropagation();
+      });
+      input.addEventListener('pointerdown', e => e.stopPropagation());
+      input.addEventListener('blur', () => commit(true));
+      span.replaceWith(input);
+      input.focus();
+      input.select();
+    });
+  }
+
+  function bindToggle(el, id, onValueChange = null) {
+    const t = tg(id);
+    if (!el || !t) return;
+    const updateDisplay = () => {
+      const v = !!t.getValue();
+      el.classList.toggle('on', v);
+      if (onValueChange) onValueChange(v);
+    };
+
+    if (t.customListener) t.valueChangedEvent.removeListener(t.customListener);
+    t.customListener = updateDisplay;
+    t.valueChangedEvent.addListener(updateDisplay);
+    updateDisplay();
+
+    const newEl = el.cloneNode(true);
+    el.parentNode.replaceChild(newEl, el);
+    el = newEl;
+    el.addEventListener('click', () => {
+      t.setValue(!t.getValue());
+      updateDisplay();
+    });
+  }
+
+  function bindStepPills(groupEl, id, onChange = null) {
+    if (!groupEl) return;
+    const slider = sl(id);
+    const buttons = groupEl.querySelectorAll('button');
+    const toNorm = (scaled) => {
+      const p = slider ? (slider.properties || { start: 1, end: 6, skew: 1 }) : { start: 1, end: 6, skew: 1 };
+      const spanRange = (p.end - p.start) || 1;
+      return Math.pow(clamp((scaled - p.start) / spanRange, 0, 1), p.skew || 1);
+    };
+    const updateDisplay = () => {
+      const v = slider ? Math.round(slider.getScaledValue()) : bandCount;
+      buttons.forEach(b => b.classList.toggle('on', parseInt(b.dataset.step, 10) === v));
+      if (onChange) onChange(v);
+    };
+    if (slider) {
+      if (slider.customListener) slider.valueChangedEvent.removeListener(slider.customListener);
+      slider.customListener = updateDisplay;
+      slider.valueChangedEvent.addListener(updateDisplay);
+    }
+    updateDisplay();
+    buttons.forEach(b => b.addEventListener('click', () => {
+      if (!slider) { bandCount = parseInt(b.dataset.step, 10); updateBandAvailability(); updateDisplay(); return; }
+      slider.sliderDragStarted();
+      slider.setNormalisedValue(toNorm(parseInt(b.dataset.step, 10)));
+      slider.sliderDragEnded();
+      updateDisplay();
+    }));
+  }
+
+  // ------------------------------------------------- transfer curve well
+  const curveCanvas = $('curveCanvas');
+  const curveCtx = curveCanvas.getContext('2d');
+  let cW = 0, cH = 0, cDpr = 1;
+
+  function fitCurveCanvas() {
+    cDpr = window.devicePixelRatio || 1;
+    const r = curveCanvas.getBoundingClientRect();
+    cW = r.width; cH = r.height;
+    curveCanvas.width = Math.round(cW * cDpr);
+    curveCanvas.height = Math.round(cH * cDpr);
+    curveCtx.setTransform(cDpr, 0, 0, cDpr, 0, 0);
+    drawCurve();
+  }
+  new ResizeObserver(fitCurveCanvas).observe(curveCanvas);
+
+  const CURVE_MIN_DB = -60;
+  const CURVE_MAX_DB_BASE = 6, CURVE_MAX_DB_LIMIT = 36;
+  let CURVE_MAX_DB = CURVE_MAX_DB_BASE;
+
+  function fitCurveRange() {
+    let needed = CURVE_MAX_DB_BASE;
+    if (staticCurve && staticCurve.outVals) {
+      for (const outDb of staticCurve.outVals) {
+        if (typeof outDb === 'number' && isFinite(outDb) && outDb > needed) needed = outDb;
+      }
+    }
+    const snapped = Math.min(CURVE_MAX_DB_LIMIT, Math.ceil(needed / 6) * 6);
+    CURVE_MAX_DB = Math.max(CURVE_MAX_DB_BASE, snapped);
+  }
+
+  function curveOutAt(inDb) {
+    const xs = staticCurve.inVals, ys = staticCurve.outVals;
+    if (inDb <= xs[0]) return ys[0];
+    if (inDb >= xs[xs.length - 1]) return ys[ys.length - 1];
+    let lo = 0, hi = xs.length - 1;
+    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (xs[m] <= inDb) lo = m; else hi = m; }
+    const t = (inDb - xs[lo]) / (xs[hi] - xs[lo] || 1);
+    return ys[lo] + t * (ys[hi] - ys[lo]);
+  }
+
+  function drawCurve() {
+    curveCtx.clearRect(0, 0, cW, cH);
+    if (cW < 40 || cH < 40) return;
+    fitCurveRange();
+
+    const pad = 18;
+    const drawW = cW - pad * 2, drawH = cH - pad * 2;
+    if (drawW < 20 || drawH < 20) return;
+    const span = CURVE_MAX_DB - CURVE_MIN_DB;
+    const toX = db => pad + (db - CURVE_MIN_DB) / span * drawW;
+    const toY = db => pad + drawH - (clamp(db, CURVE_MIN_DB, CURVE_MAX_DB) - CURVE_MIN_DB) / span * drawH;
+
+    // axes
+    curveCtx.strokeStyle = ink(0.08);
+    curveCtx.lineWidth = 1;
+    curveCtx.beginPath();
+    curveCtx.moveTo(toX(0), pad * 0.4); curveCtx.lineTo(toX(0), cH - pad * 0.4);
+    curveCtx.moveTo(pad * 0.4, toY(0)); curveCtx.lineTo(cW - pad * 0.4, toY(0));
+    curveCtx.stroke();
+
+    // unity guide line
+    curveCtx.strokeStyle = ink(0.16);
+    curveCtx.setLineDash([3, 4]);
+    curveCtx.beginPath();
+    curveCtx.moveTo(toX(CURVE_MIN_DB), toY(CURVE_MIN_DB));
+    curveCtx.lineTo(toX(CURVE_MAX_DB), toY(CURVE_MAX_DB));
+    curveCtx.stroke();
+    curveCtx.setLineDash([]);
+
+    if (!staticCurve || !staticCurve.inVals || !staticCurve.inVals.length) return;
+
+    // static curve setting: accent
+    curveCtx.strokeStyle = COL.accentLit;
+    curveCtx.lineWidth = 2.6;
+    curveCtx.lineJoin = 'round';
+    curveCtx.beginPath();
+    let started = false;
+    for (let i = 0; i < staticCurve.inVals.length; ++i) {
+      const inDb = staticCurve.inVals[i], outDb = staticCurve.outVals[i];
+      if (inDb < CURVE_MIN_DB || inDb > CURVE_MAX_DB) continue;
+      const px = toX(inDb), py = toY(outDb);
+      if (!started) { curveCtx.moveTo(px, py); started = true; } else { curveCtx.lineTo(px, py); }
+    }
+    curveCtx.stroke();
+
+    // live detector position: cyan when active band has Ext key enabled, else cream highlight
+    const det = liveBandDetDbs[selectedBand - 1];
+    if (typeof det === 'number' && det > CURVE_MIN_DB) {
+      const end = Math.min(det, CURVE_MAX_DB);
+      const useCyan = isBandExtKeyOn(selectedBand);
+      curveCtx.strokeStyle = useCyan ? keyCyan() : ink(0.92);
+      curveCtx.lineWidth = 3.4;
+      curveCtx.beginPath();
+      curveCtx.moveTo(toX(CURVE_MIN_DB), toY(curveOutAt(CURVE_MIN_DB)));
+      for (let db = CURVE_MIN_DB + 1; db < end; ++db) curveCtx.lineTo(toX(db), toY(curveOutAt(db)));
+      curveCtx.lineTo(toX(end), toY(curveOutAt(end)));
+      curveCtx.stroke();
+      curveCtx.fillStyle = useCyan ? keyCyan() : COL.cream;
+      curveCtx.beginPath();
+      curveCtx.arc(toX(end), toY(curveOutAt(end)), 4, 0, Math.PI * 2);
+      curveCtx.fill();
+    }
+  }
+
+  // ----------------------------------------------- spectrum/band well
+  const splitCanvas = $('spectrumCanvas');
+  const splitCtx = splitCanvas.getContext('2d');
+  let sW = 0, sH = 0, sDpr = 1;
+
+  function fitSplitCanvas() {
+    sDpr = window.devicePixelRatio || 1;
+    const r = splitCanvas.getBoundingClientRect();
+    sW = r.width; sH = r.height;
+    splitCanvas.width = Math.round(sW * sDpr);
+    splitCanvas.height = Math.round(sH * sDpr);
+    splitCtx.setTransform(sDpr, 0, 0, sDpr, 0, 0);
+    drawSplits();
+  }
+  new ResizeObserver(fitSplitCanvas).observe(splitCanvas);
+
+  const FMIN = 20.0, FMAX = 20000.0;
+  const DB_MIN = -80.0, DB_MAX = 10.0;
+  const hzToX = hz => clamp((Math.log(hz / FMIN) / Math.log(FMAX / FMIN)) * sW, 0, sW);
+  const xToHz = x => FMIN * Math.pow(FMAX / FMIN, clamp(x / sW, 0, 1));
+
+  let dragSplitIdx = -1;
+
+  let dragBandShelf = null;
+
+  function isBandUpwardOn(b) {
+    const t = tg('upward' + b);
+    return t ? !!t.getValue() : !!$('param_upward' + b)?.classList.contains('on');
+  }
+  function isBandBypassed(b) {
+    const t = tg('bypass' + b);
+    return t ? !!t.getValue() : !!$('param_bypass' + b)?.classList.contains('on');
+  }
+  function isBandSoloOn(b) {
+    const t = tg('solo' + b);
+    return t ? !!t.getValue() : !!$('param_solo' + b)?.classList.contains('on');
+  }
+  function bandParamVal(base, b, fallback) {
+    const s = sl(base + b);
+    if (!s) return fallback;
+    const v = s.getScaledValue();
+    return isFinite(v) ? v : fallback;
+  }
+
+  function bandEdges() {
+    const xs = [0];
+    for (let i = 0; i < bandCount - 1; ++i) xs.push(hzToX(splitsHz[i]));
+    xs.push(sW);
+    return xs;
+  }
+
+  function drawSmoothSpectrum(data, plotH, strokeStyle, fillTop, fillBot, lineWidth = 1.6) {
+    if (!data || !data.length) return;
+    const n = data.length;
+    const trace = () => {
+      for (let i = 0; i < n; ++i) {
+        const db = typeof data[i] === 'number' && isFinite(data[i]) ? data[i] : DB_MIN;
+        const x = (i / Math.max(1, n - 1)) * sW;
+        const y = plotH - clamp((db - DB_MIN) / (DB_MAX - DB_MIN), 0, 1) * plotH;
+        if (i === 0) splitCtx.moveTo(x, y);
+        else splitCtx.lineTo(x, y);
+      }
+    };
+    if (fillTop) {
+      const grad = splitCtx.createLinearGradient(0, 0, 0, plotH);
+      grad.addColorStop(0, fillTop);
+      grad.addColorStop(1, fillBot || 'rgba(0,0,0,0)');
+      splitCtx.beginPath();
+      trace();
+      splitCtx.lineTo(sW, plotH);
+      splitCtx.lineTo(0, plotH);
+      splitCtx.closePath();
+      splitCtx.fillStyle = grad;
+      splitCtx.fill();
+    }
+    splitCtx.beginPath();
+    trace();
+    splitCtx.strokeStyle = strokeStyle;
+    splitCtx.lineWidth = lineWidth;
+    splitCtx.lineJoin = 'round';
+    splitCtx.stroke();
+  }
+
+  function drawSplits() {
+    splitCtx.clearRect(0, 0, sW, sH);
+    if (sW < 40 || sH < 40) return;
+
+    const axis = 16;
+    const plotH = sH - axis;
+    const edges = bandEdges();
+    const isLight = isLightTheme();
+
+    // Band block backgrounds: subtle alternating band lanes + selected band highlight
+    for (let b = 0; b < bandCount; ++b) {
+      const active = (b === selectedBand - 1);
+      splitCtx.fillStyle = active
+        ? (isLight ? 'rgba(79, 144, 112, 0.10)' : 'rgba(130, 194, 161, 0.065)')
+        : ink(b % 2 === 0 ? 0.032 : 0.015);
+      splitCtx.fillRect(edges[b], 0, edges[b + 1] - edges[b], plotH);
+    }
+
+    // Decade & dB grid marks
+    splitCtx.font = '600 9px ' + cssVar('--font');
+    splitCtx.fillStyle = ink(0.34);
+    splitCtx.textAlign = 'center';
+    [50, 100, 200, 500, 1000, 2000, 5000, 10000].forEach(hz => {
+      const x = hzToX(hz);
+      splitCtx.beginPath(); splitCtx.moveTo(x, 0); splitCtx.lineTo(x, plotH);
+      splitCtx.strokeStyle = ink(0.06); splitCtx.lineWidth = 1; splitCtx.stroke();
+      splitCtx.fillText(hz >= 1000 ? (hz / 1000) + 'k' : String(hz), x, sH - 4);
+    });
+
+    // Smooth 240-bin Pre (Input) and Post (Output) spectra
+    drawSmoothSpectrum(
+      preSpectrumData, plotH,
+      isLight ? 'rgba(242, 237, 228, 0.36)' : 'rgba(242, 245, 250, 0.34)',
+      isLight ? 'rgba(242, 237, 228, 0.10)' : 'rgba(242, 245, 250, 0.08)',
+      'rgba(0, 0, 0, 0.0)', 1.25
+    );
+    drawSmoothSpectrum(
+      postSpectrumData, plotH,
+      COL.accentLit,
+      isLight ? 'rgba(130, 194, 161, 0.30)' : 'rgba(79, 144, 112, 0.32)',
+      'rgba(79, 144, 112, 0.02)', 1.85
+    );
+
+    // External Key spectrum curve + fill (cyan when External Key or SC Listen is active)
+    if (scActive && scSpectrumData && scSpectrumData.length && (anyExtKeyOn() || isScListenOn())) {
+      drawSmoothSpectrum(
+        scSpectrumData, plotH,
+        keyCyan(),
+        isLight ? 'rgba(2, 132, 199, 0.24)' : 'rgba(56, 189, 248, 0.24)',
+        isLight ? 'rgba(2, 132, 199, 0.02)' : 'rgba(56, 189, 248, 0.02)',
+        1.9
+      );
+    }
+
+    // Dynamic Band-Shelf Axis (-24 dB .. +24 dB centered at plotH * 0.50)
+    const yZero = plotH * 0.50;
+    const shelfScale = plotH * 0.39;
+    const gainToY = gDb => clamp(yZero - (clamp(gDb, -24, 24) / 24.0) * shelfScale, 5, plotH - 6);
+
+    splitCtx.strokeStyle = ink(0.16);
+    splitCtx.lineWidth = 1;
+    splitCtx.setLineDash([3, 4]);
+    splitCtx.beginPath();
+    splitCtx.moveTo(0, yZero);
+    splitCtx.lineTo(sW, yZero);
+    splitCtx.stroke();
+    splitCtx.setLineDash([]);
+
+    // Per-band Dynamic Shelf: static Level baseline + Range zone + live signed Gain delta
+    const boostCol = '#34d399';
+    for (let b = 0; b < bandCount; ++b) {
+      const idx = b + 1;
+      const x0 = edges[b], x1 = edges[b + 1], w = x1 - x0;
+      const lvlDb = bandParamVal('level', idx, 0.0);
+      const rangeDb = Math.max(0.0, bandParamVal('range', idx, 24.0));
+      const upward = isBandUpwardOn(idx);
+      const bypassed = isBandBypassed(idx);
+      const solo = isBandSoloOn(idx);
+      const rawGr = bypassed ? 0.0 : (bandGrDbs[b] || 0.0);
+
+      const yStatic = gainToY(lvlDb);
+      const yRangeLim = gainToY(lvlDb + (upward ? Math.min(24, rangeDb) : -Math.min(24, rangeDb)));
+      const yLive = gainToY(lvlDb + rawGr);
+
+      if (!bypassed && rangeDb > 0.1) {
+        const ry0 = Math.min(yStatic, yRangeLim);
+        const rh = Math.abs(yRangeLim - yStatic);
+        splitCtx.fillStyle = upward
+          ? 'rgba(52, 211, 153, 0.075)'
+          : 'rgba(130, 194, 161, 0.065)';
+        splitCtx.fillRect(x0 + 1, ry0, Math.max(0, w - 2), rh);
+      }
+
+      // Active dynamic excursion ribbon between static band Level and live dynamic shelf
+      if (!bypassed && Math.abs(rawGr) > 0.04) {
+        const isUp = rawGr > 0;
+        const ry0 = Math.min(yStatic, yLive);
+        const rh = Math.max(1.5, Math.abs(yLive - yStatic));
+        splitCtx.fillStyle = isUp
+          ? 'rgba(52, 211, 153, 0.28)'
+          : 'rgba(79, 144, 112, 0.34)';
+        splitCtx.fillRect(x0 + 1, ry0, Math.max(0, w - 2), rh);
+      }
+
+      // Static band level shelf (dashed)
+      splitCtx.strokeStyle = bypassed ? ink(0.22) : ink(b === selectedBand - 1 ? 0.55 : 0.32);
+      splitCtx.lineWidth = 1.2;
+      splitCtx.setLineDash([4, 3]);
+      splitCtx.beginPath();
+      splitCtx.moveTo(x0 + 2, yStatic);
+      splitCtx.lineTo(x1 - 2, yStatic);
+      splitCtx.stroke();
+      splitCtx.setLineDash([]);
+
+      // Live dynamic shelf curve segment
+      splitCtx.strokeStyle = bypassed
+        ? ink(0.28)
+        : (rawGr > 0.05 ? boostCol : COL.accentLit);
+      splitCtx.lineWidth = (b === selectedBand - 1) ? 2.6 : 2.0;
+      splitCtx.beginPath();
+      splitCtx.moveTo(x0 + 1, yLive);
+      splitCtx.lineTo(x1 - 1, yLive);
+      splitCtx.stroke();
+
+      if (b === selectedBand - 1 && bandCount > 1) {
+        splitCtx.fillStyle = upward ? boostCol : COL.accentLit;
+        splitCtx.fillRect(x0, 0, w, 3);
+      }
+
+      // Band plate + mode/delta readouts
+      const cx = x0 + w / 2;
+      const modeSuffix = bypassed ? ' · BYP' : (solo ? ' · SOLO' : (upward ? ' · UP' : ''));
+      const label = 'B' + idx + modeSuffix;
+      splitCtx.font = '700 9.5px ' + cssVar('--font');
+      const tw = splitCtx.measureText(label).width;
+      if (w > tw + 16) {
+        splitCtx.fillStyle = 'rgba(12, 15, 22, 0.82)';
+        splitCtx.beginPath();
+        if (splitCtx.roundRect) splitCtx.roundRect(cx - tw / 2 - 6, plotH - 23, tw + 12, 15, 7);
+        else splitCtx.rect(cx - tw / 2 - 6, plotH - 23, tw + 12, 15);
+        splitCtx.fill();
+        splitCtx.fillStyle = upward && !bypassed ? boostCol : ink(b === selectedBand - 1 ? 0.90 : 0.55);
+        splitCtx.textBaseline = 'middle';
+        splitCtx.fillText(label, cx, plotH - 15);
+        splitCtx.textBaseline = 'alphabetic';
+      }
+
+      if (!bypassed && w > 38 && Math.abs(rawGr) > 0.05) {
+        const txt = (rawGr > 0 ? '+' : '') + rawGr.toFixed(1) + ' dB';
+        splitCtx.font = '700 10.5px ' + cssVar('--font-mono');
+        splitCtx.fillStyle = rawGr > 0 ? boostCol : COL.accentLit;
+        splitCtx.textBaseline = 'middle';
+        const labelY = clamp(yLive + (rawGr > 0 ? -10 : 11), 28, plotH - 30);
+        splitCtx.fillText(txt, cx, labelY);
+        splitCtx.textBaseline = 'alphabetic';
+      }
+    }
+
+    // Crossover handles
+    for (let i = 0; i < bandCount - 1; ++i) {
+      const x = hzToX(splitsHz[i]);
+      const dragging = dragSplitIdx === i;
+      splitCtx.strokeStyle = ink(dragging ? 0.88 : 0.48);
+      splitCtx.lineWidth = 1.5;
+      splitCtx.setLineDash([4, 4]);
+      splitCtx.beginPath(); splitCtx.moveTo(x, 0); splitCtx.lineTo(x, plotH); splitCtx.stroke();
+      splitCtx.setLineDash([]);
+
+      const label = splitsHz[i] >= 1000 ? (splitsHz[i] / 1000).toFixed(1) + ' kHz' : Math.round(splitsHz[i]) + ' Hz';
+      splitCtx.font = '700 10px ' + cssVar('--font');
+      const tw = splitCtx.measureText(label).width + 14;
+      splitCtx.fillStyle = COL.cream;
+      splitCtx.beginPath();
+      if (splitCtx.roundRect) splitCtx.roundRect(x - tw / 2, 7, tw, 18, 9);
+      else splitCtx.rect(x - tw / 2, 7, tw, 18);
+      splitCtx.fill();
+      splitCtx.fillStyle = COL.well;
+      splitCtx.textAlign = 'center';
+      splitCtx.textBaseline = 'middle';
+      splitCtx.fillText(label, x, 16.5);
+      splitCtx.textBaseline = 'alphabetic';
+    }
+  }
+
+  splitCanvas.addEventListener('pointerdown', ev => {
+    if ((ev.button ?? 0) !== 0) return;
+    const r = splitCanvas.getBoundingClientRect();
+    const mx = ev.clientX - r.left;
+    dragSplitIdx = -1;
+    dragBandShelf = null;
+    let closest = 15;
+    for (let i = 0; i < bandCount - 1; ++i) {
+      const d = Math.abs(mx - hzToX(splitsHz[i]));
+      if (d < closest) { closest = d; dragSplitIdx = i; }
+    }
+    if (dragSplitIdx !== -1) {
+      const slider = sl('split' + (dragSplitIdx + 1));
+      if (slider) slider.sliderDragStarted();
+      splitCanvas.setPointerCapture(ev.pointerId);
+      ev.preventDefault();
+    } else {
+      const edges = bandEdges();
+      let hitBand = selectedBand;
+      for (let b = 0; b < bandCount; ++b) {
+        if (mx >= edges[b] && mx <= edges[b + 1]) { hitBand = b + 1; break; }
+      }
+      selectBand(hitBand);
+      if (ev.altKey) {
+        const soloToggle = tg('solo' + hitBand);
+        if (soloToggle) soloToggle.setValue(!soloToggle.getValue());
+        drawSplits();
+        return;
+      }
+      const targetId = (ev.shiftKey ? 'threshold' : 'level') + hitBand;
+      const slider = sl(targetId);
+      if (slider) {
+        dragBandShelf = {
+          band: hitBand,
+          slider,
+          startY: ev.clientY,
+          startNorm: slider.getNormalisedValue(),
+          engaged: false
+        };
+        splitCanvas.setPointerCapture(ev.pointerId);
+        ev.preventDefault();
+      }
+    }
+    drawSplits();
+  });
+
+  splitCanvas.addEventListener('dblclick', ev => {
+    const r = splitCanvas.getBoundingClientRect();
+    const mx = ev.clientX - r.left;
+    let hit = -1, closest = 15;
+    for (let i = 0; i < bandCount - 1; ++i) {
+      const d = Math.abs(mx - hzToX(splitsHz[i]));
+      if (d < closest) { closest = d; hit = i; }
+    }
+    if (hit !== -1) {
+      const slider = sl('split' + (hit + 1));
+      const p = slider && slider.properties ? slider.properties : { start: 20, end: 20000, skew: 1 };
+      const def = typeof p.defaultValue === 'number' ? p.defaultValue : null;
+      if (slider && def !== null) {
+        const lin = clamp((def - p.start) / ((p.end - p.start) || 1), 0, 1);
+        slider.sliderDragStarted();
+        slider.setNormalisedValue(Math.pow(lin, p.skew || 1));
+        slider.sliderDragEnded();
+        drawSplits();
+      }
+      return;
+    }
+    const targetId = (ev.shiftKey ? 'threshold' : 'level') + selectedBand;
+    const slider = sl(targetId);
+    if (slider && slider.properties && typeof slider.properties.defaultValue === 'number') {
+      const p = slider.properties;
+      const lin = clamp((p.defaultValue - p.start) / ((p.end - p.start) || 1), 0, 1);
+      slider.sliderDragStarted();
+      slider.setNormalisedValue(Math.pow(lin, p.skew || 1));
+      slider.sliderDragEnded();
+      drawSplits();
+      drawCurve();
+    }
+  });
+
+  splitCanvas.addEventListener('pointermove', ev => {
+    const r = splitCanvas.getBoundingClientRect();
+    if (dragBandShelf) {
+      const dy = dragBandShelf.startY - ev.clientY;
+      if (!dragBandShelf.engaged && Math.abs(dy) >= 2) {
+        dragBandShelf.engaged = true;
+        dragBandShelf.slider.sliderDragStarted();
+      }
+      if (dragBandShelf.engaged) {
+        const fine = ev.ctrlKey ? 0.2 : 1.0;
+        const nextNorm = clamp(dragBandShelf.startNorm + (dy * fine) / 160.0, 0, 1);
+        dragBandShelf.slider.setNormalisedValue(nextNorm);
+        drawSplits();
+        drawCurve();
+      }
+      return;
+    }
+    if (dragSplitIdx === -1) {
+      const mx = ev.clientX - r.left;
+      let near = false;
+      for (let i = 0; i < bandCount - 1; ++i)
+        if (Math.abs(mx - hzToX(splitsHz[i])) < 15) near = true;
+      splitCanvas.style.cursor = near ? 'ew-resize' : 'ns-resize';
+      return;
+    }
+    const mx = clamp(ev.clientX - r.left, 5, sW - 5);
+    const minRatio = 1.41421356;
+    let minF = FMIN, maxF = FMAX;
+    if (dragSplitIdx > 0) minF = splitsHz[dragSplitIdx - 1] * minRatio;
+    if (dragSplitIdx < bandCount - 2) maxF = splitsHz[dragSplitIdx + 1] / minRatio;
+    const newHz = clamp(xToHz(mx), minF, maxF);
+    splitsHz[dragSplitIdx] = newHz;
+    const slider = sl('split' + (dragSplitIdx + 1));
+    if (slider) {
+      const p = slider.properties || { start: 20, end: 20000, skew: 1 };
+      const lin = (newHz - p.start) / (p.end - p.start);
+      slider.setNormalisedValue(Math.pow(clamp(lin, 0, 1), p.skew || 1));
+    }
+    updateRangeText();
+    drawSplits();
+  });
+
+  const endMultiSplitDrag = ev => {
+    if (dragBandShelf) {
+      if (dragBandShelf.engaged) dragBandShelf.slider.sliderDragEnded();
+      dragBandShelf = null;
+      try { splitCanvas.releasePointerCapture(ev.pointerId); } catch (e) {}
+      drawSplits();
+    }
+    if (dragSplitIdx !== -1) {
+      const slider = sl('split' + (dragSplitIdx + 1));
+      if (slider) slider.sliderDragEnded();
+      try { splitCanvas.releasePointerCapture(ev.pointerId); } catch (e) {}
+      dragSplitIdx = -1;
+      drawSplits();
+    }
+  };
+  splitCanvas.addEventListener('pointerup', endMultiSplitDrag);
+  splitCanvas.addEventListener('pointercancel', endMultiSplitDrag);
+
+  if (window.WDKit && WDKit.attachWheelGesture) {
+    WDKit.attachWheelGesture(splitCanvas, () => sl('ratio' + selectedBand), (s, stepNorm) => {
+      s.setNormalisedValue(clamp(s.getNormalisedValue() + stepNorm, 0, 1));
+      drawCurve();
+      drawSplits();
+    });
+  }
+
+  // -------------------------------------------------------- band selection
+  function bandRangeText(b) {
+    const fmtHz = hz => hz >= 1000 ? (hz / 1000).toFixed(1) + ' kHz' : Math.round(hz) + ' Hz';
+    const lo = b === 1 ? '20 Hz' : fmtHz(splitsHz[b - 2]);
+    const hi = b === bandCount ? '20 kHz' : fmtHz(splitsHz[b - 1]);
+    return lo + ' – ' + hi;
+  }
+
+  function updateRangeText() {
+    const t = $('active_band_title');
+    if (t) t.textContent = bandCount <= 1 ? 'Whole signal' : bandRangeText(selectedBand);
+  }
+
+  function selectBand(b) {
+    selectedBand = clamp(b, 1, bandCount);
+
+    for (let i = 1; i <= MAX_BANDS; ++i) {
+      const btn = $('sel_band_' + i);
+      if (btn) btn.classList.toggle('on', i === selectedBand);
+      const pane = $('band_pane_' + i);
+      if (pane) pane.classList.toggle('active', i === selectedBand);
+    }
+    updateRangeText();
+    $('curve_title').textContent = 'Band ' + selectedBand + ' transfer';
+    $('bandGrLabel').textContent = 'Band ' + selectedBand;
+
+    if (host) {
+      host.call('selectBand', selectedBand - 1).catch(() => {});
+      host.call('requestStaticCurve').catch(() => {});
+    }
+    drawCurve();
+    drawSplits();
+  }
+
+  for (let b = 1; b <= MAX_BANDS; ++b) {
+    const btn = $('sel_band_' + b);
+    if (btn) btn.addEventListener('click', () => { if (!btn.disabled) selectBand(b); });
+  }
+
+  function updateBandAvailability() {
+    for (let b = 1; b <= MAX_BANDS; ++b) {
+      const btn = $('sel_band_' + b);
+      if (btn) btn.disabled = b > bandCount;
+    }
+    const cross = $('crossoverContainer');
+    if (cross) cross.classList.remove('inactive');
+    const hint = $('crossoverHint');
+    if (hint) hint.textContent = bandCount <= 1
+      ? 'Drag band for Level (Shift = Thresh · Wheel = Ratio)'
+      : 'Drag split · Drag band for Level (Shift = Thresh)';
+    selectBand(Math.min(selectedBand, bandCount));
+  }
+
+  // ------------------------------------------------------------- formats
+  const fmtDb = v => (v > 0 ? '+' : '') + v.toFixed(1) + ' dB';
+  const fmtDbPlain = v => v.toFixed(1) + ' dB';
+  const fmtRatio = v => v.toFixed(1) + ':1';
+  const fmtMs = v => v < 1.0 ? v.toFixed(2) + ' ms' : v < 10.0 ? v.toFixed(1) + ' ms' : Math.round(v) + ' ms';
+  const fmtPct = v => Math.round(v) + '%';
+
+  // ------------------------------------------------------------------- init
+  function initAll() {
+    document.querySelectorAll('.knob').forEach(mountKnob);
+
+    bindSlider($('param_mix'), 'mix', fmtPct); bindSlider($('param_stereoLink'), 'stereoLink', fmtPct);
+    bindSlider($('param_output'), 'output', fmtDb);
+    bindToggle($('param_msMode'), 'msMode');
+    bindToggle($('param_sclisten'), 'sclisten', () => {
+      updateBeaconLed();
+      updateSpectrumKeyBadge();
+      drawSplits();
+      drawCurve();
+    });
+    bindToggle($('param_delta'), 'delta');
+    bindToggle($('param_power'), 'power', v => {
+      const b = $('param_power');
+      if (b) b.lastChild.textContent = v ? 'Engaged' : 'Bypassed';
+    });
+
+    for (let s = 1; s <= 5; ++s) {
+      const slider = sl('split' + s);
+      if (slider) {
+        const updateSplit = () => {
+          splitsHz[s - 1] = slider.getScaledValue();
+          updateRangeText();
+          drawSplits();
+        };
+        slider.valueChangedEvent.addListener(updateSplit);
+        splitsHz[s - 1] = slider.getScaledValue();
+      }
+    }
+
+    for (let b = 1; b <= MAX_BANDS; ++b) {
+      bindSlider($('param_threshold' + b), 'threshold' + b, fmtDb, () => drawSplits());
+      bindSlider($('param_ratio' + b), 'ratio' + b, fmtRatio);
+      bindSlider($('param_knee' + b), 'knee' + b, fmtDbPlain);
+      bindSlider($('param_range' + b), 'range' + b, fmtDbPlain, () => drawSplits());
+      bindSlider($('param_attack' + b), 'attack' + b, fmtMs);
+      bindSlider($('param_release' + b), 'release' + b, fmtMs);
+      bindSlider($('param_level' + b), 'level' + b, fmtDb, () => drawSplits());
+      bindToggle($('param_autoRelease' + b), 'autoRelease' + b);
+      bindToggle($('param_upward' + b), 'upward' + b, () => {
+        if (host && b === selectedBand) host.call('requestStaticCurve').catch(() => {});
+        const modeEl = $('bandGrMode');
+        if (modeEl && b === selectedBand) modeEl.textContent = isBandUpwardOn(b) ? 'Boost' : 'Reduction';
+        drawSplits();
+        drawCurve();
+      });
+      bindToggle($('param_extKey' + b), 'extKey' + b, () => {
+        updateBeaconLed();
+        updateSpectrumKeyBadge();
+        drawSplits();
+        drawCurve();
+      });
+      bindToggle($('param_solo' + b), 'solo' + b, () => drawSplits());
+      bindToggle($('param_bypass' + b), 'bypass' + b, () => {
+        if (host && b === selectedBand) host.call('requestStaticCurve').catch(() => {});
+        drawSplits();
+        drawCurve();
+      });
+    }
+
+    bindStepPills($('bandcount-group'), 'bandCount', n => {
+      const clamped = clamp(n, 1, MAX_BANDS);
+      if (clamped !== bandCount) {
+        bandCount = clamped;
+        updateBandAvailability();
+        updateBeaconLed();
+        updateSpectrumKeyBadge();
+      }
+    });
+
+    if (window.WDKit && WDKit.enhanceAllKnobs) WDKit.enhanceAllKnobs(sl);
+    updateBandAvailability();
+  }
+
+  function renderSelfTrackChip() {
+    const chip = $('selfTrackChip');
+    const nameEl = $('selfTrackName');
+    if (nameEl && nameEl.isConnected && !nameEl.querySelector('input'))
+      nameEl.textContent = selfMeta.name || 'Multi 1';
+    if (chip) {
+      const pubName = selfMeta.publishedName || selfMeta.name || 'Multi 1';
+      chip.title = 'Click to rename this Multiband track · Broadcasting on Beacon as "' + pubName + '"';
+    }
+  }
+
+  function startInlineTrackRename(labelEl, currentText) {
+    if (!labelEl || labelEl.querySelector('input')) return;
+    const prev = currentText;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.maxLength = 47;
+    input.className = 'track-name-input';
+    input.value = prev;
+    let done = false;
+    const commit = async keep => {
+      if (done) return;
+      done = true;
+      const next = keep ? input.value.trim() : prev;
+      input.replaceWith(labelEl);
+      if (keep && host) {
+        try {
+          const res = await host.call('setInstanceName', next);
+          if (res && res.ok) {
+            selfMeta.name = res.name || selfMeta.name;
+            selfMeta.customName = res.customName || '';
+            if (typeof res.beaconPublishedName === 'string') selfMeta.publishedName = res.beaconPublishedName;
+            if (typeof res.beaconPublishing === 'boolean') selfMeta.publishing = res.beaconPublishing;
+            renderSelfTrackChip();
+            await refreshBeaconSources();
+          }
+        } catch (e) {}
+      }
+    };
+    input.addEventListener('keydown', ev => {
+      if (ev.key === 'Enter') { ev.preventDefault(); commit(true); }
+      else if (ev.key === 'Escape') { ev.preventDefault(); commit(false); }
+      ev.stopPropagation();
+    });
+    input.addEventListener('pointerdown', ev => ev.stopPropagation());
+    input.addEventListener('blur', () => commit(true));
+    labelEl.replaceWith(input);
+    input.focus({ preventScroll: true });
+    input.select();
+  }
+
+  {
+    const chip = $('selfTrackChip');
+    if (chip) {
+      chip.addEventListener('click', () => startInlineTrackRename($('selfTrackName'), selfMeta.customName || selfMeta.name));
+    }
+  }
+
+  function updateSpectrumKeyBadge() {
+    const badge = $('specKeyBadge');
+    const label = $('specKeyLabel');
+    if (!badge || !label) return;
+    const show = scActive && (anyExtKeyOn() || isScListenOn());
+    badge.hidden = !show;
+    if (show) {
+      label.textContent = 'Key: ' + (beaconSelected || 'Host Bus');
+    }
+  }
+
+  function updateBeaconLed() {
+    const wrap = $('beaconPickerWrap');
+    if (!wrap) return;
+    wrap.classList.remove('receiving', 'waiting', 'mismatch');
+    const keyConsumer = anyExtKeyOn() || isScListenOn();
+    const baseTip = 'Select an active Werewolf Digital Beacon track for external multiband sidechain keying. Wireless cross-track key — for sample-exact timing at large DAW buffer sizes (1024+), use Off (Host Bus) with a DAW sidechain send.';
+    if (beaconSelected && beaconSrMismatch) {
+      wrap.classList.add('mismatch');
+      wrap.title = `Sample rate mismatch on Beacon source "${beaconSelected}" — sidechain input is muted.`;
+    } else if (beaconSelected && !keyConsumer) {
+      wrap.classList.add('waiting');
+      wrap.title = `Beacon source "${beaconSelected}" is selected, but no band has Ext key enabled (and SC Listen is off) — enable Ext key on a band to key from Beacon.`;
+    } else if (beaconSelected && keyConsumer) {
+      wrap.classList.add(beaconReceiving ? 'receiving' : 'waiting');
+      wrap.title = (beaconReceiving
+        ? `Receiving external sidechain audio from WD Beacon "${beaconSelected}".`
+        : `Waiting for audio from WD Beacon "${beaconSelected}" (active on Bus 1 fallback only if Bus 1 is enabled).`)
+        + ' ' + baseTip;
+    } else if (!beaconSelected && keyConsumer) {
+      wrap.classList.add(scActive ? 'receiving' : 'waiting');
+      wrap.title = scActive
+        ? 'Receiving external sidechain audio from Host Bus 1. ' + baseTip
+        : 'Ext key is enabled — waiting for audio on Host Bus 1 or select a WD Beacon source.';
+    } else if (!beaconSelected && !keyConsumer && scActive) {
+      wrap.classList.add('waiting');
+      wrap.title = 'Host Bus 1 sidechain signal detected, but no band has Ext key enabled (and SC Listen is off) — enable Ext key on a band to key from Host Bus 1.';
+    } else {
+      wrap.title = baseTip;
+    }
+  }
+
+  function renderBeaconSources(res) {
+    const sel = $('beaconSourceSelect');
+    if (!sel || !res || typeof res !== 'object') {
+      updateBeaconLed();
+      return;
+    }
+    if (typeof res.selected === 'string') beaconSelected = res.selected;
+    if (!beaconMetersSeen && typeof res.receiving === 'boolean') beaconReceiving = res.receiving;
+    if (typeof res.srMismatch === 'boolean') beaconSrMismatch = res.srMismatch;
+    if (typeof res.scActive === 'boolean') scActive = res.scActive;
+    const sources = Array.isArray(res.sources) ? res.sources : [];
+    const sig = sources.map(s => `${s.name}:${s.sr}:${s.ch}`).join('|') + '#' + beaconSelected;
+    updateBeaconLed();
+    updateSpectrumKeyBadge();
+    if (document.activeElement === sel || sig === lastBeaconSig) return;
+    lastBeaconSig = sig;
+    sel.textContent = '';
+    const busOpt = document.createElement('option');
+    busOpt.value = '';
+    busOpt.textContent = 'Off (Host Bus)';
+    sel.appendChild(busOpt);
+    let found = (beaconSelected === '');
+    for (const s of sources) {
+      if (!s || typeof s.name !== 'string') continue;
+      const opt = document.createElement('option');
+      opt.value = s.name;
+      const srK = typeof s.sr === 'number' && s.sr > 0 ? (s.sr / 1000).toFixed(s.sr % 1000 === 0 ? 0 : 1) + 'k' : '?k';
+      const ch = s.ch === 1 ? 'Mono' : s.ch === 2 ? 'St' : ((s.ch || 2) + 'ch');
+      opt.textContent = `${s.name} (${srK} · ${ch})`;
+      sel.appendChild(opt);
+      if (s.name === beaconSelected) found = true;
+    }
+    if (!found && beaconSelected) {
+      const offline = document.createElement('option');
+      offline.value = beaconSelected;
+      offline.textContent = `${beaconSelected} (waiting…)`;
+      sel.appendChild(offline);
+    }
+    sel.value = beaconSelected;
+  }
+
+  async function refreshBeaconSources() {
+    if (!host) return;
+    try {
+      const res = await host.call('getBeaconSources');
+      renderBeaconSources(res);
+    } catch (_) {}
+  }
+
+  function bindBeaconPicker() {
+    const sel = $('beaconSourceSelect');
+    if (!sel) return;
+    sel.addEventListener('change', async () => {
+      beaconSelected = sel.value || '';
+      beaconSrMismatch = false;
+      if (beaconSelected && !anyExtKeyOn()) {
+        const t = tg('extKey' + selectedBand);
+        if (t && !t.getValue()) t.setValue(true);
+        $('param_extKey' + selectedBand)?.classList.add('on');
+      }
+      updateBeaconLed();
+      updateSpectrumKeyBadge();
+      drawSplits();
+      drawCurve();
+      if (host) {
+        try {
+          const res = await host.call('setBeaconSource', beaconSelected);
+          if (res && typeof res.receiving === 'boolean') beaconReceiving = res.receiving;
+          if (res && typeof res.srMismatch === 'boolean') beaconSrMismatch = res.srMismatch;
+          if (res && typeof res.scActive === 'boolean') scActive = res.scActive;
+          updateBeaconLed();
+          updateSpectrumKeyBadge();
+        } catch (_) {}
+      }
+    });
+    sel.addEventListener('focus', refreshBeaconSources);
+    sel.addEventListener('pointerdown', refreshBeaconSources);
+  }
+
+  const beaconEpochWatch = (window.WDKit && WDKit.createBeaconEpochWatcher)
+    ? WDKit.createBeaconEpochWatcher(refreshBeaconSources)
+    : null;
+
+  if (window.WDKit && WDKit.mountHeaderKit) {
+    WDKit.mountHeaderKit({ host });
+  }
+  if (window.WDKit && WDKit.syncGlobalTheme) {
+    WDKit.syncGlobalTheme(host, t => {
+      applyTheme(t);
+      drawCurve();
+      drawSplits();
+    });
+  }
+
+  setTimeout(async () => {
+    initAll();
+    bindBeaconPicker();
+    fitCurveCanvas();
+    fitSplitCanvas();
+
+    if (host) {
+      try {
+        await host.call('selectBand', selectedBand - 1);
+        await host.call('requestStaticCurve');
+      } catch (e) { console.warn('initial curve request failed', e); }
+
+      try {
+        const uiState = await host.call('getUiState');
+        if (uiState) {
+          if (uiState.build) $('buildTag').textContent = uiState.build;
+          if (uiState.sampleRate) $('srTag').textContent = (uiState.sampleRate / 1000).toFixed(1) + ' kHz';
+          if (window.WDKit && WDKit.bindBrandDiagnostics) {
+            WDKit.bindBrandDiagnostics(document.querySelector('.brand'), {
+              plugin: 'Werewolf Digital Multiband',
+              sampleRate: uiState.sampleRate ? (uiState.sampleRate / 1000).toFixed(1) + ' kHz' : '—',
+              build: uiState.build || '—'
+            });
+          }
+          if (uiState.selfName) selfMeta.name = uiState.selfName;
+          if (typeof uiState.selfCustomName === 'string') selfMeta.customName = uiState.selfCustomName;
+          if (typeof uiState.beaconPublishedName === 'string') selfMeta.publishedName = uiState.beaconPublishedName;
+          if (typeof uiState.beaconPublishing === 'boolean') selfMeta.publishing = uiState.beaconPublishing;
+          if (typeof uiState.beaconSource === 'string') beaconSelected = uiState.beaconSource;
+          if (typeof uiState.beaconReceiving === 'boolean') beaconReceiving = uiState.beaconReceiving;
+          if (typeof uiState.beaconSrMismatch === 'boolean') beaconSrMismatch = uiState.beaconSrMismatch;
+          if (typeof uiState.scActive === 'boolean') scActive = uiState.scActive;
+          renderSelfTrackChip();
+          updateBeaconLed();
+          updateSpectrumKeyBadge();
+        }
+      } catch (e) { console.warn('getUiState call failed', e); }
+      await refreshBeaconSources();
+    } else {
+      renderSelfTrackChip();
+      updateBeaconLed();
+      updateSpectrumKeyBadge();
+    }
+  }, 120);
+
+  // ------------------------------------------------------------ live events
+  function updateSignedBandReadout() {
+    const rawGr = bandGrDbs[selectedBand - 1] || 0;
+    const fast = Math.abs(rawGr) > Math.abs(mBandGr);
+    mBandGr += (rawGr - mBandGr) * (fast ? 0.7 : 0.18);
+    const modeEl = $('bandGrMode');
+    if (modeEl) modeEl.textContent = (isBandUpwardOn(selectedBand) || mBandGr > 0.05) ? 'Boost' : 'Reduction';
+    $('bandGrVal').textContent = Math.abs(mBandGr) < 0.05
+      ? '0.0 dB'
+      : (mBandGr > 0 ? '+' : '') + mBandGr.toFixed(1) + ' dB';
+  }
+
+  function updateOutMeter(out) {
+    if (typeof out !== 'number') return;
+    $('outMeterBar').style.setProperty('--fill', (clamp((out + 60) / 60, 0, 1) * 100).toFixed(1) + '%');
+    $('outMeterVal').textContent = out <= -59.5 ? '—' : (out > 0 ? '+' : '') + out.toFixed(1) + ' dB';
+  }
+
+  function updateMeters(meters) {
+    if (!meters) return;
+    beaconMetersSeen = true;
+    if (beaconEpochWatch) beaconEpochWatch(meters);
+    if (typeof meters.beaconReceiving === 'boolean') beaconReceiving = meters.beaconReceiving;
+    if (typeof meters.beaconSrMismatch === 'boolean') beaconSrMismatch = meters.beaconSrMismatch;
+    if (typeof meters.scActive === 'boolean') scActive = meters.scActive;
+    if (typeof meters.beaconSource === 'string' && !beaconSelected) beaconSelected = meters.beaconSource;
+    if (typeof meters.selfName === 'string' && meters.selfName) selfMeta.name = meters.selfName;
+    if (typeof meters.selfCustomName === 'string') selfMeta.customName = meters.selfCustomName;
+    if (typeof meters.beaconPublishedName === 'string') selfMeta.publishedName = meters.beaconPublishedName;
+    if (typeof meters.beaconPublishing === 'boolean') selfMeta.publishing = meters.beaconPublishing;
+    renderSelfTrackChip();
+    updateBeaconLed();
+    updateSpectrumKeyBadge();
+    if (meters.pre) preSpectrumData = meters.pre;
+    if (meters.post) postSpectrumData = meters.post;
+    if (Array.isArray(meters.sc)) scSpectrumData = meters.sc;
+    if (!scActive) scSpectrumData = null;
+    if (meters.grs) bandGrDbs = meters.grs;
+    if (meters.dets) liveBandDetDbs = meters.dets;
+
+    updateSignedBandReadout();
+    updateOutMeter(meters.out);
+
+    drawSplits();
+    drawCurve();
+  }
+
+  if (host) {
+    host.on('meters', data => { if (data) updateMeters(data); });
+    host.on('staticCurve', data => { staticCurve = data; drawCurve(); });
+    if (window.WDKit && WDKit.createTelemetryPoller) {
+      const kBins = 240;
+      const binPoller = WDKit.createTelemetryPoller(pkt => {
+        if (pkt.kind !== 5 || pkt.floats.length < 15 + 3 * kBins) return;
+        const f = pkt.floats;
+        updateOutMeter(f[1]);
+        for (let b = 0; b < 6; ++b) {
+          bandGrDbs[b] = f[3 + b];
+          liveBandDetDbs[b] = f[9 + b];
+        }
+        preSpectrumData = f.subarray(15, 15 + kBins);
+        postSpectrumData = f.subarray(15 + kBins, 15 + 2 * kBins);
+        scSpectrumData = (pkt.flags & 1) ? f.subarray(15 + 2 * kBins, 15 + 3 * kBins) : null;
+        updateSignedBandReadout();
+        drawSplits();
+        drawCurve();
+      }, 16);
+      binPoller.start();
+    }
+  } else {
+    const inVals = [], outVals = [];
+    for (let db = -80; db <= 20; ++db) {
+      inVals.push(db);
+      const over = db - (-20);
+      outVals.push(over <= -3 ? db : over >= 3 ? -20 + over / 4 : db - (over + 3) * (over + 3) / 16);
+    }
+    staticCurve = { band: 0, inVals, outVals };
+    setInterval(() => {
+      const t = Date.now() * 0.001;
+      const pre = [], post = [];
+      for (let i = 0; i < 240; ++i) {
+        const f = FMIN * Math.pow(FMAX / FMIN, i / 239);
+        const db = -30.0 - 20.0 * Math.sin(f / 200.0 + t) - 10.0 * Math.sin(f / 1000.0 - t * 2.1)
+                 - 12 * Math.log10(f / 100);
+        pre.push(db);
+        let red = 0;
+        for (let b = 0; b < bandCount; ++b) {
+          const lo = b === 0 ? FMIN : splitsHz[b - 1], hi = b === bandCount - 1 ? FMAX : splitsHz[b];
+          if (f >= lo && f < hi) { red = -4.0 - 2.0 * Math.sin(t * (b + 1)); break; }
+        }
+        post.push(db + red);
+      }
+      const grs = [], dets = [];
+      for (let b = 0; b < 6; ++b) { grs.push(-4.0 - 3.0 * Math.sin(t * (b + 1))); dets.push(-24 + 12 * Math.sin(t * 2 + b)); }
+      updateMeters({ pre, post, grs, dets, out: -12 + 6 * Math.sin(t * 3) });
+    }, 33);
+  }
+
+})();
+</script>
+</body>
+</html>

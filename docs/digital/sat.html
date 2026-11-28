@@ -1,0 +1,2736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Werewolf Digital Saturator</title>
+<link rel="stylesheet" href="./wd/tokens.css">
+<script src="./demo-bar.js"></script>
+<script src="./modules/sat.js"></script>
+<script src="./wd-plugin-host.js"></script>
+<script src="./wd/kit.js"></script>
+<style>
+  /* ══════════════════════════════════════════════════════════════════════
+     Instrument Panel — the Werewolf Digital chassis.
+
+     This :root block is the WHOLE design language. To bring another plugin
+     onto it, copy this block verbatim and change --accent / --accent-lit only
+     (the fourteen hues are listed in docs/UI_LANGUAGE.md).
+
+     Values are hex, not oklch(), on purpose: canvas 2D fillStyle takes these
+     literals through cssVar() below, and hex works on every WebView2 runtime
+     rather than only Chromium 111+.
+     ════════════════════════════════════════════════════════════════════ */
+  :root {
+    --bg:      #0b0d12;   /* deep studio obsidian chassis */
+    --panel:   #151922;   /* machined slate control bays  */
+    --panel-hi:#1d2330;   /* elevated cap / active surface */
+    --track:   #0d0f15;   /* recessed tracks & beds       */
+    --line:    rgba(255, 255, 255, 0.08);
+    --line-hi: rgba(255, 255, 255, 0.15);
+    --hover-bg:rgba(255, 255, 255, 0.06);
+    --text:    #f2f5fa;
+    --label:   #8b96a8;
+    --muted:   #586274;
+    --well:    #06070a;   /* pure OLED signal surface     */
+    --cream:   #f2f5fa;   /* live plot, on well           */
+
+    --accent:     #d1552f;
+    --accent-lit: #f0895c;
+    --accent-deep:#8c2f14;
+
+    --sage:      #34d399;
+    --sage-tint: rgba(52, 211, 153, 0.14);
+    --sage-deep: #6ee7b7;
+
+    --r-window: 0px;
+    --r-panel: 8px;
+    --r-pill: 5px;
+
+    --font: "Figtree", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    --font-display: "Figtree", "Segoe UI Variable Display", "Segoe UI Semibold", system-ui, sans-serif;
+  }
+  :root[data-theme="japandi-dark"] {
+    --bg:      #121316;
+    --panel:   #1b1d21;
+    --panel-hi:#24272d;
+    --track:   #0d0e10;
+    --line:    rgba(242, 237, 228, 0.08);
+    --line-hi: rgba(242, 237, 228, 0.15);
+    --hover-bg:rgba(242, 237, 228, 0.06);
+    --text:    #f2ede4;
+    --label:   #9e978c;
+    --muted:   #666057;
+    --well:    #090a0c;
+    --cream:   #f2ede4;
+    --accent-deep:#a3391a;
+    --sage:      #7a9171;
+    --sage-tint: rgba(122, 145, 113, 0.18);
+    --sage-deep: #b8cfb0;
+  }
+  :root[data-theme="japandi-light"] {
+    --bg:      #e6e1d8;
+    --panel:   #dbd5c9;
+    --panel-hi:#e4dfd5;
+    --track:   #ccc5b8;
+    --line:    rgba(24, 25, 28, 0.11);
+    --line-hi: rgba(24, 25, 28, 0.20);
+    --hover-bg:rgba(24, 25, 28, 0.06);
+    --text:    #18191c;
+    --label:   #635f58;
+    --muted:   #8c867c;
+    --well:    #17181b;
+    --cream:   #f2ede4;
+    --accent-deep:#8c2f14;
+    --sage:      #4d6b47;
+    --sage-tint: rgba(77, 107, 71, 0.16);
+    --sage-deep: #2d4229;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 400 13px/1.45 var(--font);
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  :focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- header ---------- */
+  header {
+    flex: 0 0 auto;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand svg { display: block; }
+  .brand .stack { display: flex; flex-direction: column; gap: 1px; }
+  .brand .line { font: 700 8.5px/1 var(--font); letter-spacing: 0.22em; text-transform: uppercase; color: var(--label); }
+  .brand .name { font-family: var(--font-display); font-size: 19px; line-height: 1; letter-spacing: -0.01em; }
+  .headsep { width: 1px; height: 26px; background: var(--line); }
+  .spacer { flex: 1; }
+  .stat { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  .stat .k { font: 600 9px/1 var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  .stat .v { font: 700 11.5px/1 var(--font); font-variant-numeric: tabular-nums; }
+  #buildTag { font: 500 10px/1.3 var(--font); color: var(--muted); text-align: right; max-width: 150px; }
+
+  .track-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 26px;
+    padding: 0 8px;
+    border-radius: var(--r-pill);
+    background: var(--track);
+    border: 1px solid var(--line);
+    cursor: pointer;
+    flex: 0 1 124px;
+    min-width: 78px;
+    max-width: 132px;
+    transition: border-color 0.12s, background-color 0.12s;
+  }
+  .track-chip:hover { border-color: var(--line-hi); background: var(--panel-hi); }
+  .track-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-lit); flex: 0 0 auto; }
+  .track-name { flex: 1 1 auto; min-width: 0; font: 700 11px/1 var(--font); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .track-edit-ico { font-size: 10px; color: var(--muted); opacity: 0.65; flex: 0 0 auto; }
+  .track-chip:hover .track-edit-ico { opacity: 1; color: var(--text); }
+  .track-name-input {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    height: 20px;
+    background: var(--well);
+    color: var(--cream);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    font: 600 11px/1 var(--font);
+    padding: 0 5px;
+    outline: none;
+  }
+
+  .beacon-picker {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 6px 0 8px;
+    border-radius: var(--r-pill);
+    background: var(--track);
+    border: 1px solid var(--line);
+    flex: 0 0 auto;
+  }
+  .beacon-led {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--muted);
+    transition: background-color 0.15s, box-shadow 0.15s;
+  }
+  .beacon-picker.receiving .beacon-led { background: #34d399; box-shadow: 0 0 7px #34d399; }
+  .beacon-picker.waiting .beacon-led { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; }
+  .beacon-picker.mismatch { border-color: #f59e0b; }
+  .beacon-picker.mismatch .beacon-led { background: #ef4444; box-shadow: 0 0 7px #ef4444; }
+  .beacon-lbl {
+    font: 700 9px/1 var(--font);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--label);
+    white-space: nowrap;
+  }
+  .beacon-select {
+    height: 22px;
+    max-width: 132px;
+    min-width: 96px;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font: 600 11px/1 var(--font);
+    cursor: pointer;
+    outline: none;
+  }
+  .beacon-select option { background: var(--panel); color: var(--text); }
+  .beacon-select:disabled { opacity: 0.55; cursor: default; }
+
+  .mod-pane.pane.active { gap: 10px; flex-wrap: wrap; }
+
+  /* ---------- frame ---------- */
+  .body {
+    flex: 1 1 auto;
+    display: flex;
+    gap: 12px;
+    padding: 14px;
+    min-height: 0;
+  }
+  .col { flex: 1 1 auto; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+
+  /* ---------- wells: the only dark surfaces ---------- */
+  .wells { flex: 1 1 auto; display: flex; gap: 8px; min-height: 118px; min-width: 0; }
+  .well-group { flex: 2 1 0; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .well-group.narrow { flex: 1 1 0; min-width: 176px; }
+  .well-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 0 2px;
+    min-height: 22px;
+    flex-wrap: wrap;
+  }
+  .spec-legend {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font: 600 10.5px/1 var(--font);
+    color: var(--muted);
+    min-width: 0;
+  }
+  .spec-legend .lg-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+  }
+  .spec-legend .sw {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+  }
+  .spec-legend .sw.in { background: rgba(242, 245, 250, 0.50); }
+  .spec-legend .sw.out { background: var(--accent-lit); }
+  .spec-legend .lg-item.key {
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.12);
+    border: 1px solid rgba(56, 189, 248, 0.28);
+    padding: 2px 7px;
+    border-radius: 99px;
+    max-width: 170px;
+  }
+  .spec-legend .lg-item.key[hidden] { display: none; }
+  .spec-legend .lg-item.key span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .spec-legend .sw.key { background: #38bdf8; }
+  :root[data-theme="japandi-light"] .spec-legend .lg-item.key {
+    color: #0284c7;
+    background: rgba(2, 132, 199, 0.12);
+    border-color: rgba(2, 132, 199, 0.28);
+  }
+  :root[data-theme="japandi-light"] .spec-legend .sw.key { background: #0284c7; }
+  .well-title { font: 700 11px/1 var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--label); }
+  .well-hint { font: 500 11.5px/1 var(--font); color: var(--muted); white-space: nowrap; }
+  .well-hint.accent { color: var(--accent-deep); font-weight: 600; }
+  .well {
+    flex: 1;
+    min-height: 0;
+    border-radius: var(--r-panel);
+    overflow: hidden;
+    background: var(--well);
+    position: relative;
+  }
+  .well canvas { width: 100%; height: 100%; display: block; }
+  .well-readout {
+    position: absolute; left: 12px; bottom: 10px;
+    display: flex; flex-direction: column; gap: 3px; pointer-events: none;
+    background: rgba(18, 17, 14, 0.78); border-radius: 12px; padding: 7px 10px 8px;
+  }
+  .well-readout .k { font: 600 9.5px/1 var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  .well-readout .v { font: 700 22px/1 var(--font); font-variant-numeric: tabular-nums; color: #f9f4ed; }
+
+  /* ---------- panels ---------- */
+  .panel {
+    background: var(--panel);
+    border-radius: var(--r-panel);
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .panel.rail { flex: 0 0 auto; }
+  .rail-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .rail-range { font: 500 11.5px/1 var(--font); color: var(--label); }
+
+  /* ---------- pills: every choice and toggle ---------- */
+  .pill {
+    height: 32px;
+    padding: 0 14px;
+    border-radius: var(--r-pill);
+    border: 1px solid var(--line);
+    background: transparent;
+    font: 600 12px/1 var(--font);
+    color: var(--label);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background-color 0.12s, color 0.12s;
+    white-space: nowrap;
+  }
+  .pill:hover { background: var(--hover-bg); }
+  .pill:active { background: var(--track); }
+  .pill.on { border-color: transparent; background: var(--accent); color: #f9f4ed; font-weight: 700; }
+  .pill.on:hover { background: var(--accent-deep); }
+  .pill:disabled { opacity: 0.45; cursor: default; }
+  .pill.sm { height: 28px; padding: 0 13px; font-size: 11.5px; }
+  .pill.wide { width: 100%; }
+  .pill.dashed { border-style: dashed; border-color: var(--muted); color: var(--label); }
+  .pill.power { background: var(--well); border-color: transparent; color: #f9f4ed; font-weight: 700; height: 36px; }
+  .pill.power .led {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--muted); transition: background-color 0.12s, box-shadow 0.12s;
+  }
+  .pill.power.on { background: var(--well); color: #f9f4ed; }
+  .pill.power.on .led { background: #34d399; box-shadow: 0 0 7px #34d399; }
+
+  /* exclusive groups sit in a track-coloured bed */
+  .pillbed { display: flex; gap: 4px; padding: 3px; border-radius: var(--r-pill); background: var(--track); }
+  .pillbed button {
+    height: 26px; padding: 0 14px; border-radius: var(--r-pill); border: 0;
+    background-color: transparent; color: var(--label); font: 600 11.5px/1 var(--font); cursor: pointer;
+    transition: background-color 0.12s, color 0.12s; white-space: nowrap;
+  }
+  .pillbed button:hover:not(:disabled):not(.on) { background-color: var(--hover-bg); }
+  /* The on-state is spelled with a modifier class on the bed. A bare
+     `.pillbed > button.on` lost the cascade on background-color and color in
+     WebView2 while still winning font-weight; this specificity is what the LFO
+     tabs were already using, and it paints. Don't "simplify" it back. */
+  .pillbed.accent > button.on { background-color: var(--accent); color: #f9f4ed; font-weight: 700; }
+  .pillbed.sage > button.on { background-color: var(--sage); color: #f9f4ed; font-weight: 700; }
+  #bandcount-group > button.on, #band-selector > button.on {
+    background-color: var(--accent); color: #f9f4ed; font-weight: 700;
+  }
+  .pillbed > button:disabled { opacity: 0.45; cursor: default; }
+
+  .charset { display: flex; flex-wrap: wrap; gap: 5px; }
+  .fieldlabel { font: 600 10.5px/1 var(--font); color: var(--label); }
+
+  /* ---------- knob: every continuous parameter ---------- */
+  .knob {
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    width: 78px; cursor: ns-resize; touch-action: none;
+    border-radius: 12px; padding: 2px 0;
+  }
+  .knob:hover { background: var(--hover-bg); }
+  .knob .klabel { font: 600 10.5px/1 var(--font); color: var(--label); pointer-events: none; }
+  .knob .v { font: 700 14px/1 var(--font); font-variant-numeric: tabular-nums; pointer-events: none; }
+  .knob svg { display: block; pointer-events: none; }
+  .knob.dragging .v { color: var(--accent-deep); }
+  .knob.lg { width: 92px; }
+  .knob.sm { width: auto; flex-direction: row; align-items: center; gap: 7px; }
+  .knob.sm .kstack { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; }
+  .knob.sm .klabel { font-size: 10px; }
+  .knob.sm .v { font-size: 12.5px; }
+
+  /* ---------- meters are wells too ---------- */
+  .meter-row { display: flex; align-items: center; gap: 10px; }
+  .meter-row .k { font: 600 10px/1 var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--label); }
+  .meter {
+    flex: 1; min-width: 90px; height: 9px; border-radius: var(--r-pill);
+    background: var(--track); overflow: hidden; position: relative;
+  }
+  .meter i { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: var(--accent); border-radius: var(--r-pill); }
+  .meter-row .v { font: 700 12px/1 var(--font); font-variant-numeric: tabular-nums; min-width: 52px; text-align: right; }
+
+  /* the master strip's activity read — a well, like every other meter */
+  .vmeter-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .vmeter {
+    flex: 1; min-height: 40px; width: 16px; border-radius: var(--r-pill);
+    background: var(--well); overflow: hidden; position: relative;
+  }
+  .vmeter i {
+    position: absolute; left: 0; right: 0; bottom: 0; height: var(--fill, 0%);
+    background: linear-gradient(0deg, var(--sage), var(--accent-lit));
+    border-radius: var(--r-pill);
+  }
+  .vmeter-wrap .k { font: 600 9.5px/1 var(--font); letter-spacing: 0.1em; text-transform: uppercase; color: var(--label); }
+  .vmeter-wrap .v { font: 700 11.5px/1 var(--font); font-variant-numeric: tabular-nums; }
+
+  /* ---------- master strip: identical in all fourteen ---------- */
+  .master {
+    flex: 0 0 132px;
+    background: var(--panel);
+    border-radius: var(--r-panel);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .master .fill { flex: 1; min-height: 0; }
+  .master .stack { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+
+  /* ---------- band panes ---------- */
+  .pane { display: none; }
+  .pane.active { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .vsep { width: 1px; align-self: stretch; min-height: 46px; background: var(--line); }
+  .knobs { display: flex; gap: 6px; }
+  .charcol { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 7px; }
+  .bandacts { display: flex; flex-direction: column; gap: 6px; width: 116px; }
+
+  /* ---------- modulation strip ---------- */
+  .mod { flex: 0 0 auto; }
+  .mod-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .mod-title { display: flex; flex-direction: column; gap: 3px; }
+  .mod-title .t { font: 700 10.5px/1 var(--font); letter-spacing: 0.12em; text-transform: uppercase; color: var(--label); }
+  .mod-title .s { font: 500 11px/1 var(--font); color: var(--muted); }
+  /* A route is a sentence, so it must never wrap inside its own pill:
+     flex-shrink here is what stops three chips crushing to 60px in a narrow
+     window and stacking their text on top of itself. */
+  .route {
+    display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px;
+    border-radius: var(--r-pill); background: var(--sage-tint); color: var(--sage-deep);
+    font: 600 11.5px/1 var(--font); white-space: nowrap; flex: 0 0 auto;
+  }
+  .route .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--sage); flex: none; }
+  .routes { display: flex; gap: 6px; flex: 1; min-width: 0; justify-content: flex-end; }
+
+  /* matrix — the only thing in the suite allowed to collapse */
+  .matrix { display: none; flex-direction: column; gap: 6px; max-height: 168px; overflow-y: auto; padding-top: 4px; }
+  .slot {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-pill);
+    padding: 0 12px; height: 32px;
+  }
+  .slot.active { border-color: var(--sage); background: var(--sage-tint); }
+  .slot input[type="checkbox"] { accent-color: var(--sage); cursor: pointer; }
+  .slot select {
+    background: transparent; color: var(--text); border: 0;
+    font: 600 11.5px/1 var(--font); cursor: pointer; outline: none;
+  }
+  .slot .arrow { color: var(--muted); font-size: 11px; }
+  .slot input[type="range"] { flex: 1; accent-color: var(--sage); height: 4px; cursor: pointer; }
+  .slot .val { font: 700 11px/1 var(--font); font-variant-numeric: tabular-nums; width: 34px; text-align: right; color: var(--label); }
+
+  @media (max-width: 820px) {
+    .well-group.narrow { min-width: 146px; }
+    .knob { width: 66px; }
+    .charcol { min-width: 168px; }
+  }
+
+  /* ── Precision Instrument Structural & Hardware Refinements ── */
+  header {
+    height: 46px;
+    padding: 0 14px;
+    gap: 10px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent), var(--panel);
+    border-bottom: 1px solid var(--line-hi);
+  }
+  .brand svg { filter: drop-shadow(0 0 5px var(--accent)); }
+  .brand .name { font-size: 16.5px; font-weight: 700; letter-spacing: -0.01em; }
+  .headsep { height: 20px; }
+  #buildTag { font: 500 9.5px/1.2 var(--font); color: var(--muted); max-width: 135px; opacity: 0.75; }
+
+  .theme-strip {
+    display: inline-flex;
+    background: var(--track);
+    border: 1px solid var(--line);
+    border-radius: var(--r-pill);
+    padding: 2px;
+    gap: 2px;
+  }
+  .theme-btn {
+    height: 22px;
+    padding: 0 8px;
+    border: 0;
+    border-radius: calc(var(--r-pill) - 1px);
+    background: transparent;
+    color: var(--label);
+    font: 600 10px/1 var(--font);
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: background-color 0.12s, color 0.12s;
+  }
+  .theme-btn:hover:not(.on) { color: var(--text); background: var(--hover-bg); }
+  .theme-btn.on { background: var(--panel-hi); color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35); }
+
+  .body { gap: 8px; padding: 8px 10px 10px; }
+  .col { gap: 8px; }
+  .wells { gap: 8px; }
+  .well {
+    border: 1px solid var(--line-hi);
+    box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.65);
+  }
+  .well-readout {
+    background: rgba(9, 11, 16, 0.84);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 6px;
+    backdrop-filter: blur(6px);
+  }
+  .panel, .master {
+    border: 1px solid var(--line);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+  .pill {
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--label);
+    border: 1px solid var(--line);
+  }
+  .pill:hover:not(:disabled):not(.on) { background: var(--hover-bg); color: var(--text); }
+  .pill.on { border-color: transparent; background: var(--accent); color: #ffffff; box-shadow: 0 1px 8px rgba(0, 0, 0, 0.35); }
+  .pill.on:hover { filter: brightness(1.1); background: var(--accent); }
+  .pillbed { border: 1px solid var(--line); background: var(--track); }
+  .pillbed button { color: var(--label); }
+  .pillbed button:hover:not(:disabled):not(.on) { background-color: var(--hover-bg); color: var(--text); }
+
+  .vmeter {
+    width: 14px;
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.75);
+  }
+  .vmeter i { border-radius: 2px; }
+
+  .knob .karc { filter: drop-shadow(0 0 3px var(--accent)); }
+  .knob .v {
+    pointer-events: auto;
+    cursor: text;
+    padding: 1px 4px;
+    border-radius: 3px;
+    transition: background-color 0.12s, color 0.12s;
+  }
+  .knob .v:hover { background: var(--hover-bg); }
+  .knob input.v,
+  .knob input.v-edit {
+    width: 58px;
+    background: var(--well);
+    color: var(--text);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    font: 700 12px/1 var(--font);
+    text-align: center;
+    padding: 2px 3px;
+    outline: none;
+  }
+  .knob.is-modulated .klabel::after {
+    content: "";
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #38bdf8;
+    margin-left: 4px;
+    vertical-align: middle;
+    box-shadow: 0 0 6px rgba(56, 189, 248, 0.7);
+  }
+  .wd-src-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px;
+  }
+  .wd-src-pill {
+    height: 22px;
+    padding: 0 8px;
+    border-radius: var(--r-pill);
+    border: 1px solid var(--line);
+    background: var(--track);
+    color: var(--label);
+    font: 600 10px/1 var(--font);
+    letter-spacing: 0.04em;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    cursor: grab;
+    transition: background-color 0.12s, color 0.12s, border-color 0.12s;
+  }
+  .wd-src-pill:hover { color: var(--text); border-color: var(--line-hi); background: var(--hover-bg); }
+  .wd-src-pill.on { border-color: var(--line-hi); color: var(--text); background: var(--panel-hi); }
+  .wd-src-pill:active { cursor: grabbing; }
+  .wd-src-dot { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; pointer-events: none; }
+  .wd-xlfo-deck {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .wd-xlfo-well {
+    flex: 1 1 220px;
+    height: 54px;
+    min-width: 180px;
+    border-radius: 6px;
+    background: var(--well);
+    border: 1px solid var(--line-hi);
+    box-shadow: inset 0 1px 8px rgba(0, 0, 0, 0.65);
+    overflow: hidden;
+    position: relative;
+  }
+  #xlfoCanvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
+  .wd-xlfo-sep {
+    width: 1px;
+    height: 14px;
+    background: var(--line);
+    margin: 0 2px;
+  }
+
+</style>
+</head>
+<body>
+  <header>
+    <button class="pill power header-power-btn" id="param_power" title="Bypass the whole plugin. Crossfades over 30 ms so it never clicks."><span class="led"></span><span>Engaged</span></button>
+    <div class="brand">
+      <svg width="20" height="18" viewBox="0 0 20 18">
+        <path d="M2 16.5 L10 1.5 L18 16.5 Z" fill="none" stroke="#d1552f" stroke-width="2.2" stroke-linejoin="round"/>
+      </svg>
+      <div class="stack">
+        <div class="line">Werewolf Digital</div>
+        <div class="name">Saturator</div>
+      </div>
+    </div>
+    <div class="track-chip" id="selfTrackChip" title="Click to rename this Saturator track for Beacon broadcasting">
+      <span class="track-dot" id="selfTrackDot"></span>
+      <span class="track-name" id="selfTrackName">Sat 1</span>
+      <span class="track-edit-ico">✎</span>
+    </div>
+    <div class="beacon-picker" id="beaconPickerWrap" title="Select an active Werewolf Digital Beacon track to trigger Envelope Drive saturation. Wireless cross-track key — for sample-exact timing at large DAW buffer sizes (1024+), use Off (Host Bus) with a DAW sidechain send.">
+      <span class="beacon-led" id="beaconLed"></span>
+      <span class="beacon-lbl">Beacon</span>
+      <select class="beacon-select" id="beaconSourceSelect" aria-label="External WD Beacon source">
+        <option value="">Off (Host Bus)</option>
+      </select>
+    </div>
+    <div class="spacer"></div>
+    <button class="pill sm header-audition-pill" id="param_aa" title="Anti-aliasing. Saturation creates harmonics above the sample rate that fold back as harsh tones; this oversamples to stop that.">Anti-alias</button>
+    <button class="pill sm header-audition-pill" id="param_delta" title="Listen to ONLY what the saturator is adding — the harmonics on their own.">Delta</button>
+    <div class="stat"><div class="k">Sample rate</div><div class="v" id="srTag">—</div></div>
+    <div class="theme-strip" id="themeSwitcher" title="Switch instrument chassis finish">
+      <button class="theme-btn on" data-theme="studio">Studio</button>
+      <button class="theme-btn" data-theme="japandi-dark">Sumi</button>
+      <button class="theme-btn" data-theme="japandi-light">Washi</button>
+    </div>
+    <div id="buildTag">—</div>
+  </header>
+
+  <div class="body">
+    <div class="col">
+
+      <div class="stage-row">
+        <div class="wells">
+          <!-- Live Pre/Out/Key spectrum analyzer across 1–4 bands + crossover splits -->
+          <div class="well-group" id="crossoverContainer">
+            <div class="well-head">
+              <div class="well-title" id="spectrumWellTitle">Spectrum</div>
+              <div class="pillbed accent" id="bandcount-group" title="Split the signal into this many frequency bands and saturate each one separately.">
+                <button data-step="1">1</button><button data-step="2">2</button><button data-step="3">3</button><button data-step="4">4</button>
+              </div>
+              <div class="spec-legend" id="specLegend">
+                <span class="lg-item"><i class="sw in"></i>In</span>
+                <span class="lg-item"><i class="sw out"></i>Out</span>
+                <span class="lg-item key" id="specKeyBadge" hidden><i class="sw key"></i><span id="specKeyLabel">Key</span></span>
+              </div>
+              <div class="well-hint" id="crossoverHint">Whole signal</div>
+            </div>
+            <div class="well"><canvas id="splitCanvas"></canvas></div>
+          </div>
+
+          <div class="well-group narrow">
+            <div class="well-head">
+              <div class="well-title" id="curve_title">Transfer curve</div>
+              <div class="well-hint accent" id="activeShaperLabel">Tanh</div>
+            </div>
+            <div class="well">
+              <canvas id="curveCanvas"></canvas>
+              <div class="well-readout"><div class="k">Adding</div><div class="v" id="satAddVal">—</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="meter-bridge">
+          <div class="vmeter-wrap">
+            <div class="vmeter"><i id="satMeterBar"></i></div>
+            <div class="k" id="satMeterLabel">Sat</div>
+            <div class="v" id="satMeterVal">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel rail">
+        <div class="rail-head">
+          <div class="pillbed accent" id="band-selector">
+            <button id="sel_band_1">Band 1</button>
+            <button id="sel_band_2">Band 2</button>
+            <button id="sel_band_3">Band 3</button>
+            <button id="sel_band_4">Band 4</button>
+          </div>
+          <div class="rail-range" id="active_band_title">Saturator</div>
+        </div>
+
+        <div id="band_panes_container">
+          <!-- Above one band the per-band controls are what reach the DSP. -->
+          <div class="pane" id="band_pane_1">
+            <div class="knobs">
+              <div class="knob" id="param_banddrive1" data-param-id="banddrive1" data-dest-id="10" data-label="Drive" title="How hard this band is pushed into the saturator."></div>
+              <div class="knob" id="param_bandmix1" data-param-id="bandmix1" data-dest-id="12" data-label="Mix" title="Blend of clean and saturated within this band."></div>
+              <div class="knob" id="param_bandlevel1" data-param-id="bandlevel1" data-dest-id="13" data-label="Level" data-bipolar="1" title="Level trim for this band after saturation."></div>
+            </div>
+            <div class="vsep"></div>
+            <div class="charcol">
+              <div class="fieldlabel">Character</div>
+              <div class="charset" id="char-group-1" title="The saturation curve used for this band."></div>
+            </div>
+            <div class="vsep"></div>
+            <div class="bandacts">
+              <button class="pill" id="param_bandsolo1" title="Hear this band on its own.">Solo band</button>
+              <button class="pill" id="param_bandbypass1" title="Leave this band clean.">Bypass band</button>
+            </div>
+          </div>
+
+          <div class="pane" id="band_pane_2">
+            <div class="knobs">
+              <div class="knob" id="param_banddrive2" data-param-id="banddrive2" data-dest-id="20" data-label="Drive"></div>
+              <div class="knob" id="param_bandmix2" data-param-id="bandmix2" data-dest-id="22" data-label="Mix"></div>
+              <div class="knob" id="param_bandlevel2" data-param-id="bandlevel2" data-dest-id="23" data-label="Level" data-bipolar="1"></div>
+            </div>
+            <div class="vsep"></div>
+            <div class="charcol">
+              <div class="fieldlabel">Character</div>
+              <div class="charset" id="char-group-2"></div>
+            </div>
+            <div class="vsep"></div>
+            <div class="bandacts">
+              <button class="pill" id="param_bandsolo2">Solo band</button>
+              <button class="pill" id="param_bandbypass2">Bypass band</button>
+            </div>
+          </div>
+
+          <div class="pane" id="band_pane_3">
+            <div class="knobs">
+              <div class="knob" id="param_banddrive3" data-param-id="banddrive3" data-dest-id="30" data-label="Drive"></div>
+              <div class="knob" id="param_bandmix3" data-param-id="bandmix3" data-dest-id="32" data-label="Mix"></div>
+              <div class="knob" id="param_bandlevel3" data-param-id="bandlevel3" data-dest-id="33" data-label="Level" data-bipolar="1"></div>
+            </div>
+            <div class="vsep"></div>
+            <div class="charcol">
+              <div class="fieldlabel">Character</div>
+              <div class="charset" id="char-group-3"></div>
+            </div>
+            <div class="vsep"></div>
+            <div class="bandacts">
+              <button class="pill" id="param_bandsolo3">Solo band</button>
+              <button class="pill" id="param_bandbypass3">Bypass band</button>
+            </div>
+          </div>
+
+          <div class="pane" id="band_pane_4">
+            <div class="knobs">
+              <div class="knob" id="param_banddrive4" data-param-id="banddrive4" data-dest-id="40" data-label="Drive"></div>
+              <div class="knob" id="param_bandmix4" data-param-id="bandmix4" data-dest-id="42" data-label="Mix"></div>
+              <div class="knob" id="param_bandlevel4" data-param-id="bandlevel4" data-dest-id="43" data-label="Level" data-bipolar="1"></div>
+            </div>
+            <div class="vsep"></div>
+            <div class="charcol">
+              <div class="fieldlabel">Character</div>
+              <div class="charset" id="char-group-4"></div>
+            </div>
+            <div class="vsep"></div>
+            <div class="bandacts">
+              <button class="pill" id="param_bandsolo4">Solo band</button>
+              <button class="pill" id="param_bandbypass4">Bypass band</button>
+            </div>
+          </div>
+
+          <!-- One band: the single-band path reads the global drive/character/mix
+               and ignores every per-band control, so only this set is shown. -->
+          <div class="pane" id="pane_global">
+            <div class="knobs">
+              <div class="knob" id="param_drive" data-param-id="drive" data-dest-id="1" data-label="Drive" title="How hard the signal is pushed into the saturator. More drive means more harmonics and more compression of the peaks."></div>
+              <div class="knob" id="param_mix" data-param-id="mix" data-dest-id="3" data-label="Mix" title="Blend between the clean signal and the saturated one. Low values give parallel saturation."></div>
+            </div>
+            <div class="vsep"></div>
+            <div class="charcol">
+              <div class="fieldlabel">Character</div>
+              <div class="charset" id="char-group" title="The shape of the saturation curve — which harmonics get added. They differ most at high drive."></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel mod">
+        <div class="mod-head">
+          <div class="mod-title">
+            <div class="t">Modulation</div>
+            <div class="s" id="routeCount">no routes live</div>
+          </div>
+          <div class="pillbed sage" id="xlfo-tabs">
+            <button class="on" data-xlfo="1">LFO 1</button>
+            <button data-xlfo="2">LFO 2</button>
+            <button data-xlfo="3">LFO 3</button>
+            <button data-xlfo="env">Env</button>
+          </div>
+          <div class="vsep"></div>
+          <div class="pane mod-pane active" id="mod_pane_lfo">
+            <div class="knobs" style="gap: 12px;">
+              <div class="knob sm" id="xlfo_rate" data-label="Rate" data-size="38" title="How fast this LFO cycles. On its own it does nothing until you point it at a control below."></div>
+              <div class="knob sm" id="xlfo_phase" data-label="Phase" data-size="38" title="Where in its cycle this LFO starts. Offset two LFOs so they don't move in lockstep."></div>
+              <div class="knob sm" id="xlfo_snap" data-label="Snap" data-size="38" title="Quantise the LFO into steps instead of a smooth sweep."></div>
+            </div>
+            <button class="pill sm" id="xlfo_balance" title="Bipolar: the LFO swings both above and below center.">Bipolar</button>
+          </div>
+          <div class="pane mod-pane" id="mod_pane_env">
+            <button class="pill sm" id="param_envext" title="Trigger envelope follower from the selected WD Beacon track or DAW sidechain bus instead of main input.">Ext Key</button>
+            <div class="knobs" style="gap: 10px;">
+              <div class="knob sm" id="param_envdrive" data-label="Env Drive" data-size="38" data-bipolar="1" title="How much the envelope follower pushes or pulls saturation Drive (positive = hit adds drive; negative = duck drive)."></div>
+              <div class="knob sm" id="param_envsens" data-label="Sensitivity" data-size="38" data-bipolar="1" title="Input gain into the envelope follower detector."></div>
+              <div class="knob sm" id="param_envatk" data-label="Attack" data-size="38" title="How quickly the envelope follower rises on transients."></div>
+              <div class="knob sm" id="param_envrel" data-label="Release" data-size="38" title="How smoothly the envelope follower recovers after transients."></div>
+            </div>
+          </div>
+          <div class="vsep"></div>
+          <div class="routes" id="routeChips"></div>
+          <button class="pill sm dashed" id="matrixToggle">Routes</button>
+          <div class="deck-master-bay">
+            <div class="knob sm" id="param_output" data-param-id="output" data-dest-id="4" data-size="40" data-label="Output" data-bipolar="1" title="Final level out, after saturation. Match levels so you judge the tone rather than the loudness."></div>
+          </div>
+        </div>
+        <div class="wd-xlfo-deck">
+          <div class="wd-src-bar" id="sourceBar" aria-label="Modulation sources — drag onto a knob">
+            <div class="wd-src-pill on" data-source-id="0" role="button" tabindex="0" title="Drag onto a knob to route LFO 1"><span class="wd-src-dot" style="background:#38bdf8"></span>LFO 1</div>
+            <div class="wd-src-pill" data-source-id="1" role="button" tabindex="0" title="Drag onto a knob to route LFO 2"><span class="wd-src-dot" style="background:#a78bfa"></span>LFO 2</div>
+            <div class="wd-src-pill" data-source-id="2" role="button" tabindex="0" title="Drag onto a knob to route LFO 3"><span class="wd-src-dot" style="background:#34d399"></span>LFO 3</div>
+            <div class="wd-src-pill" data-source-id="4" role="button" tabindex="0" title="Drag onto a knob to route Envelope Follower"><span class="wd-src-dot" style="background:#f59e0b"></span>Env</div>
+            <div class="wd-src-pill" data-source-id="5" role="button" tabindex="0" title="Drag onto a knob to route MIDI Note"><span class="wd-src-dot" style="background:#f472b6"></span>Note</div>
+            <div class="wd-src-pill" data-source-id="6" role="button" tabindex="0" title="Drag onto a knob to route MIDI Velocity"><span class="wd-src-dot" style="background:#fb7185"></span>Vel</div>
+            <div class="wd-src-pill" data-source-id="7" role="button" tabindex="0" title="Drag onto a knob to route Mod Wheel"><span class="wd-src-dot" style="background:#60a5fa"></span>Wheel</div>
+          </div>
+          <div class="wd-xlfo-well"><canvas id="xlfoCanvas"></canvas></div>
+          <div class="wd-xlfo-presets" id="xlfoPresetBar" aria-label="XLFO shape presets and transforms">
+            <button type="button" class="wd-xlfo-preset-btn" data-xlfo-preset="Sine">Sine</button>
+            <button type="button" class="wd-xlfo-preset-btn" data-xlfo-preset="Triangle">Triangle</button>
+            <button type="button" class="wd-xlfo-preset-btn" data-xlfo-preset="Saw">Saw</button>
+            <button type="button" class="wd-xlfo-preset-btn" data-xlfo-preset="Ramp">Ramp</button>
+            <button type="button" class="wd-xlfo-preset-btn" data-xlfo-preset="Square">Square</button>
+            <button type="button" class="wd-xlfo-preset-btn" data-xlfo-preset="S&amp;H">S&amp;H</button>
+            <button type="button" class="wd-xlfo-preset-btn" data-xlfo-preset="Sidechain Pump">Sidechain Pump</button>
+            <button type="button" class="wd-xlfo-preset-btn" data-xlfo-preset="Euclidean">Euclidean</button>
+            <span class="wd-xlfo-sep" aria-hidden="true"></span>
+            <button type="button" class="wd-xlfo-preset-btn" data-xlfo-op="invert">Invert</button>
+            <button type="button" class="wd-xlfo-preset-btn" data-xlfo-op="shift">Phase Shift</button>
+            <button type="button" class="wd-xlfo-preset-btn" data-xlfo-op="smooth">Smooth</button>
+          </div>
+        </div>
+        <div class="matrix" id="matrixContainer"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  window.addEventListener('error', e => {
+    if (e.message && (e.message.includes('ResizeObserver') || e.message.includes('loop completed with undelivered notifications'))) return;
+    let el = document.getElementById('errBanner');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'errBanner';
+      el.style.cssText = 'position:fixed;left:0;right:0;bottom:0;background:#8c2f14;'
+        + 'color:#fff2eb;font:11px monospace;padding:4px 10px;z-index:99;';
+      document.body.appendChild(el);
+    }
+    el.textContent = 'UI error: ' + e.message + ' @' + (e.lineno || '?');
+  });
+</script>
+
+<script type="module">
+(async () => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+
+  // Canvas 2D silently rejects 'var(--x)' colour strings, so the theme is
+  // resolved to literals once and the wells draw from these.
+  const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const COL = {
+    accent:    cssVar('--accent')     || '#d1552f',
+    accentLit: cssVar('--accent-lit') || '#f0895c',
+    well:      cssVar('--well')       || '#06070a',
+    cream:     cssVar('--cream')      || '#f2f5fa',
+  };
+  function applyTheme(theme) {
+    const t = theme || 'studio';
+    if (t === 'studio') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', t);
+    COL.accent = cssVar('--accent') || COL.accent;
+    COL.accentLit = cssVar('--accent-lit') || COL.accentLit;
+    COL.well = cssVar('--well') || '#06070a';
+    COL.cream = cssVar('--cream') || '#f2f5fa';
+    const sw = document.getElementById('themeSwitcher');
+    if (sw) {
+      sw.querySelectorAll('.theme-btn').forEach(b => {
+        b.classList.toggle('on', b.dataset.theme === t);
+      });
+    }
+    try { localStorage.setItem('wd_theme', t); } catch (e) {}
+  }
+  {
+    let saved = 'studio';
+    try { saved = localStorage.getItem('wd_theme') || 'studio'; } catch (e) {}
+    applyTheme(saved);
+    const sw = document.getElementById('themeSwitcher');
+    if (sw) {
+      sw.addEventListener('click', e => {
+        const btn = e.target.closest('.theme-btn');
+        if (btn && btn.dataset.theme) applyTheme(btn.dataset.theme);
+      });
+    }
+  }
+  // Well ink: cream at fixed alphas. Grid 7%, labels 34%, live plot 92%.
+  const ink = a => 'rgba(242, 245, 250, ' + a + ')';
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+  // ------------------------------------------------------------------ host
+  let host = null;
+  if (window.__JUCE__ && window.__JUCE__.backend) {
+    try {
+      const lib = await import('./juce/index.js');
+      const be = window.__JUCE__.backend;
+      host = {
+        slider: id => lib.getSliderState(id),
+        combo:  id => lib.getComboBoxState(id),
+        toggle: id => lib.getToggleState(id),
+        call:   (name, ...args) => lib.getNativeFunction(name)(...args),
+        on:     (event, cb) => be.addEventListener(event, cb),
+      };
+    } catch (e) { console.warn('JUCE frontend unavailable:', e); }
+  }
+
+  // ------------------------------------------------------------------ state
+  let currentXlfoIdx = 0; // 0..2
+  let currentBandIdx = 0; // 0..3 (b = 1..4)
+  let activeSlots = [];
+  let xlfosState = [];
+  let liveSourceVals = new Array(10).fill(0);
+  let liveXlfoPhases = new Array(3).fill(0);
+  let liveSlotVals = new Array(24).fill(0);
+  let liveDestOffsets = new Array(128).fill(0);
+  const ringGestureOpen = {};
+  let patchCords = null;
+
+  for (let s = 0; s < 24; ++s)
+    activeSlots.push({ index: s, source: -1, dest: -1, curve: 0, on: false, depth: 0.0 });
+
+  for (let i = 0; i < 3; ++i) {
+    const steps = [];
+    for (let step = 0; step < 32; ++step)
+      steps.push({ index: step, value: 0.5 - 0.5 * Math.cos(2 * Math.PI * ((step + 1) / 16)), glide: 100.0, slope: 0.0 });
+    xlfosState.push({ index: i, numSteps: 16, isSynced: false, syncRateBeats: 1.0, retriggerMode: 0, steps });
+  }
+
+  const SRC_META = {
+    0: { label: 'LFO 1', color: '#38bdf8' },
+    1: { label: 'LFO 2', color: '#a78bfa' },
+    2: { label: 'LFO 3', color: '#34d399' },
+    4: { label: 'Env',   color: '#f59e0b' },
+    5: { label: 'Note',  color: '#f472b6' },
+    6: { label: 'Vel',   color: '#fb7185' },
+    7: { label: 'Wheel', color: '#60a5fa' },
+  };
+
+  const DEST_OPTIONS = [
+    { val: -1, label: "None" },
+    { val: 1, label: "Drive" },
+    { val: 2, label: "Character" },
+    { val: 3, label: "Mix" },
+    { val: 4, label: "Output" },
+    { val: 10, label: "Band 1 Drive" },
+    { val: 11, label: "Band 1 Character" },
+    { val: 12, label: "Band 1 Mix" },
+    { val: 13, label: "Band 1 Level" },
+    { val: 20, label: "Band 2 Drive" },
+    { val: 21, label: "Band 2 Character" },
+    { val: 22, label: "Band 2 Mix" },
+    { val: 23, label: "Band 2 Level" },
+    { val: 30, label: "Band 3 Drive" },
+    { val: 31, label: "Band 3 Character" },
+    { val: 32, label: "Band 3 Mix" },
+    { val: 33, label: "Band 3 Level" },
+    { val: 40, label: "Band 4 Drive" },
+    { val: 41, label: "Band 4 Character" },
+    { val: 42, label: "Band 4 Mix" },
+    { val: 43, label: "Band 4 Level" },
+    { val: 1000, label: "LFO 1 Rate" },
+    { val: 1001, label: "LFO 2 Rate" },
+    { val: 1002, label: "LFO 3 Rate" }
+  ];
+
+  const SRC_OPTIONS = [
+    { val: -1, label: "None" },
+    { val: 0, label: "LFO 1" },
+    { val: 1, label: "LFO 2" },
+    { val: 2, label: "LFO 3" },
+    { val: 4, label: "Envelope" },
+    { val: 5, label: "MIDI Note" },
+    { val: 6, label: "Velocity" },
+    { val: 7, label: "Mod Wheel" }
+  ];
+
+  // Full words, per the language. The DSP order is unchanged.
+  const SHAPER_CHOICES = ["Tanh", "Diode", "Asymmetric", "Tape", "Tube", "Transformer", "Fold"];
+
+  const sliders = {}, combos = {}, toggles = {};
+  const sl = id => { if (!host) return null; if (!sliders[id]) sliders[id] = host.slider(id); return sliders[id]; };
+  const cb = id => { if (!host) return null; if (!combos[id]) combos[id] = host.combo(id); return combos[id]; };
+  const tg = id => { if (!host) return null; if (!toggles[id]) toggles[id] = host.toggle(id); return toggles[id]; };
+
+  const comboIndex = (id, n) => { const s = cb(id); return s ? Math.round((s.value || 0) * (n - 1)) : 0; };
+  const setComboIndex = (id, i) => { const s = cb(id); if (s && s.setChoiceIndex) s.setChoiceIndex(i); };
+
+  // --------------------------------------------------- slider / toggle binds
+  function bindToggle(el, id, onValueChange = null) {
+    const t = tg(id);
+    if (!el || !t) return;
+    if (el._wdToggleAbort) el._wdToggleAbort.abort();
+    const ac = typeof AbortController === 'function' ? new AbortController() : null;
+    el._wdToggleAbort = ac;
+    const evOpts = ac ? { signal: ac.signal } : undefined;
+
+    const updateDisplay = () => {
+      const v = !!t.getValue();
+      el.classList.toggle('on', v);
+      if (onValueChange) onValueChange(v);
+    };
+
+    if (t.customListener) t.valueChangedEvent.removeListener(t.customListener);
+    t.customListener = updateDisplay;
+    t.valueChangedEvent.addListener(updateDisplay);
+    updateDisplay();
+
+    el.addEventListener('click', () => {
+      t.setValue(!t.getValue());
+      updateDisplay();
+    }, evOpts);
+  }
+
+  // A choice parameter as a row of pills. Replaces both the old button group
+  // and the per-band <select> — one control shape for one kind of parameter.
+  function bindChoicePills(groupEl, id, choices, onChange = null) {
+    if (!groupEl) return;
+    groupEl.innerHTML = '';
+    choices.forEach((name, i) => {
+      const b = document.createElement('button');
+      b.className = 'pill sm';
+      b.dataset.index = String(i);
+      b.textContent = name;
+      groupEl.appendChild(b);
+    });
+    const buttons = groupEl.querySelectorAll('button');
+
+    const updateDisplay = () => {
+      const idx = comboIndex(id, choices.length);
+      buttons.forEach(btn => btn.classList.toggle('on', parseInt(btn.dataset.index, 10) === idx));
+      if (onChange) onChange(idx);
+    };
+
+    const s = cb(id);
+    if (s) {
+      if (s.customListener) s.valueChangedEvent.removeListener(s.customListener);
+      s.customListener = updateDisplay;
+      s.valueChangedEvent.addListener(updateDisplay);
+    }
+    updateDisplay();
+
+    buttons.forEach(btn => btn.addEventListener('click', () => {
+      setComboIndex(id, parseInt(btn.dataset.index, 10));
+      updateDisplay();
+    }));
+  }
+
+  // An integer slider parameter as discrete pills (band count). Writes through
+  // the same slider relay as a knob would, so nothing changes downstream.
+  function bindStepPills(groupEl, id, onChange = null) {
+    if (!groupEl) return;
+    const slider = sl(id);
+    const buttons = groupEl.querySelectorAll('button');
+    const toNorm = (scaled) => {
+      const p = slider ? (slider.properties || { start: 1, end: 4, skew: 1 }) : { start: 1, end: 4, skew: 1 };
+      const spanRange = (p.end - p.start) || 1;
+      return Math.pow(clamp((scaled - p.start) / spanRange, 0, 1), p.skew || 1);
+    };
+    const updateDisplay = () => {
+      const v = slider ? Math.round(slider.getScaledValue()) : 1;
+      buttons.forEach(b => b.classList.toggle('on', parseInt(b.dataset.step, 10) === v));
+      if (onChange) onChange(v);
+    };
+    if (slider) {
+      if (slider.customListener) slider.valueChangedEvent.removeListener(slider.customListener);
+      slider.customListener = updateDisplay;
+      slider.valueChangedEvent.addListener(updateDisplay);
+    }
+    updateDisplay();
+    buttons.forEach(b => b.addEventListener('click', () => {
+      if (!slider) return;
+      slider.sliderDragStarted();
+      slider.setNormalisedValue(toNorm(parseInt(b.dataset.step, 10)));
+      slider.sliderDragEnded();
+      updateDisplay();
+    }));
+  }
+
+  // ------------------------------------------------- transfer curve well
+  const curveCanvas = $('curveCanvas');
+  const curveCtx = curveCanvas.getContext('2d');
+  let cW = 0, cH = 0, cDpr = 1;
+
+  function fitCurveCanvas() {
+    cDpr = window.devicePixelRatio || 1;
+    const r = curveCanvas.getBoundingClientRect();
+    cW = r.width; cH = r.height;
+    curveCanvas.width = Math.round(cW * cDpr);
+    curveCanvas.height = Math.round(cH * cDpr);
+    curveCtx.setTransform(cDpr, 0, 0, cDpr, 0, 0);
+    drawCurve();
+  }
+  new ResizeObserver(fitCurveCanvas).observe(curveCanvas);
+
+  // Pure waveshaping functions matching WdSat.h precisely
+  const shapeTanh = (x, g) => Math.tanh(x * g);
+  const shapeDiode = (x, g) => clamp(x * g, -1.0, 1.0);
+  const shapeAsymmetric = (x, g) => {
+    const b = 0.5 + 0.5 * Math.tanh((g - 1.0) * 0.25);
+    return Math.tanh(x * g + b) - Math.tanh(b);
+  };
+  const shapeTape = (x, g) => { const u = x * g; return u / Math.sqrt(1.0 + u * u); };
+  const shapeTube = (x, g) => {
+    const b = 0.35 * Math.tanh((g - 1.0) * 0.25);
+    const u = x * g, tu = Math.tanh(u);
+    return tu + b * tu * tu;
+  };
+  const shapeTransformer = (x, g) => {
+    const u = x * g, tu = Math.tanh(u);
+    return tu + (1.0 / 3.0) * tu * tu * tu;
+  };
+  const shapeFold = (x, g) => {
+    const u = x * g;
+    const n = Math.floor(u * 0.5 + 0.5);
+    return ((n % 2 === 0) ? 1.0 : -1.0) * (u - 2.0 * n);
+  };
+
+  function shaperRms(shaper, amp, g) {
+    let sumOut = 0.0;
+    const steps = 32;
+    for (let k = 0; k < steps; ++k) {
+      const testX = amp * Math.sin(2.0 * Math.PI * k / steps);
+      const testY = shaper(testX, g);
+      sumOut += testY * testY;
+    }
+    return Math.sqrt(Math.max(1e-12, sumOut / steps));
+  }
+
+  // Block-rate satAutoGain calibration, mirrored so the drawn curve is the
+  // curve you hear rather than the raw shaper.
+  function autoGain(shaper, g) {
+    const inRms = 0.25 * Math.SQRT1_2;
+    return clamp(inRms / shaperRms(shaper, 0.25, g), 0.0316, 31.6);
+  }
+
+  function drawCurve() {
+    curveCtx.clearRect(0, 0, cW, cH);
+    if (cW < 40 || cH < 40) return;
+
+    // Above one band the per-band drive and character are what reach the DSP,
+    // so the curve follows the selected band. At one band SatProcessor maps the
+    // global drive/character onto band 1, so read those instead.
+    let driveDb = 0.0, charIdx = 0;
+    if (host) {
+      if (bandCountNow() > 1) {
+        const b = currentBandIdx + 1;
+        const bandDrive = sl('banddrive' + b);
+        if (bandDrive) driveDb = bandDrive.getScaledValue();
+        charIdx = comboIndex('bandchar' + b, SHAPER_CHOICES.length);
+      } else {
+        const driveParam = sl('drive');
+        if (driveParam) driveDb = driveParam.getScaledValue();
+        charIdx = comboIndex('character', SHAPER_CHOICES.length);
+      }
+    }
+
+    const driveDestId = bandCountNow() > 1 ? (10 * (currentBandIdx + 1)) : 1;
+    const charDestId  = bandCountNow() > 1 ? (10 * (currentBandIdx + 1) + 1) : 2;
+    const modulatedDriveDb = clamp(driveDb + (liveDestOffsets[driveDestId] || 0.0), 0.0, 36.0);
+    const modulatedCharIdx = clamp(Math.round(charIdx + (liveDestOffsets[charDestId] || 0.0)), 0, 6);
+    const gBase = Math.pow(10.0, driveDb / 20.0);
+    const g = Math.pow(10.0, modulatedDriveDb / 20.0);
+    const shaper = [shapeTanh, shapeDiode, shapeAsymmetric, shapeTape, shapeTube,
+                    shapeTransformer, shapeFold][modulatedCharIdx] || shapeTanh;
+    let ag = autoGain(shaper, gBase);
+    if (Math.abs(g - gBase) > 1e-4) {
+      ag = clamp(ag * (shaperRms(shaper, 0.5, gBase) / Math.max(1e-6, shaperRms(shaper, 0.5, g))), 0.0316, 31.6);
+    }
+
+    const pad = 18;
+    const drawW = cW - pad * 2, drawH = cH - pad * 2;
+    const yFor = out => pad + drawH / 2 - (clamp(out * ag, -1.5, 1.5) / 1.5) * (drawH / 2);
+
+    // axes, then unity as a dashed guide: the curve is only legible against it
+    curveCtx.strokeStyle = ink(0.08);
+    curveCtx.lineWidth = 1;
+    curveCtx.beginPath();
+    curveCtx.moveTo(cW / 2, pad * 0.4); curveCtx.lineTo(cW / 2, cH - pad * 0.4);
+    curveCtx.moveTo(pad * 0.4, cH / 2); curveCtx.lineTo(cW - pad * 0.4, cH / 2);
+    curveCtx.stroke();
+
+    curveCtx.strokeStyle = ink(0.16);
+    curveCtx.setLineDash([3, 4]);
+    curveCtx.beginPath();
+    curveCtx.moveTo(pad, pad + drawH);
+    curveCtx.lineTo(pad + drawW, pad);
+    curveCtx.stroke();
+    curveCtx.setLineDash([]);
+
+    // the setting: accent
+    curveCtx.strokeStyle = COL.accentLit;
+    curveCtx.lineWidth = 2.6;
+    curveCtx.lineJoin = 'round';
+    curveCtx.beginPath();
+    for (let px = 0; px <= drawW; ++px) {
+      const y = yFor(shaper((px / drawW) * 2.0 - 1.0, g));
+      px ? curveCtx.lineTo(pad + px, y) : curveCtx.moveTo(pad + px, y);
+    }
+    curveCtx.stroke();
+
+    // what the audio is doing right now: cream, always brighter than the setting
+    const envLevel = liveSourceVals[4] || 0.0;
+    if (envLevel > 0.005) {
+      const excursion = clamp(envLevel, 0.0, 1.2);
+      const spanPx = Math.round(excursion * (drawW / 2));
+      const from = Math.round(drawW / 2 - spanPx);
+      curveCtx.strokeStyle = ink(0.92);
+      curveCtx.lineWidth = 3.4;
+      curveCtx.beginPath();
+      for (let px = from; px <= drawW / 2 + spanPx; ++px) {
+        const y = yFor(shaper((px / drawW) * 2.0 - 1.0, g));
+        px === from ? curveCtx.moveTo(pad + px, y) : curveCtx.lineTo(pad + px, y);
+      }
+      curveCtx.stroke();
+      curveCtx.fillStyle = COL.cream;
+      curveCtx.beginPath();
+      curveCtx.arc(pad + drawW / 2 + spanPx, yFor(shaper(excursion, g)), 4, 0, Math.PI * 2);
+      curveCtx.fill();
+    }
+  }
+
+  // --------------------------------------------- crossover well (draggable)
+  const splitCanvas = $('splitCanvas');
+  const splitCtx = splitCanvas.getContext('2d');
+  let sW = 0, sH = 0, sDpr = 1;
+
+  function fitSplitCanvas() {
+    sDpr = window.devicePixelRatio || 1;
+    const r = splitCanvas.getBoundingClientRect();
+    sW = r.width; sH = r.height;
+    splitCanvas.width = Math.round(sW * sDpr);
+    splitCanvas.height = Math.round(sH * sDpr);
+    splitCtx.setTransform(sDpr, 0, 0, sDpr, 0, 0);
+    drawSplits();
+  }
+  new ResizeObserver(fitSplitCanvas).observe(splitCanvas);
+
+  const FMIN = 20.0, FMAX = 20000.0;
+  const SPEC_BINS = 160;
+  const SPEC_DB_MIN = -84.0, SPEC_DB_MAX = 6.0;
+  const hzToX = hz => clamp((Math.log(hz / FMIN) / Math.log(FMAX / FMIN)) * sW, 0, sW);
+  const xToHz = x => FMIN * Math.pow(FMAX / FMIN, clamp(x / sW, 0, 1));
+  const ySpec = (db, plotH) => clamp(1.0 - (db - SPEC_DB_MIN) / (SPEC_DB_MAX - SPEC_DB_MIN), 0.0, 1.0) * plotH;
+
+  const specFreq = new Float32Array(SPEC_BINS);
+  const specTilt = new Float32Array(SPEC_BINS);
+  for (let b = 0; b < SPEC_BINS; ++b) {
+    specFreq[b] = FMIN * Math.pow(FMAX / FMIN, (b + 0.5) / SPEC_BINS);
+    specTilt[b] = 3.0 * Math.log2(specFreq[b] / 1000.0);
+  }
+  const tgtPre  = new Float32Array(SPEC_BINS).fill(-120.0);
+  const tgtPost = new Float32Array(SPEC_BINS).fill(-120.0);
+  const tgtSc   = new Float32Array(SPEC_BINS).fill(-120.0);
+  const curPre  = new Float32Array(SPEC_BINS).fill(-120.0);
+  const curPost = new Float32Array(SPEC_BINS).fill(-120.0);
+  const curSc   = new Float32Array(SPEC_BINS).fill(-120.0);
+  const peakSc  = new Float32Array(SPEC_BINS).fill(-120.0);
+  let specRaf = 0;
+  let specScActive = false;
+
+  function updateSpectrumKeyBadge(activeNow) {
+    specScActive = !!activeNow;
+    const badge = $('specKeyBadge');
+    const lbl = $('specKeyLabel');
+    const show = !!(specScActive || beaconSelected);
+    if (badge) badge.hidden = !show;
+    if (lbl && show) {
+      lbl.textContent = beaconSelected ? ('Key · ' + beaconSelected) : 'Key · Sidechain';
+    }
+  }
+
+  function applySpecBins(tgt, src) {
+    if (!Array.isArray(src) || src.length !== SPEC_BINS) return;
+    for (let b = 0; b < SPEC_BINS; ++b) {
+      const v = src[b];
+      tgt[b] = (typeof v === 'number' && isFinite(v)) ? v : -120.0;
+    }
+  }
+
+  function kickSpectrumRaf() {
+    if (!specRaf) specRaf = requestAnimationFrame(stepSpectrum);
+  }
+
+  function stepSpectrum() {
+    specRaf = 0;
+    let moving = false;
+    const stepArr = (cur, tgt, atk, rel) => {
+      for (let b = 0; b < SPEC_BINS; ++b) {
+        const c = cur[b], t = tgt[b];
+        const next = t > c ? (c + (t - c) * atk) : (c + (t - c) * rel);
+        if (Math.abs(next - t) > 0.15 && (next > SPEC_DB_MIN - 1.0 || t > SPEC_DB_MIN - 1.0)) {
+          cur[b] = next;
+          moving = true;
+        } else {
+          cur[b] = t;
+        }
+      }
+    };
+    stepArr(curPre, tgtPre, 0.55, 0.14);
+    stepArr(curPost, tgtPost, 0.55, 0.14);
+    stepArr(curSc, tgtSc, 0.62, 0.16);
+    for (let b = 0; b < SPEC_BINS; ++b) {
+      const t = tgtSc[b];
+      if (t >= peakSc[b]) {
+        peakSc[b] = t;
+      } else {
+        peakSc[b] += (t - peakSc[b]) * 0.04;
+      }
+      if (Math.abs(peakSc[b] - t) > 0.25 && (peakSc[b] > SPEC_DB_MIN - 1.0 || t > SPEC_DB_MIN - 1.0)) {
+        moving = true;
+      } else {
+        peakSc[b] = t;
+      }
+    }
+    drawSplits();
+    if (moving) specRaf = requestAnimationFrame(stepSpectrum);
+  }
+
+  let dragSplitIdx = -1;
+
+  function readSplits() {
+    let bandCount = 1;
+    const splits = [150.0, 600.0, 2500.0];
+    if (host) {
+      const bc = sl('bandcount');
+      if (bc) bandCount = Math.round(bc.getScaledValue());
+      for (let i = 0; i < 3; ++i) {
+        const p = sl('split' + (i + 1));
+        if (p) splits[i] = p.getScaledValue();
+      }
+    }
+    return { bandCount, splits };
+  }
+
+  function hexToRgba(hex, alpha) {
+    const m = /^#?([0-9a-f]{6})$/i.exec((hex || '').trim());
+    if (!m) return `rgba(209, 85, 47, ${alpha})`;
+    const n = parseInt(m[1], 16);
+    return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+  }
+
+  function drawSpecTrace(arr, plotH, fillStyle, strokeStyle, lineWidth, fillArea) {
+    let visible = false;
+    for (let b = 0; b < SPEC_BINS; ++b) {
+      if (arr[b] + specTilt[b] > SPEC_DB_MIN + 0.2) {
+        visible = true;
+        break;
+      }
+    }
+    if (!visible) return;
+
+    const tracePoints = () => {
+      const y0 = ySpec(arr[0] + specTilt[0], plotH);
+      splitCtx.moveTo(0, y0);
+      for (let b = 0; b < SPEC_BINS; ++b) {
+        splitCtx.lineTo(hzToX(specFreq[b]), ySpec(arr[b] + specTilt[b], plotH));
+      }
+      const yLast = ySpec(arr[SPEC_BINS - 1] + specTilt[SPEC_BINS - 1], plotH);
+      splitCtx.lineTo(sW, yLast);
+    };
+
+    if (fillArea && fillStyle) {
+      splitCtx.beginPath();
+      tracePoints();
+      splitCtx.lineTo(sW, plotH);
+      splitCtx.lineTo(0, plotH);
+      splitCtx.closePath();
+      splitCtx.fillStyle = fillStyle;
+      splitCtx.fill();
+    }
+
+    splitCtx.beginPath();
+    tracePoints();
+    splitCtx.strokeStyle = strokeStyle;
+    splitCtx.lineWidth = lineWidth;
+    splitCtx.lineJoin = 'round';
+    splitCtx.stroke();
+  }
+
+  function drawSplits() {
+    splitCtx.clearRect(0, 0, sW, sH);
+    if (sW < 40 || sH < 40) return;
+
+    const axis = 16;
+    const plotH = sH - axis;
+    const { bandCount, splits } = readSplits();
+
+    // Bands alternate two subtle washes when multiband is active
+    let sx = 0;
+    for (let b = 0; b < bandCount; ++b) {
+      const ex = b < bandCount - 1 ? hzToX(splits[b]) : sW;
+      splitCtx.fillStyle = ink(b % 2 === 0 ? 0.055 : 0.028);
+      splitCtx.fillRect(sx, 0, ex - sx, plotH);
+      sx = ex;
+    }
+
+    // Horizontal dB gridlines
+    splitCtx.strokeStyle = ink(0.055);
+    splitCtx.lineWidth = 1;
+    splitCtx.font = '600 8.5px ' + cssVar('--font');
+    splitCtx.fillStyle = ink(0.28);
+    splitCtx.textAlign = 'left';
+    splitCtx.textBaseline = 'middle';
+    [-18, -36, -54, -72].forEach(db => {
+      const y = Math.round(ySpec(db, plotH)) + 0.5;
+      splitCtx.beginPath();
+      splitCtx.moveTo(0, y);
+      splitCtx.lineTo(sW, y);
+      splitCtx.stroke();
+      splitCtx.fillText(String(db), 5, y - 6);
+    });
+    splitCtx.textBaseline = 'alphabetic';
+
+    // Vertical Hz gridlines + labels
+    splitCtx.strokeStyle = ink(0.07);
+    splitCtx.lineWidth = 1;
+    splitCtx.font = '600 9px ' + cssVar('--font');
+    splitCtx.fillStyle = ink(0.34);
+    splitCtx.textAlign = 'center';
+    [50, 100, 200, 500, 1000, 2000, 5000, 10000].forEach(hz => {
+      const x = hzToX(hz);
+      splitCtx.beginPath(); splitCtx.moveTo(x, 0); splitCtx.lineTo(x, plotH); splitCtx.stroke();
+      splitCtx.fillText(hz >= 1000 ? (hz / 1000) + 'k' : String(hz), x, sH - 4);
+    });
+
+    // Live 3-trace spectrum: In (dry), Out (saturated), Key (external Beacon / DAW sidechain)
+    const outGrad = splitCtx.createLinearGradient(0, 0, 0, plotH);
+    outGrad.addColorStop(0, hexToRgba(COL.accent, 0.30));
+    outGrad.addColorStop(1, hexToRgba(COL.accent, 0.02));
+    drawSpecTrace(curPre, plotH, ink(0.08), ink(0.32), 1.2, true);
+    drawSpecTrace(curPost, plotH, outGrad, COL.accentLit, 1.8, true);
+
+    const isLight = document.documentElement.getAttribute('data-theme') === 'japandi-light';
+    const keyStroke = isLight ? '#0284c7' : '#38bdf8';
+    const keyTopRgba = isLight ? 'rgba(2, 132, 199, 0.24)' : 'rgba(56, 189, 248, 0.24)';
+    const keyBotRgba = isLight ? 'rgba(2, 132, 199, 0.02)' : 'rgba(56, 189, 248, 0.02)';
+    const keyGrad = splitCtx.createLinearGradient(0, 0, 0, plotH);
+    keyGrad.addColorStop(0, keyTopRgba);
+    keyGrad.addColorStop(1, keyBotRgba);
+    drawSpecTrace(curSc, plotH, keyGrad, keyStroke, 1.9, true);
+    drawSpecTrace(peakSc, plotH, null, isLight ? 'rgba(2, 132, 199, 0.45)' : 'rgba(56, 189, 248, 0.45)', 1.0, false);
+
+    // Band names in multiband mode only so 1-band view stays an open spectrum
+    if (bandCount > 1) {
+      splitCtx.font = '700 9.5px ' + cssVar('--font');
+      splitCtx.textBaseline = 'middle';
+      sx = 0;
+      for (let b = 0; b < bandCount; ++b) {
+        const ex = b < bandCount - 1 ? hzToX(splits[b]) : sW;
+        const cx = sx + (ex - sx) / 2;
+        const label = 'BAND ' + (b + 1);
+        const tw = splitCtx.measureText(label).width;
+        if (ex - sx > tw + 22) {
+          splitCtx.fillStyle = 'rgba(46, 43, 37, 0.85)';
+          splitCtx.beginPath();
+          if (splitCtx.roundRect) {
+            splitCtx.roundRect(cx - tw / 2 - 7, plotH - 26, tw + 14, 16, 8);
+          } else {
+            splitCtx.rect(cx - tw / 2 - 7, plotH - 26, tw + 14, 16);
+          }
+          splitCtx.fill();
+          splitCtx.fillStyle = ink(b === currentBandIdx ? 0.85 : 0.45);
+          splitCtx.fillText(label, cx, plotH - 17.5);
+        }
+        sx = ex;
+      }
+      splitCtx.textBaseline = 'alphabetic';
+    }
+
+    // handles: dashed guide plus a cream pill carrying the value. Anything
+    // draggable in a well is a pill.
+    for (let i = 0; i < bandCount - 1; ++i) {
+      const x = hzToX(splits[i]);
+      splitCtx.strokeStyle = ink(dragSplitIdx === i ? 0.85 : 0.5);
+      splitCtx.lineWidth = 1.5;
+      splitCtx.setLineDash([4, 4]);
+      splitCtx.beginPath(); splitCtx.moveTo(x, 0); splitCtx.lineTo(x, plotH); splitCtx.stroke();
+      splitCtx.setLineDash([]);
+
+      const label = splits[i] >= 1000 ? (splits[i] / 1000).toFixed(1) + ' kHz' : Math.round(splits[i]) + ' Hz';
+      splitCtx.font = '700 10px ' + cssVar('--font');
+      const tw = splitCtx.measureText(label).width + 16;
+      splitCtx.fillStyle = COL.cream;
+      splitCtx.beginPath();
+      if (splitCtx.roundRect) splitCtx.roundRect(x - tw / 2, 10, tw, 20, 10);
+      else splitCtx.rect(x - tw / 2, 10, tw, 20);
+      splitCtx.fill();
+      splitCtx.fillStyle = COL.well;
+      splitCtx.textAlign = 'center';
+      splitCtx.textBaseline = 'middle';
+      splitCtx.fillText(label, x, 20.5);
+      splitCtx.textBaseline = 'alphabetic';
+    }
+  }
+
+  splitCanvas.addEventListener('pointerdown', ev => {
+    if ((ev.button ?? 0) !== 0) return;
+    const r = splitCanvas.getBoundingClientRect();
+    const mx = ev.clientX - r.left;
+    const { bandCount, splits } = readSplits();
+    dragSplitIdx = -1;
+    for (let i = 0; i < bandCount - 1; ++i) {
+      if (Math.abs(mx - hzToX(splits[i])) < 15) {
+        dragSplitIdx = i;
+        const slider = sl('split' + (dragSplitIdx + 1));
+        if (slider) slider.sliderDragStarted();
+        splitCanvas.setPointerCapture(ev.pointerId);
+        ev.preventDefault();
+        break;
+      }
+    }
+    drawSplits();
+  });
+
+  splitCanvas.addEventListener('dblclick', ev => {
+    const r = splitCanvas.getBoundingClientRect();
+    const mx = ev.clientX - r.left;
+    const { bandCount, splits } = readSplits();
+    for (let i = 0; i < bandCount - 1; ++i) {
+      if (Math.abs(mx - hzToX(splits[i])) < 15) {
+        const slider = sl('split' + (i + 1));
+        const p = slider && slider.properties ? slider.properties : { start: 20, end: 20000, skew: 1 };
+        const def = typeof p.defaultValue === 'number' ? p.defaultValue : null;
+        if (slider && def !== null) {
+          const lin = clamp((def - p.start) / ((p.end - p.start) || 1), 0, 1);
+          slider.sliderDragStarted();
+          slider.setNormalisedValue(Math.pow(lin, p.skew || 1));
+          slider.sliderDragEnded();
+          drawSplits();
+        }
+        break;
+      }
+    }
+  });
+
+  splitCanvas.addEventListener('pointermove', ev => {
+    const r = splitCanvas.getBoundingClientRect();
+    if (dragSplitIdx === -1) {
+      const mx = ev.clientX - r.left;
+      const { bandCount, splits } = readSplits();
+      let near = false;
+      for (let i = 0; i < bandCount - 1; ++i)
+        if (Math.abs(mx - hzToX(splits[i])) < 15) near = true;
+      splitCanvas.style.cursor = near ? 'ew-resize' : 'default';
+      return;
+    }
+    const mx = clamp(ev.clientX - r.left, 5, sW - 5);
+    const newHz = xToHz(mx);
+    const slider = sl('split' + (dragSplitIdx + 1));
+    if (slider) {
+      const p = slider.properties || { start: 20, end: 20000, skew: 1 };
+      const lin = (newHz - p.start) / (p.end - p.start);
+      slider.setNormalisedValue(Math.pow(clamp(lin, 0, 1), p.skew || 1));
+      drawSplits();
+    }
+  });
+
+  const endSplitDrag = ev => {
+    if (dragSplitIdx !== -1) {
+      const slider = sl('split' + (dragSplitIdx + 1));
+      if (slider) slider.sliderDragEnded();
+      try { splitCanvas.releasePointerCapture(ev.pointerId); } catch (e) {}
+      dragSplitIdx = -1;
+      drawSplits();
+    }
+  };
+  splitCanvas.addEventListener('pointerup', endSplitDrag);
+  splitCanvas.addEventListener('pointercancel', endSplitDrag);
+
+  // -------------------------------------------------------- per-band controls
+  // Every band is bound ONCE at init; selection only toggles which pane is
+  // visible. Rebinding a shared control set on each switch is the bug that
+  // froze this editor's readouts once already.
+  const SAT_BANDS = 4;
+
+  function bandCountNow() {
+    const p = sl('bandcount');
+    return p ? Math.round(p.getScaledValue()) : 1;
+  }
+
+  function bandRangeText(b) {
+    const { bandCount, splits } = readSplits();
+    if (bandCount <= 1) return 'Whole signal';
+    const fmtHz = hz => hz >= 1000 ? (hz / 1000).toFixed(1) + ' kHz' : Math.round(hz) + ' Hz';
+    const lo = b === 1 ? '20 Hz' : fmtHz(splits[b - 2]);
+    const hi = b === bandCount ? '20 kHz' : fmtHz(splits[b - 1]);
+    return lo + ' – ' + hi;
+  }
+
+  function bindAllBandControls() {
+    for (let b = 1; b <= SAT_BANDS; ++b) {
+      if (window.WDKit && WDKit.bindSliderKnob) {
+        WDKit.bindSliderKnob($('param_banddrive' + b), sl('banddrive' + b), {
+          paramId: 'banddrive' + b,
+          fmt: v => v.toFixed(1) + ' dB',
+          onValueChange: () => {
+            if (b === currentBandIdx + 1) drawCurve();
+            updateModCollars();
+          },
+        });
+        WDKit.bindSliderKnob($('param_bandmix' + b), sl('bandmix' + b), {
+          paramId: 'bandmix' + b,
+          fmt: v => Math.round(v) + '%',
+          onValueChange: updateModCollars,
+        });
+        WDKit.bindSliderKnob($('param_bandlevel' + b), sl('bandlevel' + b), {
+          paramId: 'bandlevel' + b,
+          fmt: v => (v > 0 ? '+' : '') + v.toFixed(1) + ' dB',
+          onValueChange: updateModCollars,
+        });
+      }
+      bindToggle($('param_bandsolo' + b), 'bandsolo' + b);
+      bindToggle($('param_bandbypass' + b), 'bandbypass' + b);
+      bindChoicePills($('char-group-' + b), 'bandchar' + b, SHAPER_CHOICES, () => {
+        if (b === currentBandIdx + 1) {
+          const idx = comboIndex('bandchar' + b, SHAPER_CHOICES.length);
+          $('activeShaperLabel').textContent = SHAPER_CHOICES[idx] || 'Tanh';
+          drawCurve();
+        }
+      });
+    }
+  }
+
+  function updateCurveTitle() {
+    const t = $('curve_title');
+    if (!t) return;
+    t.textContent = bandCountNow() <= 1 ? 'Transfer curve'
+                                        : ('Band ' + (currentBandIdx + 1) + ' transfer curve');
+  }
+
+  function selectBand(b) {
+    currentBandIdx = b - 1;
+    const multi = bandCountNow() > 1;
+
+    for (let i = 1; i <= SAT_BANDS; ++i) {
+      const btn = $('sel_band_' + i);
+      if (btn) btn.classList.toggle('on', i === b);
+      const pane = $('band_pane_' + i);
+      if (pane) pane.classList.toggle('active', multi && i === b);
+    }
+    const gp = $('pane_global');
+    if (gp) gp.classList.toggle('active', !multi);
+
+    const title = $('active_band_title');
+    if (title) title.textContent = multi ? bandRangeText(b) : 'Whole signal';
+    const mLabel = $('satMeterLabel');
+    if (mLabel) mLabel.textContent = multi ? ('Band ' + b) : 'Saturation';
+
+    const idx = multi ? comboIndex('bandchar' + b, SHAPER_CHOICES.length)
+                      : comboIndex('character', SHAPER_CHOICES.length);
+    $('activeShaperLabel').textContent = SHAPER_CHOICES[idx] || 'Tanh';
+
+    updateCurveTitle();
+    drawCurve();
+    drawSplits();
+  }
+
+  for (let b = 1; b <= SAT_BANDS; ++b) {
+    const btn = $('sel_band_' + b);
+    if (btn) btn.addEventListener('click', () => { if (!btn.disabled) selectBand(b); });
+  }
+
+  // Bands past the count grey out and the crossover dims — a control that
+  // vanishes reads as a bug.
+  function updateBandAvailability() {
+    const n = bandCountNow();
+    for (let b = 1; b <= SAT_BANDS; ++b) {
+      const btn = $('sel_band_' + b);
+      if (btn) btn.disabled = b > n;
+    }
+    const selector = $('band-selector');
+    if (selector) selector.style.visibility = n > 1 ? 'visible' : 'hidden';
+    const cross = $('crossoverContainer');
+    if (cross) cross.classList.toggle('inactive', n <= 1);
+    const wt = $('spectrumWellTitle');
+    if (wt) wt.textContent = n <= 1 ? 'Spectrum' : 'Spectrum · Crossover';
+    const hint = $('crossoverHint');
+    if (hint) hint.textContent = n <= 1 ? 'Whole signal' : 'Drag handle to split';
+    selectBand(Math.min(currentBandIdx + 1, n));
+  }
+
+  // --------------------------------------------------- track name + WD Beacon
+  const selfMeta = { name: 'Sat 1', customName: '', publishedName: '', publishing: false };
+  let beaconSelected = '';
+  let beaconReceiving = false;
+  let beaconSrMismatch = false;
+  let beaconMetersSeen = false;
+  let lastBeaconSig = '';
+
+  function renderSelfTrackChip() {
+    const chip = $('selfTrackChip');
+    const nameEl = $('selfTrackName');
+    if (nameEl && nameEl.isConnected && !nameEl.querySelector('input'))
+      nameEl.textContent = selfMeta.name || 'Sat 1';
+    if (chip) {
+      const pubName = selfMeta.publishedName || selfMeta.name || 'Sat 1';
+      chip.title = 'Click to rename this Saturator track · Broadcasting on Beacon as "' + pubName + '"';
+    }
+  }
+
+  function startInlineTrackRename(labelEl, currentText) {
+    if (!labelEl || labelEl.querySelector('input')) return;
+    const prev = currentText;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.maxLength = 47;
+    input.className = 'track-name-input';
+    input.value = prev;
+    let done = false;
+    const commit = async keep => {
+      if (done) return;
+      done = true;
+      const next = keep ? input.value.trim() : prev;
+      input.replaceWith(labelEl);
+      if (keep && host) {
+        try {
+          const res = await host.call('setInstanceName', next);
+          if (res && res.ok) {
+            selfMeta.name = res.name || selfMeta.name;
+            selfMeta.customName = res.customName || '';
+            if (typeof res.beaconPublishedName === 'string') selfMeta.publishedName = res.beaconPublishedName;
+            if (typeof res.beaconPublishing === 'boolean') selfMeta.publishing = res.beaconPublishing;
+            renderSelfTrackChip();
+          }
+        } catch (e) {}
+      }
+    };
+    input.addEventListener('keydown', ev => {
+      if (ev.key === 'Enter') { ev.preventDefault(); commit(true); }
+      else if (ev.key === 'Escape') { ev.preventDefault(); commit(false); }
+      ev.stopPropagation();
+    });
+    input.addEventListener('pointerdown', ev => ev.stopPropagation());
+    input.addEventListener('blur', () => commit(true));
+    labelEl.replaceWith(input);
+    input.focus({ preventScroll: true });
+    input.select();
+  }
+
+  {
+    const chip = $('selfTrackChip');
+    if (chip) {
+      chip.addEventListener('click', () => startInlineTrackRename($('selfTrackName'), selfMeta.customName || selfMeta.name));
+    }
+  }
+
+  function updateBeaconLed() {
+    const wrap = $('beaconPickerWrap');
+    if (!wrap) return;
+    const extTg = tg('envext');
+    const extOn = extTg ? !!extTg.getValue() : true;
+    const cls = beaconSelected ? (beaconSrMismatch ? 'mismatch' : ((beaconReceiving && extOn) ? 'receiving' : 'waiting')) : '';
+    wrap.classList.remove('receiving', 'waiting', 'mismatch');
+    if (cls) wrap.classList.add(cls);
+    wrap.title = (beaconSelected && beaconSrMismatch)
+      ? 'Sample rate mismatch between this track and the selected WD Beacon track.'
+      : (beaconSelected && !extOn)
+      ? 'Beacon source selected, but Ext Key is off on the Env tab — enable Ext Key so Beacon drives saturation.'
+      : 'Select an active Werewolf Digital Beacon track to trigger Envelope Drive saturation. Wireless cross-track key — for sample-exact timing at large DAW buffer sizes (1024+), use Off (Host Bus) with a DAW sidechain send.';
+  }
+
+  function renderBeaconSources(res) {
+    const sel = $('beaconSourceSelect');
+    if (!sel || !res || typeof res !== 'object') return;
+    const sources = Array.isArray(res.sources) ? res.sources : [];
+    if (typeof res.selected === 'string') beaconSelected = res.selected;
+    if (!beaconMetersSeen && typeof res.receiving === 'boolean') beaconReceiving = res.receiving;
+    if (typeof res.srMismatch === 'boolean') beaconSrMismatch = res.srMismatch;
+
+    const sig = sources.map(s => `${s.name}:${s.sr}:${s.ch}`).join('|') + '#' + beaconSelected;
+    updateBeaconLed();
+    if (document.activeElement === sel || sig === lastBeaconSig) return;
+    lastBeaconSig = sig;
+
+    sel.textContent = '';
+    const off = document.createElement('option');
+    off.value = '';
+    off.textContent = 'Off (Host Bus)';
+    sel.appendChild(off);
+
+    let found = (beaconSelected === '');
+    for (const s of sources) {
+      const opt = document.createElement('option');
+      opt.value = s.name;
+      const sr = s.sr ? (s.sr / 1000).toFixed(s.sr % 1000 === 0 ? 0 : 1) + 'k' : '?';
+      const ch = s.ch === 1 ? 'Mono' : s.ch === 2 ? 'St' : (s.ch + 'ch');
+      opt.textContent = `${s.name} (${sr} · ${ch})`;
+      if (s.name === beaconSelected) found = true;
+      sel.appendChild(opt);
+    }
+    if (!found && beaconSelected) {
+      const offline = document.createElement('option');
+      offline.value = beaconSelected;
+      offline.textContent = `${beaconSelected} (waiting…)`;
+      sel.appendChild(offline);
+    }
+    sel.value = beaconSelected;
+  }
+
+  async function refreshBeaconSources() {
+    if (!host) return;
+    try {
+      const res = await host.call('getBeaconSources');
+      renderBeaconSources(res);
+    } catch (e) {}
+  }
+
+  {
+    const sel = $('beaconSourceSelect');
+    if (sel) {
+      sel.addEventListener('pointerdown', refreshBeaconSources);
+      sel.addEventListener('focus', refreshBeaconSources);
+      sel.addEventListener('change', async () => {
+        beaconSelected = sel.value || '';
+        beaconSrMismatch = false;
+        if (beaconSelected) {
+          const extTg = tg('envext');
+          if (extTg && !extTg.getValue()) {
+            extTg.setValue(true);
+            $('param_envext')?.classList.add('on');
+            refreshRouteChips();
+          }
+          const envTab = document.querySelector('#xlfo-tabs button[data-xlfo="env"]');
+          if (envTab && !envTab.classList.contains('on')) envTab.click();
+        }
+        updateBeaconLed();
+        if (host) {
+          try {
+            const res = await host.call('setBeaconSource', beaconSelected);
+            if (res && typeof res.receiving === 'boolean') beaconReceiving = res.receiving;
+            if (res && typeof res.srMismatch === 'boolean') beaconSrMismatch = res.srMismatch;
+            updateBeaconLed();
+            updateSpectrumKeyBadge(specScActive);
+          } catch (e) {}
+        }
+      });
+    }
+  }
+
+  // ------------------------------------------------------------- modulation
+  const xlfoTabs = document.querySelectorAll('#xlfo-tabs button');
+  function selectXlfoTab(idx) {
+    currentXlfoIdx = clamp(idx, 0, 2);
+    xlfoTabs.forEach(t => t.classList.toggle('on', parseInt(t.dataset.xlfo, 10) === currentXlfoIdx + 1));
+    $('mod_pane_lfo')?.classList.add('active');
+    $('mod_pane_env')?.classList.remove('active');
+    document.querySelectorAll('#sourceBar .wd-src-pill').forEach(p => {
+      p.classList.toggle('on', parseInt(p.dataset.sourceId, 10) === currentXlfoIdx);
+    });
+    bindActiveXlfoControls();
+    drawXlfoCurve();
+  }
+
+  xlfoTabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      xlfoTabs.forEach(t => t.classList.toggle('on', t === tab));
+      const mode = tab.dataset.xlfo;
+      const isEnv = (mode === 'env');
+      $('mod_pane_lfo')?.classList.toggle('active', !isEnv);
+      $('mod_pane_env')?.classList.toggle('active', isEnv);
+      if (!isEnv) {
+        currentXlfoIdx = Math.max(0, (parseInt(mode, 10) || 1) - 1);
+        document.querySelectorAll('#sourceBar .wd-src-pill').forEach(p => {
+          p.classList.toggle('on', parseInt(p.dataset.sourceId, 10) === currentXlfoIdx);
+        });
+        bindActiveXlfoControls();
+        drawXlfoCurve();
+      }
+    });
+  });
+
+  document.querySelectorAll('#sourceBar .wd-src-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      const sid = parseInt(pill.dataset.sourceId, 10);
+      document.querySelectorAll('#sourceBar .wd-src-pill').forEach(p => p.classList.toggle('on', p === pill));
+      if (sid >= 0 && sid <= 2) selectXlfoTab(sid);
+    });
+  });
+
+  function bindActiveXlfoControls() {
+    const N = (currentXlfoIdx + 1).toString();
+    if (window.WDKit && WDKit.bindSliderKnob) {
+      WDKit.bindSliderKnob($('xlfo_rate'), sl('xlfo' + N + 'rate'), { paramId: 'xlfo' + N + 'rate', fmt: v => v.toFixed(2) + ' Hz', unit: 'Hz' });
+      WDKit.bindSliderKnob($('xlfo_phase'), sl('xlfo' + N + 'phase'), { paramId: 'xlfo' + N + 'phase', fmt: v => Math.round(v) + '°' });
+      WDKit.bindSliderKnob($('xlfo_snap'), sl('xlfo' + N + 'snap'), { paramId: 'xlfo' + N + 'snap', fmt: v => Math.round(v) + '%' });
+    }
+    bindToggle($('xlfo_balance'), 'xlfo' + N + 'balance');
+  }
+
+  // ------------------------------------------------------------ XLFO canvas
+  const xCanvas = $('xlfoCanvas');
+  const xCtx = xCanvas.getContext('2d');
+  let xW = 0, xH = 0, xDpr = 1;
+  let dragHandleIdx = -1;
+  let dragStartPos = null;
+  const X_AXIS = 10, X_PAD_TOP = 6;
+
+  function fitXCanvas() {
+    xDpr = window.devicePixelRatio || 1;
+    const r = xCanvas.getBoundingClientRect();
+    xW = r.width; xH = r.height;
+    xCanvas.width = Math.round(xW * xDpr);
+    xCanvas.height = Math.round(xH * xDpr);
+    xCtx.setTransform(xDpr, 0, 0, xDpr, 0, 0);
+    drawXlfoCurve();
+  }
+  new ResizeObserver(fitXCanvas).observe(xCanvas);
+
+  function xBent(u, slope) {
+    if (Math.abs(slope) <= 1e-6) return u;
+    return slope > 0 ? Math.pow(u, 1.0 - slope * 0.95) : Math.pow(u, 1.0 - slope * 19.0);
+  }
+
+  function xPatternAt(xlfo, u) {
+    const n = xlfo.numSteps || 16;
+    const i = clamp(Math.floor(u * n), 0, n - 1);
+    const local = u * n - i;
+    const prev = xlfo.steps[(i - 1 + n) % n].value;
+    const curr = xlfo.steps[i].value;
+    const g = xlfo.steps[i].glide / 100.0;
+    if (g > 0 && local < g) return prev + xBent(local / g, xlfo.steps[i].slope) * (curr - prev);
+    return curr;
+  }
+
+  const xPlotH = () => Math.max(12, xH - X_AXIS - X_PAD_TOP);
+  const xYFor = v => X_PAD_TOP + (1.0 - v) * xPlotH();
+
+  function drawXlfoCurve() {
+    xCtx.clearRect(0, 0, xW, xH);
+    if (xW < 40 || xH < 24) return;
+    const xlfo = xlfosState[currentXlfoIdx];
+    if (!xlfo) return;
+    const n = xlfo.numSteps || 16;
+    const stepW = xW / n;
+
+    xCtx.strokeStyle = ink(0.07);
+    xCtx.lineWidth = 1;
+    for (let i = 1; i < n; ++i) {
+      const bx = Math.round(i * stepW);
+      xCtx.beginPath(); xCtx.moveTo(bx, X_PAD_TOP); xCtx.lineTo(bx, xH - X_AXIS); xCtx.stroke();
+    }
+
+    const trace = (from, to) => {
+      xCtx.beginPath();
+      let first = true;
+      for (let px = from; px <= to; ++px) {
+        const y = xYFor(xPatternAt(xlfo, clamp(px / xW, 0, 0.999999)));
+        first ? xCtx.moveTo(px, y) : xCtx.lineTo(px, y);
+        first = false;
+      }
+      xCtx.stroke();
+    };
+    xCtx.lineWidth = 2.2;
+    xCtx.lineJoin = 'round';
+    xCtx.lineCap = 'round';
+    xCtx.strokeStyle = COL.accentLit;
+    trace(0, Math.round(xW));
+
+    const phase = liveXlfoPhases[currentXlfoIdx];
+    if (typeof phase === 'number' && phase > 0) {
+      const px = clamp(Math.round(phase * xW), 0, xW);
+      xCtx.lineWidth = 2.8;
+      xCtx.strokeStyle = ink(0.92);
+      trace(0, px);
+      const tipY = xYFor(xPatternAt(xlfo, clamp(phase, 0, 0.999999)));
+      xCtx.fillStyle = COL.cream;
+      xCtx.beginPath();
+      xCtx.arc(px, tipY, 3.2, 0, Math.PI * 2);
+      xCtx.fill();
+    }
+
+    for (let i = 0; i < n; ++i) {
+      const hx = (i + 1) * stepW;
+      const hy = xYFor(xlfo.steps[i].value);
+      xCtx.fillStyle = dragHandleIdx === i ? COL.accentLit : COL.cream;
+      xCtx.beginPath();
+      if (xCtx.roundRect) xCtx.roundRect(hx - 3.5, hy - 3.5, 7, 7, 2);
+      else xCtx.rect(hx - 3.5, hy - 3.5, 7, 7);
+      xCtx.fill();
+    }
+  }
+
+  async function saveStep(xlfoIdx, stepIdx) {
+    const xlfo = xlfosState[xlfoIdx];
+    if (!xlfo) return;
+    const step = xlfo.steps[stepIdx];
+    if (host) {
+      try {
+        await host.call('setXlfoStep', xlfoIdx, stepIdx, step.value, step.glide, step.slope);
+      } catch (e) { console.error('Error saving step:', e); }
+    }
+  }
+
+  async function saveXlfoConfig(xlfoIdx) {
+    const xlfo = xlfosState[xlfoIdx];
+    if (!xlfo) return;
+    if (host) {
+      try {
+        await host.call('setXlfoConfig', xlfoIdx, xlfo.numSteps, xlfo.isSynced, xlfo.syncRateBeats, xlfo.retriggerMode);
+      } catch (e) { console.error('Error saving XLFO config:', e); }
+    }
+  }
+
+  xCanvas.addEventListener('pointerdown', ev => {
+    if ((ev.button ?? 0) !== 0) return;
+    const r = xCanvas.getBoundingClientRect();
+    const mx = ev.clientX - r.left;
+    const my = ev.clientY - r.top;
+    const xlfo = xlfosState[currentXlfoIdx];
+    if (!xlfo) return;
+    const n = xlfo.numSteps || 16;
+    const stepW = xW / n;
+
+    dragHandleIdx = -1;
+    for (let i = 0; i < n; ++i) {
+      const hx = (i + 1) * stepW;
+      const hy = xYFor(xlfo.steps[i].value);
+      if (Math.hypot(mx - hx, my - hy) < 12) {
+        dragHandleIdx = i;
+        dragStartPos = { x: mx, y: my, val: xlfo.steps[i].value, glide: xlfo.steps[i].glide };
+        try { xCanvas.setPointerCapture(ev.pointerId); } catch (_) {}
+        break;
+      }
+    }
+    if (dragHandleIdx === -1) {
+      const idx = clamp(Math.floor(mx / Math.max(1, stepW)), 0, n - 1);
+      dragHandleIdx = idx;
+      dragStartPos = { x: mx, y: my, val: xlfo.steps[idx].value, glide: xlfo.steps[idx].glide };
+      try { xCanvas.setPointerCapture(ev.pointerId); } catch (_) {}
+    }
+    drawXlfoCurve();
+  });
+
+  xCanvas.addEventListener('pointermove', ev => {
+    if (dragHandleIdx === -1 || !dragStartPos) return;
+    const r = xCanvas.getBoundingClientRect();
+    const mx = clamp(ev.clientX - r.left, 0, xW);
+    const my = clamp(ev.clientY - r.top, X_PAD_TOP, xH - X_AXIS);
+    const xlfo = xlfosState[currentXlfoIdx];
+    if (!xlfo) return;
+    const n = xlfo.numSteps || 16;
+    const stepIdx = clamp(dragHandleIdx, 0, n - 1);
+    const step = xlfo.steps[stepIdx];
+    let newVal = 1.0 - (my - X_PAD_TOP) / xPlotH();
+    if (!ev.shiftKey) newVal = Math.round(newVal * 8) / 8;
+    step.value = clamp(newVal, 0.0, 1.0);
+    const stepW = xW / n;
+    const localX = clamp(mx - stepIdx * stepW, 0, stepW);
+    let newGlide = (localX / stepW) * 100;
+    if (!ev.shiftKey) newGlide = Math.round(newGlide / 25) * 25;
+    step.glide = clamp(newGlide, 0.0, 100.0);
+    saveStep(currentXlfoIdx, stepIdx);
+    drawXlfoCurve();
+  });
+
+  const endXDrag = ev => {
+    if (dragHandleIdx !== -1) {
+      try { xCanvas.releasePointerCapture(ev.pointerId); } catch (e) {}
+      dragHandleIdx = -1;
+      dragStartPos = null;
+      drawXlfoCurve();
+    }
+  };
+  xCanvas.addEventListener('pointerup', endXDrag);
+  xCanvas.addEventListener('pointercancel', endXDrag);
+
+  function applyXlfoPreset(presetName) {
+    const xlfo = xlfosState[currentXlfoIdx];
+    if (!xlfo || !window.WDKit || !WDKit.buildXlfoPresetSteps) return;
+    const numSteps = xlfo.numSteps || 16;
+    const built = WDKit.buildXlfoPresetSteps(presetName, numSteps);
+    const steps = Array.isArray(built) ? built : (built && built.steps ? built.steps : []);
+    for (let i = 0; i < 32 && i < steps.length; ++i) {
+      xlfo.steps[i] = {
+        index: i,
+        value: clamp(steps[i].value, 0, 1),
+        glide: clamp(steps[i].glide, 0, 100),
+        slope: clamp(steps[i].slope, -1, 1),
+      };
+    }
+    saveXlfoConfig(currentXlfoIdx);
+    for (let i = 0; i < numSteps; ++i) saveStep(currentXlfoIdx, i);
+    drawXlfoCurve();
+  }
+
+  function applyXlfoTransform(op) {
+    const xlfo = xlfosState[currentXlfoIdx];
+    if (!xlfo || !window.WDKit || !WDKit.transformXlfoSteps) return;
+    const numSteps = xlfo.numSteps || 16;
+    const arg = op === 'shift' ? 1 : (op === 'smooth' ? 35 : undefined);
+    const next = WDKit.transformXlfoSteps(xlfo.steps, op, arg, numSteps);
+    for (let i = 0; i < 32 && i < next.length; ++i) {
+      xlfo.steps[i] = {
+        index: i,
+        value: clamp(next[i].value, 0, 1),
+        glide: clamp(next[i].glide, 0, 100),
+        slope: clamp(next[i].slope, -1, 1),
+      };
+    }
+    for (let i = 0; i < numSteps; ++i) saveStep(currentXlfoIdx, i);
+    drawXlfoCurve();
+  }
+
+  {
+    const bar = $('xlfoPresetBar');
+    if (bar) {
+      bar.querySelectorAll('[data-xlfo-preset]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          bar.querySelectorAll('[data-xlfo-preset]').forEach(b => b.classList.toggle('on', b === btn));
+          applyXlfoPreset(btn.dataset.xlfoPreset);
+        });
+      });
+      bar.querySelectorAll('[data-xlfo-op]').forEach(btn => {
+        btn.addEventListener('click', () => applyXlfoTransform(btn.dataset.xlfoOp));
+      });
+    }
+  }
+
+  const matrixToggle = $('matrixToggle');
+  const matrixContainer = $('matrixContainer');
+  matrixToggle.addEventListener('click', () => {
+    const open = matrixContainer.style.display === 'flex';
+    matrixContainer.style.display = open ? 'none' : 'flex';
+    matrixToggle.classList.toggle('on', !open);
+    matrixToggle.textContent = open ? 'Routes' : 'Hide routes';
+  });
+
+  const labelOf = (list, val) => {
+    const hit = list.find(o => o.val === val);
+    return hit ? hit.label : '—';
+  };
+
+  // A route reads as a sentence. The collapsed strip states what is live, so
+  // twenty-four numbered slots never have to be opened to find out.
+  function refreshRouteChips() {
+    const chips = $('routeChips');
+    const live = activeSlots.filter(s => s.on && s.source >= 0 && s.dest >= 0);
+    const envDriveS = sl('envdrive');
+    const envDriveVal = envDriveS ? envDriveS.getScaledValue() : 0;
+    const envExtT = tg('envext');
+    const envExtOn = envExtT ? !!envExtT.getValue() : false;
+    const envActive = Math.abs(envDriveVal) >= 0.1;
+
+    const totalCount = live.length + (envActive ? 1 : 0);
+    $('routeCount').textContent = totalCount === 0 ? 'no routes live'
+      : (totalCount + (totalCount === 1 ? ' route live' : ' routes live'));
+    chips.innerHTML = '';
+
+    const chipTexts = [];
+    if (envActive) {
+      const sign = envDriveVal > 0 ? '+' : '';
+      chipTexts.push((envExtOn ? 'Env (Ext)' : 'Env') + ' → Drive ' + sign + envDriveVal.toFixed(1) + ' dB');
+    }
+    for (const s of live) {
+      chipTexts.push(labelOf(SRC_OPTIONS, s.source) + ' → ' + labelOf(DEST_OPTIONS, s.dest)
+        + ' ' + Math.round(Math.abs(s.depth) * 50) + '%');
+    }
+
+    // The strip has room for exactly one chip beside the counter at 1000px.
+    // Everything else is reachable through the matrix, and the title line
+    // above already states the true live count.
+    chipTexts.slice(0, 1).forEach(txt => {
+      const el = document.createElement('div');
+      el.className = 'route';
+      const dot = document.createElement('span');
+      dot.className = 'dot';
+      el.append(dot, document.createTextNode(txt));
+      chips.appendChild(el);
+    });
+    if (chipTexts.length > 1) {
+      const more = document.createElement('button');
+      more.className = 'pill sm';
+      more.textContent = '+' + (chipTexts.length - 1);
+      more.addEventListener('click', () => matrixToggle.click());
+      chips.appendChild(more);
+    }
+    updateModCollars();
+  }
+
+  function rebuildSlotsGridUI() {
+    matrixContainer.innerHTML = '';
+    for (let s = 0; s < 24; ++s) {
+      const initSlot = activeSlots[s];
+      const row = document.createElement('div');
+      row.className = 'slot' + (initSlot.on ? ' active' : '');
+      row.dataset.slotIndex = s;
+
+      const chk = document.createElement('input');
+      chk.type = 'checkbox';
+      chk.checked = initSlot.on;
+      chk.addEventListener('change', () => {
+        const slot = activeSlots[s];
+        if (!slot) return;
+        slot.on = chk.checked;
+        row.classList.toggle('active', slot.on);
+        saveSlot(s);
+        refreshRouteChips();
+        if (patchCords) patchCords.refresh();
+      });
+      row.appendChild(chk);
+
+      const srcSel = document.createElement('select');
+      SRC_OPTIONS.forEach(opt => {
+        const o = document.createElement('option');
+        o.value = opt.val; o.textContent = opt.label;
+        if (initSlot.source === opt.val) o.selected = true;
+        srcSel.appendChild(o);
+      });
+      srcSel.addEventListener('change', () => {
+        const slot = activeSlots[s];
+        if (!slot) return;
+        slot.source = parseInt(srcSel.value, 10);
+        saveSlot(s);
+        refreshRouteChips();
+        if (patchCords) patchCords.refresh();
+      });
+      row.appendChild(srcSel);
+
+      const arr = document.createElement('span');
+      arr.className = 'arrow';
+      arr.textContent = '→';
+      row.appendChild(arr);
+
+      const destSel = document.createElement('select');
+      DEST_OPTIONS.forEach(opt => {
+        const o = document.createElement('option');
+        o.value = opt.val; o.textContent = opt.label;
+        if (initSlot.dest === opt.val) o.selected = true;
+        destSel.appendChild(o);
+      });
+      destSel.addEventListener('change', () => {
+        const slot = activeSlots[s];
+        if (!slot) return;
+        slot.dest = parseInt(destSel.value, 10);
+        saveSlot(s);
+        refreshRouteChips();
+        if (patchCords) patchCords.refresh();
+      });
+      row.appendChild(destSel);
+
+      const depthSlider = document.createElement('input');
+      depthSlider.type = 'range';
+      depthSlider.min = -2.0; depthSlider.max = 2.0; depthSlider.step = 0.01;
+      depthSlider.value = initSlot.depth;
+
+      const valSpan = document.createElement('span');
+      valSpan.className = 'val';
+      valSpan.textContent = initSlot.depth.toFixed(2);
+
+      let matrixDragOpen = false;
+      const updateMatrixDepth = isFinal => {
+        const slot = activeSlots[s];
+        if (!slot) return;
+        const dVal = clamp(parseFloat(depthSlider.value) || 0, -2.0, 2.0);
+        slot.depth = dVal;
+        valSpan.textContent = dVal.toFixed(2);
+        const pSl = sl('slot' + (s + 1) + 'depth');
+        if (pSl) {
+          if (!matrixDragOpen) {
+            matrixDragOpen = true;
+            pSl.sliderDragStarted();
+          }
+          pSl.setNormalisedValue((dVal + 2.0) / 4.0);
+          if (isFinal) {
+            matrixDragOpen = false;
+            pSl.sliderDragEnded();
+          }
+        }
+        refreshRouteChips();
+      };
+      depthSlider.addEventListener('pointerdown', ev => {
+        if ((ev.button ?? 0) !== 0) return;
+        updateMatrixDepth(false);
+      });
+      depthSlider.addEventListener('input', () => updateMatrixDepth(false));
+      depthSlider.addEventListener('pointerup', () => { if (matrixDragOpen) updateMatrixDepth(true); });
+      depthSlider.addEventListener('pointercancel', () => { if (matrixDragOpen) updateMatrixDepth(true); });
+      depthSlider.addEventListener('change', () => updateMatrixDepth(true));
+      row.appendChild(depthSlider);
+      row.appendChild(valSpan);
+
+      matrixContainer.appendChild(row);
+    }
+    refreshRouteChips();
+  }
+
+  function applySlotsToRows() {
+    for (let s = 0; s < 24; ++s) {
+      const slot = activeSlots[s];
+      const row = matrixContainer.querySelector('[data-slot-index="' + s + '"]');
+      if (!row) continue;
+      row.classList.toggle('active', slot.on);
+      row.querySelector('input[type="checkbox"]').checked = slot.on;
+      const sels = row.querySelectorAll('select');
+      sels[0].value = String(slot.source);
+      sels[1].value = String(slot.dest);
+      row.querySelector('input[type="range"]').value = slot.depth;
+      row.querySelector('span.val').textContent = slot.depth.toFixed(2);
+    }
+    refreshRouteChips();
+    if (patchCords) patchCords.refresh();
+  }
+
+  async function saveSlot(s) {
+    const slot = activeSlots[s];
+    if (host) {
+      try {
+        await host.call('setSlotConfig', s, slot.source, slot.dest, slot.curve, slot.on);
+      } catch (e) { console.error('Error saving slot config:', e); }
+    }
+  }
+
+  function handleRingChangeDepth(slotIndex, depth, isFinal) {
+    const slot = activeSlots[slotIndex];
+    if (!slot) return;
+    const clamped = clamp(depth, -2.0, 2.0);
+    slot.depth = clamped;
+    const pSl = sl('slot' + (slotIndex + 1) + 'depth');
+    if (pSl) {
+      if (!ringGestureOpen[slotIndex]) {
+        ringGestureOpen[slotIndex] = true;
+        pSl.sliderDragStarted();
+      }
+      pSl.setNormalisedValue((clamped + 2.0) / 4.0);
+      if (isFinal) {
+        ringGestureOpen[slotIndex] = false;
+        pSl.sliderDragEnded();
+      }
+    }
+    const r = matrixContainer.querySelector('[data-slot-index="' + slotIndex + '"]');
+    if (r) {
+      const rng = r.querySelector('input[type="range"]');
+      const valEl = r.querySelector('span.val');
+      if (rng) rng.value = clamped;
+      if (valEl) valEl.textContent = clamped.toFixed(2);
+    }
+    refreshRouteChips();
+  }
+
+  // ------------------------------------------------------------------- init
+  function initAll() {
+    document.querySelectorAll('.knob').forEach(el => {
+      if (window.WDKit && WDKit.mountKnob) WDKit.mountKnob(el);
+    });
+
+    if (window.WDKit && WDKit.bindSliderKnob) {
+      WDKit.bindSliderKnob($('param_drive'), sl('drive'), { paramId: 'drive', fmt: v => v.toFixed(1) + ' dB', onValueChange: () => { drawCurve(); updateModCollars(); } });
+      WDKit.bindSliderKnob($('param_mix'), sl('mix'), { paramId: 'mix', fmt: v => Math.round(v) + '%', onValueChange: updateModCollars });
+      WDKit.bindSliderKnob($('param_output'), sl('output'), { paramId: 'output', fmt: v => (v > 0 ? '+' : '') + v.toFixed(1) + ' dB', onValueChange: updateModCollars });
+    }
+
+    bindStepPills($('bandcount-group'), 'bandcount', () => updateBandAvailability());
+    bindChoicePills($('char-group'), 'character', SHAPER_CHOICES, idx => {
+      if (bandCountNow() <= 1) {
+        $('activeShaperLabel').textContent = SHAPER_CHOICES[idx] || 'Tanh';
+        drawCurve();
+      }
+    });
+
+    bindToggle($('param_aa'), 'aa');
+    bindToggle($('param_delta'), 'delta');
+    bindToggle($('param_power'), 'power', v => {
+      const b = $('param_power');
+      if (b) b.lastChild.textContent = v ? 'Engaged' : 'Bypassed';
+    });
+
+    for (let i = 1; i <= 3; ++i) {
+      sl('xlfo' + i + 'rate');
+      sl('xlfo' + i + 'phase');
+      sl('xlfo' + i + 'snap');
+      tg('xlfo' + i + 'balance');
+    }
+    bindActiveXlfoControls();
+    bindToggle($('param_envext'), 'envext', () => { refreshRouteChips(); updateBeaconLed(); });
+    if (window.WDKit && WDKit.bindSliderKnob) {
+      WDKit.bindSliderKnob($('param_envdrive'), sl('envdrive'), {
+        paramId: 'envdrive',
+        fmt: v => (v > 0.05 ? '+' : '') + (Math.abs(v) < 0.05 ? '0.0' : v.toFixed(1)) + ' dB',
+        onValueChange: () => { refreshRouteChips(); drawCurve(); },
+      });
+      WDKit.bindSliderKnob($('param_envsens'), sl('envsens'), {
+        paramId: 'envsens',
+        fmt: v => (v > 0.05 ? '+' : '') + (Math.abs(v) < 0.05 ? '0.0' : v.toFixed(1)) + ' dB',
+      });
+      WDKit.bindSliderKnob($('param_envatk'), sl('envatk'), {
+        paramId: 'envatk',
+        fmt: v => (v < 10 ? v.toFixed(1) : Math.round(v)) + ' ms',
+        unit: 'ms',
+      });
+      WDKit.bindSliderKnob($('param_envrel'), sl('envrel'), {
+        paramId: 'envrel',
+        fmt: v => Math.round(v) + ' ms',
+        unit: 'ms',
+      });
+    }
+    bindAllBandControls();
+    rebuildSlotsGridUI();
+
+    if (window.WDKit && WDKit.initPatchCords && !patchCords) {
+      patchCords = WDKit.initPatchCords({
+        sourceSelector: '#sourceBar .wd-src-pill[data-source-id]',
+        destSelector: '.knob[data-dest-id]',
+        getSourceColor: id => (SRC_META[id] && SRC_META[id].color) || '#38bdf8',
+        getSourceLabel: id => (SRC_META[id] && SRC_META[id].label) || ('Src ' + id),
+        getDestLabel: did => labelOf(DEST_OPTIONS, did),
+        getSlotsForDest: did => activeSlots
+          .filter(s => s.dest === did && s.source >= 0)
+          .map(s => ({ index: s.index, source: s.source, dest: s.dest, depth: s.depth, on: s.on })),
+        onConnect(sourceId, destId) {
+          let idx = activeSlots.findIndex(s => s.on && s.source === sourceId && s.dest === destId);
+          if (idx === -1) idx = activeSlots.findIndex(s => !s.on || s.dest === -1);
+          if (idx === -1) {
+            $('routeCount').textContent = 'all 24 slots in use';
+            return;
+          }
+          const slot = activeSlots[idx];
+          const wasConnected = slot.on && slot.source === sourceId && slot.dest === destId;
+          slot.source = sourceId;
+          slot.dest = destId;
+          slot.on = true;
+          if (!wasConnected && Math.abs(slot.depth) < 0.05) {
+            slot.depth = 0.5;
+            const pSl = sl('slot' + (idx + 1) + 'depth');
+            if (pSl) {
+              pSl.sliderDragStarted();
+              pSl.setNormalisedValue((slot.depth + 2.0) / 4.0);
+              pSl.sliderDragEnded();
+            }
+          }
+          saveSlot(idx);
+          applySlotsToRows();
+        },
+        onChangeDepth: handleRingChangeDepth,
+        onToggleSlot(slotIndex, nextOn) {
+          const slot = activeSlots[slotIndex];
+          if (!slot) return;
+          slot.on = !!nextOn;
+          saveSlot(slotIndex);
+          applySlotsToRows();
+        },
+        onRemoveSlot(slotIndex) {
+          const slot = activeSlots[slotIndex];
+          if (!slot) return;
+          slot.source = -1;
+          slot.dest = -1;
+          slot.on = false;
+          slot.depth = 0.0;
+          const pSl = sl('slot' + (slotIndex + 1) + 'depth');
+          if (pSl) {
+            pSl.sliderDragStarted();
+            pSl.setNormalisedValue(0.5);
+            pSl.sliderDragEnded();
+          }
+          saveSlot(slotIndex);
+          applySlotsToRows();
+        },
+      });
+    }
+
+    selectBand(1);
+    updateBandAvailability();
+  }
+
+  function applyModCollar(knobEl, paramId, destId, totalOffsetScaled) {
+    const s = sl(paramId);
+    if (!knobEl || !s || !window.WDKit || !WDKit.scaledDeltaToNorm || !WDKit.setKnobModulationSources) return;
+    const baseScaled = s.getScaledValue();
+    const baseNorm = s.getNormalisedValue();
+    const routedSlots = activeSlots.filter(slSlot => slSlot.on && slSlot.dest === destId && slSlot.source >= 0);
+    knobEl.classList.toggle('is-modulated', routedSlots.length > 0);
+    const totalNorm = WDKit.scaledDeltaToNorm(s, baseScaled, totalOffsetScaled || 0);
+    if (Math.abs(totalNorm) < 0.001) {
+      WDKit.setKnobModulationSources(knobEl, baseNorm, []);
+      return;
+    }
+    if (routedSlots.length === 0) {
+      WDKit.setKnobModulationSources(knobEl, baseNorm, [{ sourceId: -1, color: '#38bdf8', offsetNorm: totalNorm }]);
+      return;
+    }
+    if (routedSlots.length === 1) {
+      const slot = routedSlots[0];
+      WDKit.setKnobModulationSources(knobEl, baseNorm, [{
+        sourceId: slot.source,
+        color: (SRC_META[slot.source] && SRC_META[slot.source].color) || '#38bdf8',
+        offsetNorm: totalNorm,
+      }]);
+      return;
+    }
+    let weights = routedSlots.map(slot => Math.abs((liveSlotVals[slot.index] || 0) * (slot.depth || 0)));
+    let sumW = weights.reduce((a, b) => a + b, 0);
+    if (sumW < 1e-6) {
+      weights = routedSlots.map(slot => Math.max(0.01, Math.abs(slot.depth || 0)));
+      sumW = weights.reduce((a, b) => a + b, 0);
+    }
+    const sources = routedSlots.map((slot, i) => ({
+      sourceId: slot.source,
+      color: (SRC_META[slot.source] && SRC_META[slot.source].color) || '#38bdf8',
+      offsetNorm: totalNorm * (weights[i] / sumW),
+    }));
+    WDKit.setKnobModulationSources(knobEl, baseNorm, sources);
+  }
+
+  function updateModCollars() {
+    applyModCollar($('param_drive'), 'drive', 1, liveDestOffsets[1] || 0);
+    applyModCollar($('param_mix'), 'mix', 3, liveDestOffsets[3] || 0);
+    applyModCollar($('param_output'), 'output', 4, liveDestOffsets[4] || 0);
+    for (let b = 1; b <= 4; ++b) {
+      const base = 10 * b;
+      applyModCollar($('param_banddrive' + b), 'banddrive' + b, base, liveDestOffsets[base] || 0);
+      applyModCollar($('param_bandmix' + b), 'bandmix' + b, base + 2, liveDestOffsets[base + 2] || 0);
+      applyModCollar($('param_bandlevel' + b), 'bandlevel' + b, base + 3, liveDestOffsets[base + 3] || 0);
+    }
+  }
+
+  const beaconEpochWatch = (window.WDKit && WDKit.createBeaconEpochWatcher)
+    ? WDKit.createBeaconEpochWatcher(refreshBeaconSources)
+    : null;
+
+  if (window.WDKit && WDKit.mountHeaderKit) {
+    WDKit.mountHeaderKit({ host });
+  }
+  if (window.WDKit && WDKit.syncGlobalTheme) {
+    WDKit.syncGlobalTheme(host, t => {
+      applyTheme(t);
+      drawCurve();
+      drawSplits();
+      drawXlfoCurve();
+    });
+  }
+
+  // Small delay so parameter relays have their properties before first paint.
+  setTimeout(async () => {
+    initAll();
+
+    if (host) {
+      try {
+        const state = await Promise.race([
+          host.call('getModState'),
+          new Promise(res => setTimeout(() => res(null), 400))
+        ]);
+        if (state && state.slots) {
+          state.slots.forEach(s => {
+            if (s.index >= 0 && s.index < 24) {
+              Object.assign(activeSlots[s.index], {
+                index: s.index, source: s.source, dest: s.dest,
+                curve: s.curve, on: s.on
+              });
+            }
+          });
+        }
+        if (state && Array.isArray(state.xlfos)) {
+          state.xlfos.forEach(x => {
+            if (x.index >= 0 && x.index < 3) {
+              const xlfo = xlfosState[x.index];
+              xlfo.numSteps = x.numSteps;
+              xlfo.isSynced = x.isSynced;
+              xlfo.syncRateBeats = x.syncRateBeats;
+              xlfo.retriggerMode = x.retriggerMode;
+              if (Array.isArray(x.steps)) {
+                x.steps.forEach(st => {
+                  if (st.index >= 0 && st.index < 32)
+                    xlfo.steps[st.index] = { index: st.index, value: st.value, glide: st.glide, slope: st.slope };
+                });
+              }
+            }
+          });
+        }
+      } catch (e) { console.error('Error getting initial modState:', e); }
+    }
+
+    for (let s = 0; s < 24; ++s) {
+      const slider = sl('slot' + (s + 1) + 'depth');
+      if (slider) {
+        activeSlots[s].depth = slider.getNormalisedValue() * 4.0 - 2.0;
+        slider.valueChangedEvent.addListener(() => {
+          activeSlots[s].depth = slider.getNormalisedValue() * 4.0 - 2.0;
+          const r = matrixContainer.querySelector('[data-slot-index="' + s + '"]');
+          if (r) {
+            r.querySelector('input[type="range"]').value = activeSlots[s].depth;
+            r.querySelector('span.val').textContent = activeSlots[s].depth.toFixed(2);
+          }
+          refreshRouteChips();
+        });
+      }
+    }
+
+    applySlotsToRows();
+    fitCurveCanvas();
+    fitSplitCanvas();
+    fitXCanvas();
+
+    if (host) {
+      try {
+        const uiState = await host.call('getUiState');
+        if (uiState) {
+          if (uiState.build) $('buildTag').textContent = uiState.build;
+          if (uiState.sampleRate) $('srTag').textContent = (uiState.sampleRate / 1000).toFixed(1) + ' kHz';
+          if (window.WDKit && WDKit.bindBrandDiagnostics) {
+            WDKit.bindBrandDiagnostics(document.querySelector('.brand'), {
+              plugin: 'Werewolf Digital Saturator',
+              sampleRate: uiState.sampleRate ? (uiState.sampleRate / 1000).toFixed(1) + ' kHz' : '—',
+              build: uiState.build || '—'
+            });
+          }
+          if (uiState.selfName) selfMeta.name = uiState.selfName;
+          if (typeof uiState.selfCustomName === 'string') selfMeta.customName = uiState.selfCustomName;
+          if (typeof uiState.beaconPublishedName === 'string') selfMeta.publishedName = uiState.beaconPublishedName;
+          if (typeof uiState.beaconPublishing === 'boolean') selfMeta.publishing = uiState.beaconPublishing;
+          if (typeof uiState.beaconSource === 'string') beaconSelected = uiState.beaconSource;
+          if (typeof uiState.beaconReceiving === 'boolean') beaconReceiving = uiState.beaconReceiving;
+          if (typeof uiState.beaconSrMismatch === 'boolean') beaconSrMismatch = uiState.beaconSrMismatch;
+          renderSelfTrackChip();
+          updateBeaconLed();
+        }
+      } catch (e) {}
+      await refreshBeaconSources();
+    } else {
+      renderSelfTrackChip();
+    }
+  }, 120);
+
+  // ------------------------------------------------------------ live events
+  if (host) {
+    host.on('modState', data => {
+      if (!data) return;
+      liveSourceVals = Array.isArray(data.sourceVals) ? data.sourceVals : liveSourceVals;
+      liveXlfoPhases = Array.isArray(data.xlfoPhases) ? data.xlfoPhases : liveXlfoPhases;
+      liveSlotVals = Array.isArray(data.slotVals) ? data.slotVals : liveSlotVals;
+      if (data.destOffsets !== undefined) {
+        liveDestOffsets = Array.isArray(data.destOffsets) ? data.destOffsets : [];
+      }
+      updateModCollars();
+      drawXlfoCurve();
+      drawCurve();
+      drawSplits();
+    });
+
+    host.on('satMeters', data => {
+      if (!data) return;
+      beaconMetersSeen = true;
+      if (beaconEpochWatch) beaconEpochWatch(data);
+      if (typeof data.beaconReceiving === 'boolean') beaconReceiving = data.beaconReceiving;
+      if (typeof data.beaconSrMismatch === 'boolean') beaconSrMismatch = data.beaconSrMismatch;
+      if (typeof data.beaconSource === 'string' && !beaconSelected) beaconSelected = data.beaconSource;
+      updateBeaconLed();
+
+      let kickSpec = false;
+      if (data.pre) { applySpecBins(tgtPre, data.pre); kickSpec = true; }
+      if (data.post) { applySpecBins(tgtPost, data.post); kickSpec = true; }
+      if (data.sc) { applySpecBins(tgtSc, data.sc); kickSpec = true; }
+      if (typeof data.scActive === 'boolean') {
+        updateSpectrumKeyBadge(data.scActive);
+        if (!data.scActive) {
+          tgtSc.fill(-120.0);
+          kickSpec = true;
+        }
+      }
+      if (kickSpec) kickSpectrumRaf();
+
+      if (!data.activity) return;
+      // At one band the single-band path reports into slot 0 regardless of
+      // which band button was last selected.
+      const idx = bandCountNow() > 1 ? currentBandIdx : 0;
+      const db = data.activity[idx];
+      if (typeof db !== 'number') return;
+      // -40..+6 dB of added energy spans the bar; below -40 reads as nothing
+      // happening, which at low drive is the honest answer.
+      const pct = Math.max(0, Math.min(100, ((db + 40) / 46) * 100));
+      const bar = $('satMeterBar');
+      const val = $('satMeterVal');
+      const add = $('satAddVal');
+      if (bar) bar.style.setProperty('--fill', pct.toFixed(1) + '%');
+      const text = db <= -59.5 ? '—' : (db > 0 ? '+' : '') + db.toFixed(1) + ' dB';
+      if (val) val.textContent = text;
+      if (add) add.textContent = text;
+    });
+  } else {
+    // Offline browser preview: envelope & synthetic guitar+snare spectrum mock so wells are readable.
+    updateSpectrumKeyBadge(true);
+    setInterval(() => {
+      const t = Date.now() * 0.001;
+      const pulse = 0.5 + 0.5 * Math.sin(t * 4);
+      liveSourceVals[4] = 0.25 + 0.55 * pulse;
+      for (let b = 0; b < SPEC_BINS; ++b) {
+        const f = specFreq[b];
+        const gtrPeak = -24.0 - 18.0 * Math.pow(Math.log2(Math.max(40, f) / 220.0), 2) - specTilt[b];
+        const snareCrack = -30.0 + 14.0 * pulse - 14.0 * Math.pow(Math.log2(Math.max(40, f) / 180.0), 2)
+                         + Math.max(-40.0, -10.0 * Math.pow(Math.log2(Math.max(40, f) / 3200.0), 2)) - specTilt[b];
+        curPre[b]  = gtrPeak;
+        curPost[b] = gtrPeak + (f > 350 ? 6.5 * pulse : 1.0);
+        curSc[b]   = snareCrack;
+        peakSc[b]  = snareCrack + 3.0;
+      }
+      drawCurve();
+      drawSplits();
+    }, 33);
+  }
+
+})();
+</script>
+</body>
+</html>

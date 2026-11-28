@@ -1,0 +1,2044 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Werewolf Digital De-esser</title>
+<link rel="stylesheet" href="./wd/tokens.css">
+<script src="./demo-bar.js"></script>
+<script src="./modules/deess.js"></script>
+<script src="./wd-plugin-host.js"></script>
+<script src="./wd/kit.js"></script>
+<style>
+  /* ══════════════════════════════════════════════════════════════════════
+     Instrument Panel — the Werewolf Digital chassis.
+
+     This :root block is the WHOLE design language. To bring another plugin
+     onto it, copy this block verbatim and change --accent / --accent-lit only
+     (the fourteen hues are listed in docs/UI_LANGUAGE.md).
+
+     Values are hex, not oklch(), on purpose: canvas 2D fillStyle takes these
+     literals through cssVar() below, and hex works on every WebView2 runtime
+     rather than only Chromium 111+.
+     ════════════════════════════════════════════════════════════════════ */
+  :root {
+    --bg:      #0b0d12;   /* deep studio obsidian chassis */
+    --panel:   #151922;   /* machined slate control bays  */
+    --panel-hi:#1d2330;   /* elevated cap / active surface */
+    --track:   #0d0f15;   /* recessed tracks & beds       */
+    --line:    rgba(255, 255, 255, 0.08);
+    --line-hi: rgba(255, 255, 255, 0.15);
+    --hover-bg:rgba(255, 255, 255, 0.06);
+    --text:    #f2f5fa;
+    --label:   #8b96a8;
+    --muted:   #586274;
+    --well:    #06070a;   /* pure OLED signal surface     */
+    --cream:   #f2f5fa;   /* live plot, on well           */
+
+    --accent:     #b25bb0;
+    --accent-lit: #dd90da;
+    --accent-deep:#77326f;
+
+    --sage:      #34d399;
+    --sage-tint: rgba(52, 211, 153, 0.14);
+    --sage-deep: #6ee7b7;
+
+    --r-window: 0px;
+    --r-panel: 8px;
+    --r-pill: 5px;
+
+    --font: "Figtree", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    --font-display: "Caprasimo", "Segoe UI Variable Display", "Segoe UI Semibold", system-ui, sans-serif;
+  }
+  :root[data-theme="japandi-dark"] {
+    --bg:      #121316;
+    --panel:   #1b1d21;
+    --panel-hi:#24272d;
+    --track:   #0d0e10;
+    --line:    rgba(242, 237, 228, 0.08);
+    --line-hi: rgba(242, 237, 228, 0.15);
+    --hover-bg:rgba(242, 237, 228, 0.06);
+    --text:    #f2ede4;
+    --label:   #9e978c;
+    --muted:   #666057;
+    --well:    #090a0c;
+    --cream:   #f2ede4;
+    --accent-deep:#8d3d84;
+    --sage:      #7a9171;
+    --sage-tint: rgba(122, 145, 113, 0.18);
+    --sage-deep: #b8cfb0;
+  }
+  :root[data-theme="japandi-light"] {
+    --bg:      #e6e1d8;
+    --panel:   #dbd5c9;
+    --panel-hi:#e4dfd5;
+    --track:   #ccc5b8;
+    --line:    rgba(24, 25, 28, 0.11);
+    --line-hi: rgba(24, 25, 28, 0.20);
+    --hover-bg:rgba(24, 25, 28, 0.06);
+    --text:    #18191c;
+    --label:   #635f58;
+    --muted:   #8c867c;
+    --well:    #17181b;
+    --cream:   #f2ede4;
+    --accent-deep:#77326f;
+    --sage:      #4d6b47;
+    --sage-tint: rgba(77, 107, 71, 0.16);
+    --sage-deep: #2d4229;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 400 13px/1.45 var(--font);
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  :focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- header ---------- */
+  header {
+    flex: 0 0 auto;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand svg { display: block; }
+  .brand .stack { display: flex; flex-direction: column; gap: 1px; }
+  .brand .line { font: 700 8.5px/1 var(--font); letter-spacing: 0.22em; text-transform: uppercase; color: var(--label); }
+  .brand .name { font-family: var(--font-display); font-size: 19px; line-height: 1; letter-spacing: -0.01em; }
+  .headsep { width: 1px; height: 26px; background: var(--line); }
+  .spacer { flex: 1; }
+  .stat { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  .stat .k { font: 600 9px/1 var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  .stat .v { font: 700 11.5px/1 var(--font); font-variant-numeric: tabular-nums; }
+  #buildTag { font: 500 10px/1.3 var(--font); color: var(--muted); text-align: right; max-width: 150px; }
+
+  /* ---------- frame ---------- */
+  .body {
+    flex: 1 1 auto;
+    display: flex;
+    gap: 12px;
+    padding: 14px;
+    min-height: 0;
+  }
+  .col { flex: 1 1 auto; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+
+  /* ---------- wells: the only dark surfaces ---------- */
+  .wells { flex: 1 1 46%; display: flex; gap: 12px; min-height: 140px; min-width: 0; }
+  .stage-wells-col {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .stage-wells-col .wells {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+  }
+  #historyScrubMount { flex: 0 0 auto; }
+  .well-group { flex: 2 1 0; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+  .well-group.narrow { flex: 1 1 0; min-width: 210px; }
+  .well-group.inactive .well { opacity: 0.45; }
+  .well-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 0 2px;
+    min-height: 22px;
+  }
+  .well-title { font: 700 11px/1 var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--label); }
+  .well-hint { font: 500 11.5px/1 var(--font); color: var(--muted); white-space: nowrap; }
+  .well-hint.accent { color: var(--accent-deep); font-weight: 600; }
+  .well {
+    flex: 1;
+    min-height: 0;
+    border-radius: var(--r-panel);
+    overflow: hidden;
+    background: var(--well);
+    position: relative;
+  }
+  .well canvas { width: 100%; height: 100%; display: block; }
+  .well-readout {
+    position: absolute; left: 12px; bottom: 10px;
+    display: flex; flex-direction: column; gap: 3px; pointer-events: none;
+    background: rgba(18, 17, 14, 0.78); border-radius: 12px; padding: 7px 10px 8px;
+  }
+  .well-readout .k { font: 600 9.5px/1 var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  .well-readout .v { font: 700 22px/1 var(--font); font-variant-numeric: tabular-nums; color: #f9f4ed; }
+
+  /* ---------- panels ---------- */
+  .panel {
+    background: var(--panel);
+    border-radius: var(--r-panel);
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .panel.rail { flex: 1 1 auto; justify-content: space-between; }
+  .rail-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .rail-range { font: 600 10.5px/1 var(--font); letter-spacing: 0.12em; text-transform: uppercase; color: var(--label); }
+
+  /* ---------- pills: every choice and toggle ---------- */
+  .pill {
+    height: 32px;
+    padding: 0 14px;
+    border-radius: var(--r-pill);
+    border: 1px solid var(--line);
+    background: transparent;
+    font: 600 12px/1 var(--font);
+    color: var(--label);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background-color 0.12s, color 0.12s;
+    white-space: nowrap;
+  }
+  .pill:hover { background: var(--hover-bg); }
+  .pill:active { background: var(--track); }
+  .pill.on { border-color: transparent; background: var(--accent); color: #f9f4ed; font-weight: 700; }
+  .pill.on:hover { background: var(--accent-deep); }
+  .pill:disabled { opacity: 0.45; cursor: default; }
+  .pill.sm { height: 28px; padding: 0 13px; font-size: 11.5px; }
+  .pill.wide { width: 100%; }
+  .pill.dashed { border-style: dashed; border-color: var(--muted); color: var(--label); }
+  .pill.power { background: var(--well); border-color: transparent; color: #f9f4ed; font-weight: 700; height: 36px; }
+  .pill.power .led {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--muted); transition: background-color 0.12s, box-shadow 0.12s;
+  }
+  .pill.power.on { background: var(--well); color: #f9f4ed; }
+  .pill.power.on .led { background: #34d399; box-shadow: 0 0 7px #34d399; }
+
+  /* exclusive groups sit in a track-coloured bed */
+  .pillbed { display: flex; gap: 4px; padding: 3px; border-radius: var(--r-pill); background: var(--track); }
+  .pillbed button {
+    height: 26px; padding: 0 14px; border-radius: var(--r-pill); border: 0;
+    background-color: transparent; color: var(--label); font: 600 11.5px/1 var(--font); cursor: pointer;
+    transition: background-color 0.12s, color 0.12s; white-space: nowrap;
+  }
+  .pillbed button:hover:not(:disabled):not(.on) { background-color: var(--hover-bg); }
+  .pillbed.accent > button.on { background-color: var(--accent); color: #f9f4ed; font-weight: 700; }
+  .pillbed > button:disabled { opacity: 0.45; cursor: default; }
+
+  .charset { display: flex; flex-wrap: wrap; gap: 4px; }
+  .fieldlabel { font: 600 10.5px/1 var(--font); color: var(--label); }
+
+  /* ---------- knob: every continuous parameter ---------- */
+  .knob {
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    width: 78px; cursor: ns-resize; touch-action: none;
+    border-radius: 12px; padding: 2px 0;
+  }
+  .knob:hover { background: var(--hover-bg); }
+  .knob .klabel { font: 600 10.5px/1 var(--font); color: var(--label); pointer-events: none; }
+  .knob .v { font: 700 14px/1 var(--font); font-variant-numeric: tabular-nums; pointer-events: none; }
+  .knob svg { display: block; pointer-events: none; }
+  .knob.dragging .v { color: var(--accent-deep); }
+  .knob.inert { opacity: 0.35; pointer-events: none; }
+
+  /* Auto threshold: the knob is NOT dead — WdDeEss.h adds it as an offset to
+     the tracked base (thresholdDb = autoBase + (knob - (-20))). So under auto
+     it is relabelled "Threshold offset" and reads signed, relative to -20 dB,
+     and stays fully live. */
+  .knob.auto-on .v { color: var(--accent-deep); font-weight: 800; }
+  .knob-stack { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .knob-stack .knob { width: auto; min-width: 78px; }
+
+  .knobs-row { display: flex; gap: 12px; align-items: flex-start; justify-content: space-around; }
+  .vsep { width: 1px; align-self: stretch; min-height: 28px; background: var(--line); }
+
+  /* ---------- bottom controls strip ---------- */
+  .strip-footer { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .strip-footer .group { display: flex; align-items: center; gap: 8px; }
+
+  /* ---------- meters are wells too ---------- */
+  .vmeter-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .vmeter {
+    flex: 1; min-height: 40px; width: 16px; border-radius: var(--r-pill);
+    background: var(--well); overflow: hidden; position: relative;
+  }
+  .vmeter i {
+    position: absolute; left: 0; right: 0; bottom: 0; height: var(--fill, 0%);
+    background: linear-gradient(0deg, var(--sage), var(--accent-lit));
+    border-radius: var(--r-pill);
+  }
+  .vmeter .peak {
+    position: absolute; left: 0; right: 0; height: 2px; background: #ffffff;
+    display: none; bottom: var(--peak, 0%);
+  }
+  .vmeter.down .peak { bottom: auto; top: var(--peak, 0%); }
+  .vmeter-wrap .k { font: 600 9.5px/1 var(--font); letter-spacing: 0.1em; text-transform: uppercase; color: var(--label); }
+  .vmeter-wrap .v { font: 700 11.5px/1 var(--font); font-variant-numeric: tabular-nums; }
+
+  /* ---------- master strip: identical in all fourteen ---------- */
+  .master {
+    flex: 0 0 132px;
+    background: var(--panel);
+    border-radius: var(--r-panel);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .master .fill { flex: 1; min-height: 0; }
+  .master .stack { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+
+  /* Compact layout adjustments */
+  @media (max-width: 860px) {
+    .knob { width: 68px; }
+  }
+
+  /* ── Precision Instrument Structural & Hardware Refinements ── */
+  header {
+    height: 46px;
+    padding: 0 14px;
+    gap: 10px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent), var(--panel);
+    border-bottom: 1px solid var(--line-hi);
+  }
+  .brand svg { filter: drop-shadow(0 0 5px var(--accent)); }
+  .brand .name { font-size: 16.5px; font-weight: 700; letter-spacing: -0.01em; }
+  .headsep { height: 20px; }
+  #buildTag { font: 500 9.5px/1.2 var(--font); color: var(--muted); max-width: 135px; opacity: 0.75; }
+
+  .theme-strip {
+    display: inline-flex;
+    background: var(--track);
+    border: 1px solid var(--line);
+    border-radius: var(--r-pill);
+    padding: 2px;
+    gap: 2px;
+  }
+  .theme-btn {
+    height: 22px;
+    padding: 0 8px;
+    border: 0;
+    border-radius: calc(var(--r-pill) - 1px);
+    background: transparent;
+    color: var(--label);
+    font: 600 10px/1 var(--font);
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: background-color 0.12s, color 0.12s;
+  }
+  .theme-btn:hover:not(.on) { color: var(--text); background: var(--hover-bg); }
+  .theme-btn.on { background: var(--panel-hi); color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35); }
+
+  .body { gap: 8px; padding: 8px 10px 10px; }
+  .col { gap: 8px; }
+  .wells { gap: 8px; }
+  .well {
+    border: 1px solid var(--line-hi);
+    box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.65);
+  }
+  .well-readout {
+    background: rgba(9, 11, 16, 0.84);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 6px;
+    backdrop-filter: blur(6px);
+  }
+  .panel, .master {
+    border: 1px solid var(--line);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+  .pill {
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--label);
+    border: 1px solid var(--line);
+  }
+  .pill:hover:not(:disabled):not(.on) { background: var(--hover-bg); color: var(--text); }
+  .pill.on { border-color: transparent; background: var(--accent); color: #ffffff; box-shadow: 0 1px 8px rgba(0, 0, 0, 0.35); }
+  .pill.on:hover { filter: brightness(1.1); background: var(--accent); }
+  .pillbed { border: 1px solid var(--line); background: var(--track); }
+  .pillbed button { color: var(--label); }
+  .pillbed button:hover:not(:disabled):not(.on) { background-color: var(--hover-bg); color: var(--text); }
+
+  .vmeter {
+    width: 14px;
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.75);
+  }
+  .vmeter i { border-radius: 2px; }
+
+  .knob .karc { filter: drop-shadow(0 0 3px var(--accent)); }
+  .knob .v {
+    pointer-events: auto;
+    cursor: text;
+    padding: 1px 4px;
+    border-radius: 3px;
+    transition: background-color 0.12s, color 0.12s;
+  }
+  .knob .v:hover { background: var(--hover-bg); }
+  .knob input.v {
+    width: 58px;
+    background: var(--well);
+    color: var(--text);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    font: 700 12px/1 var(--font);
+    text-align: center;
+    padding: 2px 3px;
+    outline: none;
+  }
+
+  /* ── Beacon Track Chip, Picker & External Key Spectrum ── */
+  .track-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 26px;
+    padding: 0 8px;
+    border-radius: var(--r-pill);
+    background: var(--track);
+    border: 1px solid var(--line);
+    cursor: pointer;
+    flex: 0 1 118px;
+    min-width: 70px;
+    max-width: 124px;
+    transition: border-color 0.12s, background-color 0.12s;
+  }
+  .track-chip:hover { border-color: var(--line-hi); background: var(--panel-hi); }
+  .track-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-lit); flex: 0 0 auto; }
+  .track-name { flex: 1 1 auto; min-width: 0; font: 700 11px/1 var(--font); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .track-edit-ico { font-size: 10px; color: var(--muted); opacity: 0.65; flex: 0 0 auto; }
+  .track-chip:hover .track-edit-ico { opacity: 1; color: var(--text); }
+  .track-name-input {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    height: 20px;
+    background: var(--well);
+    color: var(--cream);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    font: 600 11px/1 var(--font);
+    padding: 0 5px;
+    outline: none;
+  }
+
+  .beacon-picker {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 6px 0 8px;
+    border-radius: var(--r-pill);
+    background: var(--track);
+    border: 1px solid var(--line);
+    flex: 0 0 auto;
+  }
+  .beacon-led {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--muted);
+    transition: background-color 0.15s, box-shadow 0.15s;
+    flex: 0 0 auto;
+  }
+  .beacon-picker.receiving .beacon-led { background: #34d399; box-shadow: 0 0 7px #34d399; }
+  .beacon-picker.waiting .beacon-led { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; }
+  .beacon-picker.mismatch { border-color: #ef4444; }
+  .beacon-picker.mismatch .beacon-led { background: #ef4444; box-shadow: 0 0 7px #ef4444; }
+  .beacon-lbl {
+    font: 700 9px/1 var(--font);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--label);
+    white-space: nowrap;
+  }
+  .beacon-select {
+    height: 22px;
+    max-width: 132px;
+    min-width: 92px;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font: 600 11px/1 var(--font);
+    cursor: pointer;
+    outline: none;
+  }
+  .beacon-select option { background: var(--panel); color: var(--text); }
+  .beacon-select:disabled { opacity: 0.55; cursor: default; }
+
+  .well-head { flex-wrap: wrap; gap: 6px; }
+  .spec-legend {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font: 600 10.5px/1 var(--font);
+    color: var(--muted);
+    min-width: 0;
+  }
+  .spec-legend .lg-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+  }
+  .spec-legend .sw { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; }
+  .spec-legend .sw.in { background: rgba(242, 245, 250, 0.50); }
+  :root[data-theme="japandi-light"] .spec-legend .sw.in { background: rgba(24, 25, 28, 0.45); }
+  .spec-legend .lg-item.key {
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.12);
+    border: 1px solid rgba(56, 189, 248, 0.30);
+    padding: 2px 7px;
+    border-radius: 99px;
+    max-width: 160px;
+  }
+  .spec-legend .lg-item.key[hidden] { display: none; }
+  .spec-legend .lg-item.key.idle { opacity: 0.65; }
+  .spec-legend .lg-item.key span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .spec-legend .sw.key { background: #38bdf8; }
+  :root[data-theme="japandi-light"] .spec-legend .lg-item.key {
+    color: #0284c7;
+    background: rgba(2, 132, 199, 0.12);
+    border-color: rgba(2, 132, 199, 0.30);
+  }
+  :root[data-theme="japandi-light"] .spec-legend .sw.key { background: #0284c7; }
+
+  .sc-hint {
+    font: 600 10.5px/1 var(--font);
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .sc-hint[hidden] { display: none; }
+  .sc-hint.warn { color: #f59e0b; }
+  :root[data-theme="japandi-light"] .sc-hint.warn { color: #b45309; }
+
+  @media (max-width: 860px) {
+    header { padding: 0 10px; gap: 7px; }
+    .narrow-hide { display: none !important; }
+    .track-chip { max-width: 102px; min-width: 64px; padding: 0 7px; }
+    .beacon-select { min-width: 78px; max-width: 110px; }
+    .beacon-lbl { display: none; }
+    .panel.rail { padding: 8px 10px; gap: 6px; }
+    .knobs-row { gap: 8px; }
+    .strip-footer { gap: 8px; }
+    .strip-footer .group { gap: 6px; }
+    .pillbed button { padding: 0 10px; }
+  }
+
+</style>
+</head>
+<body>
+  <header>
+    <button class="pill power header-power-btn" id="param_power" title="Bypass the whole plugin."><span class="led"></span>Engaged</button>
+    <div class="brand">
+      <svg width="20" height="18" viewBox="0 0 20 18">
+        <path d="M2 16.5 L10 1.5 L18 16.5 Z" fill="none" stroke="#b25bb0" stroke-width="2.2" stroke-linejoin="round"/>
+      </svg>
+      <div class="stack">
+        <div class="line">Werewolf Digital</div>
+        <div class="name">De-esser</div>
+      </div>
+    </div>
+    <div class="track-chip" id="selfTrackChip" title="Instance name broadcast to WD Beacon — click to rename"><span class="track-dot"></span><span class="track-name" id="selfTrackName">DeEss 1</span><span class="track-edit-ico">✎</span></div>
+    <div class="beacon-picker" id="beaconPickerWrap" title="Select an active Werewolf Digital Beacon track for external sibilance detector keying. Wireless cross-track key — for sample-exact timing at large DAW buffer sizes (1024+), use Off (Host Bus) with a DAW sidechain send.">
+      <span class="beacon-led"></span>
+      <span class="beacon-lbl">Beacon</span>
+      <select class="beacon-select" id="beaconSourceSelect"><option value="">Off (Host Bus)</option></select>
+    </div>
+    <div class="spacer"></div>
+    <div class="stat narrow-hide"><div class="k">Sample rate</div><div class="v" id="srTag">—</div></div>
+    <div class="theme-strip" id="themeSwitcher" title="Switch instrument chassis finish">
+      <button class="theme-btn on" data-theme="studio">Studio</button>
+      <button class="theme-btn" data-theme="japandi-dark">Sumi</button>
+      <button class="theme-btn" data-theme="japandi-light">Washi</button>
+    </div>
+    <div class="headsep narrow-hide"></div>
+    <div id="buildTag" class="narrow-hide">—</div>
+  </header>
+
+  <div class="body">
+    <div class="col">
+
+      <div class="stage-row">
+      <div class="stage-wells-col">
+        <div class="wells">
+          <div class="well-group" id="detectorContainer">
+            <div class="well-head">
+              <div class="well-title">Detector</div>
+              <div class="spec-legend">
+                <span class="lg-item"><span class="sw in"></span>In</span>
+                <span class="lg-item key" id="specKeyBadge" hidden><span class="sw key"></span><span id="specKeyLabel">Key</span></span>
+              </div>
+              <div class="well-hint" id="detectorHint">Drag the band · wheel for width</div>
+            </div>
+            <div class="well"><canvas id="spectrumCanvas"></canvas></div>
+          </div>
+
+          <div class="well-group narrow">
+            <div class="well-head">
+              <div class="well-title">Reduction</div>
+              <div class="well-hint accent" id="envVal">—</div>
+            </div>
+            <div class="well">
+              <canvas id="grCanvas"></canvas>
+              <div class="well-readout"><div class="k">dB removed</div><div class="v" id="grVal">—</div></div>
+            </div>
+          </div>
+        </div>
+        <div id="historyScrubMount"></div>
+      </div>
+      <div class="meter-bridge">
+        <div class="vmeter-wrap">
+          <div class="vmeter down"><i id="grBar"></i><i class="peak" id="grPeakLine"></i></div>
+          <div class="k">GR</div>
+          <div class="v" id="grMeterVal">—</div>
+        </div>
+      </div>
+      </div>
+
+      <div class="panel rail">
+        <div class="rail-head">
+          <div class="rail-range">Mode</div>
+          <div class="pillbed accent" id="param_mode" title="Bandpass listens to a band around the frequency; Highpass listens to everything above it."></div>
+          <div class="vsep"></div>
+          <div class="rail-range">Listen</div>
+          <div class="pillbed accent" id="param_listen" title="Off: normal output. Detector: hear only what the detector hears. Removed: hear only what is being taken out."></div>
+          <div class="spacer"></div>
+          <div class="deck-master-bay">
+            <button class="pill sm" id="param_link" title="Detect on both channels together so the stereo image doesn't wander.">Link</button>
+            <button class="pill sm" id="param_vocalOnly" title="Only trigger on vocal-like material.">Vocal trigger</button>
+          </div>
+        </div>
+
+        <div class="knobs-row">
+          <div class="knob" id="param_freq" data-label="Frequency" title="Centre of the sibilance band the detector listens to."></div>
+          <div class="knob" id="param_width" data-label="Width" title="How wide the detection band is, in octaves. Ignored in Highpass mode."></div>
+          <div class="knob-stack">
+            <div class="knob" id="param_threshold" data-label="Threshold" title="Detector level above which reduction starts. With Auto threshold on, the base follows the programme level and this knob becomes an offset from it: 0 dB is the tracked level, negative de-esses harder, positive backs off."></div>
+            <button class="pill sm" id="param_autoThreshold" title="Threshold tracks the programme level, so quiet and loud passages de-ess alike.">Auto threshold</button>
+          </div>
+        </div>
+
+        <div class="knobs-row">
+          <div class="knob" id="param_range" data-label="Range" title="The most reduction the de-esser is allowed to apply."></div>
+          <div class="knob" id="param_release" data-label="Release" title="How quickly the reduction lets go after a sibilant."></div>
+          <div class="knob" id="param_mix" data-label="Mix" title="Blend of processed and dry signal."></div>
+        </div>
+
+        <div class="strip-footer">
+          <div class="group">
+            <div class="fieldlabel">Style</div>
+            <div class="pillbed accent" id="param_style" title="Split: only the band is reduced. Wide: the whole signal ducks when sibilance is detected."></div>
+          </div>
+          <div class="vsep"></div>
+          <div class="group">
+            <div class="fieldlabel">Target</div>
+            <div class="pillbed accent" id="param_stereoTarget" title="Which part of a stereo signal is processed."></div>
+          </div>
+          <div class="vsep"></div>
+          <div class="group">
+            <div class="fieldlabel">SC Source</div>
+            <div class="pillbed accent" id="scsource-group" title="Internal: detect sibilance from the main input. External: key the detector from DAW sidechain Bus 1 or a selected WD Beacon track."></div>
+            <span class="sc-hint" id="scHint" hidden>No key connected</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  window.addEventListener('error', e => {
+    if (e.message && (e.message.includes('ResizeObserver') || e.message.includes('loop completed with undelivered notifications'))) return;
+    let el = document.getElementById('errBanner');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'errBanner';
+      el.style.cssText = 'position:fixed;left:0;right:0;bottom:0;background:#77326f;'
+        + 'color:#f2f5fa;font:11px monospace;padding:4px 10px;z-index:99;';
+      document.body.appendChild(el);
+    }
+    el.textContent = 'UI error: ' + e.message + ' @' + (e.lineno || '?');
+  });
+</script>
+
+<script type="module">
+(async () => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+
+  // Canvas 2D silently rejects 'var(--x)' colour strings, so the theme is
+  // resolved to literals once and the wells draw from these.
+  const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const COL = {
+    accent:    cssVar('--accent')     || '#b25bb0',
+    accentLit: cssVar('--accent-lit') || '#dd90da',
+    well:      cssVar('--well')       || '#06070a',
+    cream:     cssVar('--cream')      || '#f2f5fa',
+    theme:     'studio',
+  };
+  let drawSpectrumFn = null;
+  let drawReductionFn = null;
+  function applyTheme(theme) {
+    const t = theme || 'studio';
+    COL.theme = t;
+    if (t === 'studio') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', t);
+    COL.accent = cssVar('--accent') || COL.accent;
+    COL.accentLit = cssVar('--accent-lit') || COL.accentLit;
+    COL.well = cssVar('--well') || '#06070a';
+    COL.cream = cssVar('--cream') || '#f2f5fa';
+    const sw = document.getElementById('themeSwitcher');
+    if (sw) {
+      sw.querySelectorAll('.theme-btn').forEach(b => {
+        b.classList.toggle('on', b.dataset.theme === t);
+      });
+    }
+    try { localStorage.setItem('wd_theme', t); } catch (e) {}
+    if (drawSpectrumFn) drawSpectrumFn();
+    if (drawReductionFn) drawReductionFn();
+  }
+  {
+    let saved = 'studio';
+    try { saved = localStorage.getItem('wd_theme') || 'studio'; } catch (e) {}
+    applyTheme(saved);
+    const sw = document.getElementById('themeSwitcher');
+    if (sw) {
+      sw.addEventListener('click', e => {
+        const btn = e.target.closest('.theme-btn');
+        if (btn && btn.dataset.theme) applyTheme(btn.dataset.theme);
+      });
+    }
+  }
+  // Well ink: cream at fixed alphas. Grid 7%, labels 34%, live plot 92%.
+  const ink = a => 'rgba(242, 245, 250, ' + a + ')';
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+  // ------------------------------------------------------------------ host
+  let host = null;
+  if (window.__JUCE__ && window.__JUCE__.backend) {
+    try {
+      const lib = await import('./juce/index.js');
+      const be = window.__JUCE__.backend;
+      host = {
+        slider: id => lib.getSliderState(id),
+        combo:  id => lib.getComboBoxState(id),
+        toggle: id => lib.getToggleState(id),
+        call:   (name, ...args) => lib.getNativeFunction(name)(...args),
+        on:     (event, cb) => be.addEventListener(event, cb),
+      };
+    } catch (e) { console.warn('JUCE frontend unavailable:', e); }
+  }
+
+  const sliders = {}, combos = {}, toggles = {};
+  const sl = id => { if (!host) return null; if (!sliders[id]) sliders[id] = host.slider(id); return sliders[id]; };
+  const cb = id => { if (!host) return null; if (!combos[id]) combos[id] = host.combo(id); return combos[id]; };
+  const tg = id => { if (!host) return null; if (!toggles[id]) toggles[id] = host.toggle(id); return toggles[id]; };
+
+  const comboIndex = (id, n) => { const s = cb(id); return s ? clamp(Math.round((s.value || 0) * (n - 1)), 0, n - 1) : 0; };
+  const setComboIndex = (id, i) => { const s = cb(id); if (s && s.setChoiceIndex) s.setChoiceIndex(i); };
+
+  // Full words, per the language. The DSP order is unchanged.
+  const MODE_CHOICES   = ['Bandpass', 'Highpass'];
+  const LISTEN_CHOICES = ['Off', 'Detector', 'Removed'];
+  const STYLE_CHOICES    = ['Split', 'Wide'];
+  const TARGET_CHOICES   = ['Stereo', 'Mid', 'Side'];
+  const SCSOURCE_CHOICES = ['Internal', 'External'];
+
+  // ------------------------------------------------------------------ state
+  let preSpectrumDb = new Array(240).fill(-120);
+  let scSpectrumDb = new Array(240).fill(-120);
+  let sampleRate = 48000;
+  let liveGrDb = 0;
+  let liveEnvDb = -120;
+  let peakHoldGr = 0;
+  let peakHoldTimer = 0;
+
+  let currentScSource = 0;
+  let scActive = false;
+  let beaconSelected = '';
+  let beaconReceiving = false;
+  let beaconSrMismatch = false;
+  let beaconMetersSeen = false;
+  let beaconRpcInFlight = false;
+  let lastBeaconSig = '';
+  let selfMeta = { name: 'DeEss 1', customName: '', publishedName: '', publishing: false };
+  let selfEditing = false;
+  let syncScSourcePills = null;
+
+  // Parameter values cached for the detector well's band overlay.
+  let currentFreq = 6500;
+  let currentWidth = 1.5;
+  let currentMode = 0; // 0 = Bandpass, 1 = Highpass
+  let currentRange = 6.0;
+
+  // ---------------------------------------------------------------- knobs
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  const ARC_FULL = 'M12.44 43.56 A22 22 0 1 1 43.56 43.56';
+  const ARC_UP   = 'M28 6 A22 22 0 0 1 43.56 43.56';
+  const ARC_DOWN = 'M28 6 A22 22 0 0 0 12.44 43.56';
+  const LEN_FULL = 2 * Math.PI * 22 * 0.75;
+  const LEN_HALF = LEN_FULL / 2;
+
+  function mountKnob(el) {
+    const size = parseInt(el.dataset.size || '56', 10);
+    const bipolar = el.dataset.bipolar === '1';
+    const sw = size < 48 ? 5.5 : 4.5;
+
+    const svg = document.createElementNS(SVGNS, 'svg');
+    svg.setAttribute('viewBox', '0 0 56 56');
+    svg.setAttribute('width', String(size));
+    svg.setAttribute('height', String(size));
+
+    if (size >= 48) {
+      const ticks = document.createElementNS(SVGNS, 'g');
+      for (let i = 0; i <= 10; i++) {
+        const deg = -135 + i * 27;
+        const rad = (deg - 90) * Math.PI / 180;
+        const major = (i === 0 || i === 5 || i === 10);
+        const r1 = 24.0;
+        const r2 = major ? 26.2 : 25.3;
+        const t = document.createElementNS(SVGNS, 'line');
+        t.setAttribute('x1', (28 + Math.cos(rad) * r1).toFixed(2));
+        t.setAttribute('y1', (28 + Math.sin(rad) * r1).toFixed(2));
+        t.setAttribute('x2', (28 + Math.cos(rad) * r2).toFixed(2));
+        t.setAttribute('y2', (28 + Math.sin(rad) * r2).toFixed(2));
+        t.setAttribute('stroke', major ? 'var(--label)' : 'var(--muted)');
+        t.setAttribute('stroke-width', major ? '1.3' : '0.9');
+        t.setAttribute('stroke-linecap', 'round');
+        t.setAttribute('opacity', major ? '0.75' : '0.42');
+        ticks.appendChild(t);
+      }
+      svg.appendChild(ticks);
+    }
+
+    const mk = (d, stroke, width) => {
+      const p = document.createElementNS(SVGNS, 'path');
+      p.setAttribute('d', d);
+      p.setAttribute('fill', 'none');
+      p.setAttribute('stroke', stroke);
+      p.setAttribute('stroke-width', String(width));
+      p.setAttribute('stroke-linecap', 'round');
+      return p;
+    };
+    const track = mk(ARC_FULL, 'var(--track)', sw);
+    const arc = mk(bipolar ? ARC_UP : ARC_FULL, 'var(--accent)', sw);
+    arc.setAttribute('stroke-dasharray', String(bipolar ? LEN_HALF : LEN_FULL));
+    arc.setAttribute('stroke-dashoffset', String(bipolar ? LEN_HALF : LEN_FULL));
+    arc.classList.add('karc');
+    svg.append(track, arc);
+
+    if (bipolar) {
+      const tick = document.createElementNS(SVGNS, 'line');
+      tick.setAttribute('x1', '28'); tick.setAttribute('y1', '3.5');
+      tick.setAttribute('x2', '28'); tick.setAttribute('y2', '8.2');
+      tick.setAttribute('stroke', 'var(--label)');
+      tick.setAttribute('stroke-width', '1.5');
+      tick.setAttribute('stroke-linecap', 'round');
+      svg.appendChild(tick);
+    }
+
+    const collar = document.createElementNS(SVGNS, 'circle');
+    collar.setAttribute('cx', '28'); collar.setAttribute('cy', '28');
+    collar.setAttribute('r', size < 48 ? '15.2' : '16.8');
+    collar.setAttribute('fill', 'rgba(0, 0, 0, 0.35)');
+    collar.setAttribute('stroke', 'var(--line)');
+    svg.appendChild(collar);
+
+    const cap = document.createElementNS(SVGNS, 'circle');
+    cap.setAttribute('cx', '28'); cap.setAttribute('cy', '28');
+    cap.setAttribute('r', size < 48 ? '13.4' : '14.6');
+    cap.setAttribute('fill', 'var(--panel-hi)');
+    cap.setAttribute('stroke', 'var(--line-hi)');
+    svg.appendChild(cap);
+
+    const needle = document.createElementNS(SVGNS, 'line');
+    needle.setAttribute('x1', '28'); needle.setAttribute('y1', size < 48 ? '15.5' : '14.6');
+    needle.setAttribute('x2', '28'); needle.setAttribute('y2', '21.2');
+    needle.setAttribute('stroke', 'var(--text)');
+    needle.setAttribute('stroke-width', size < 48 ? '2.6' : '2.4');
+    needle.setAttribute('stroke-linecap', 'round');
+    needle.classList.add('kneedle');
+    svg.appendChild(needle);
+
+    const lab = document.createElement('div');
+    lab.className = 'klabel';
+    lab.textContent = el.dataset.label || '';
+    const val = document.createElement('span');
+    val.className = 'v';
+    val.textContent = '—';
+
+    el.innerHTML = '';
+    if (el.classList.contains('sm')) {
+      const stack = document.createElement('div');
+      stack.className = 'kstack';
+      stack.append(lab, val);
+      el.append(svg, stack);
+    } else {
+      el.append(lab, svg, val);
+    }
+    paintKnob(el, bipolar ? 0.5 : 0);
+  }
+
+  function paintKnob(el, norm) {
+    const arc = el.querySelector('.karc');
+    const needle = el.querySelector('.kneedle');
+    if (!arc || !needle) return;
+    const n = clamp(norm, 0, 1);
+    if (el.dataset.bipolar === '1') {
+      const p = (n - 0.5) * 2;
+      arc.setAttribute('d', p >= 0 ? ARC_UP : ARC_DOWN);
+      arc.setAttribute('stroke-dashoffset', String(LEN_HALF * (1 - Math.abs(p))));
+    } else {
+      arc.setAttribute('stroke-dashoffset', String(LEN_FULL * (1 - n)));
+    }
+    needle.setAttribute('transform', 'rotate(' + (-135 + n * 270).toFixed(2) + ' 28 28)');
+  }
+
+  // --------------------------------------------------- slider / toggle binds
+  function bindSlider(el, id, fmt, onValueChange = null) {
+    const slider = sl(id);
+    if (!el) return;
+    if (!slider) { return; }
+
+    {
+      const fresh = el.cloneNode(true);
+      el.parentNode.replaceChild(fresh, el);
+      el = fresh;
+    }
+    el.dataset.paramId = id;
+    const span = el.querySelector('.v');
+
+    const toNorm = (scaled) => {
+      const p = slider.properties || { start: 0, end: 1, skew: 1 };
+      const spanRange = (p.end - p.start) || 1;
+      const lin = Math.min(1, Math.max(0, (scaled - p.start) / spanRange));
+      return Math.pow(lin, p.skew || 1);
+    };
+
+    const updateDisplay = () => {
+      const v = slider.getScaledValue();
+      if (span.isConnected) span.textContent = fmt(v);
+      paintKnob(el, slider.getNormalisedValue());
+      if (onValueChange) onValueChange(v);
+    };
+
+    if (slider.customListener) slider.valueChangedEvent.removeListener(slider.customListener);
+    slider.customListener = updateDisplay;
+    slider.valueChangedEvent.addListener(updateDisplay);
+    updateDisplay();
+
+    el.addEventListener('dblclick', ev => {
+      ev.preventDefault();
+      const def = (slider.properties || {}).defaultValue;
+      if (typeof def !== 'number') return;
+      slider.sliderDragStarted();
+      slider.setNormalisedValue(toNorm(def));
+      slider.sliderDragEnded();
+      updateDisplay();
+    });
+
+    let st = null;
+    el.addEventListener('pointerdown', ev => {
+      if ((ev.button ?? 0) !== 0) return;
+      // Drag + wheel step in NORMALISED (knob-arc) space. Stepping in real units
+      // felt identical on linear knobs but collapsed the low end of skewed log
+      // ranges (attack/Q/rate): everything below ~1 fit in a few px / one wheel
+      // notch, so readouts hopped from 1 straight to the floor (2026-08-30).
+      st = { y: ev.clientY, n: slider.getNormalisedValue() };
+      slider.sliderDragStarted();
+      el.classList.add('dragging');
+      el.setPointerCapture(ev.pointerId);
+      ev.preventDefault();
+    });
+
+    el.addEventListener('pointermove', ev => {
+      if (!st) return;
+      const fine = ev.shiftKey ? 0.1 : 1.0;
+      const delta = (st.y - ev.clientY) * fine / 250.0;
+      slider.setNormalisedValue(Math.min(1, Math.max(0, st.n + delta)));
+      updateDisplay();
+    });
+
+    const endKnobDrag = ev => {
+      if (st) {
+        slider.sliderDragEnded();
+        st = null;
+      }
+      el.classList.remove('dragging');
+      try { el.releasePointerCapture(ev.pointerId); } catch (e) {}
+    };
+    el.addEventListener('pointerup', endKnobDrag);
+    el.addEventListener('pointercancel', endKnobDrag);
+
+    if (window.WDKit) {
+      window.WDKit.attachWheelGesture(el, () => slider, (s, stepNorm) => {
+        s.setNormalisedValue(Math.min(1, Math.max(0, s.getNormalisedValue() + stepNorm)));
+        updateDisplay();
+      });
+    } else {
+      el.addEventListener('wheel', ev => {
+        ev.preventDefault();
+        const fine = ev.shiftKey ? 0.1 : 1.0;
+        const direction = ev.deltaY < 0 ? 1 : -1;
+        const n = slider.getNormalisedValue() + direction * fine / 100.0;
+        slider.sliderDragStarted();
+        slider.setNormalisedValue(Math.min(1, Math.max(0, n)));
+        slider.sliderDragEnded();
+        updateDisplay();
+      }, { passive: false });
+    }
+
+    span.addEventListener('pointerdown', ev => ev.stopPropagation());
+    span.addEventListener('dblclick', ev => ev.stopPropagation());
+    span.addEventListener('click', ev => {
+      ev.stopPropagation();
+      if (!span.isConnected) return;
+      const input = document.createElement('input');
+      input.className = 'v';
+      input.value = String(Number(slider.getScaledValue().toFixed(4)));
+      input.setAttribute('aria-label', el.dataset.label || id);
+      let done = false;
+      const commit = keep => {
+        if (done) return;
+        done = true;
+        if (keep) {
+          const raw = input.value.trim();
+          const unitHint = /ms\s*$/i.test(span.textContent || '') ? 'ms' : (/hz/i.test(span.textContent || '') ? 'Hz' : undefined);
+          const v = window.WDKit
+            ? window.WDKit.parseMusicalValue(raw, { unit: unitHint })
+            : (parseFloat(raw.replace(/k(?:hz)?\s*$/i, '').replace(/[^0-9.+\-eE]/g, '')) * (/k(?:hz)?\s*$/i.test(raw) ? 1000 : 1));
+          if (isFinite(v)) {
+            slider.sliderDragStarted();
+            slider.setNormalisedValue(toNorm(v));
+            slider.sliderDragEnded();
+          }
+        }
+        input.replaceWith(span);
+        updateDisplay();
+      };
+      input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); commit(true); }
+        else if (e.key === 'Escape') { e.preventDefault(); commit(false); }
+        e.stopPropagation();
+      });
+      input.addEventListener('pointerdown', e => e.stopPropagation());
+      input.addEventListener('blur', () => commit(true));
+      span.replaceWith(input);
+      input.focus();
+      input.select();
+    });
+  }
+
+  function bindToggle(el, id, onValueChange = null) {
+    const t = tg(id);
+    if (!el || !t) return;
+    const updateDisplay = () => {
+      const v = !!t.getValue();
+      el.classList.toggle('on', v);
+      if (onValueChange) onValueChange(v);
+    };
+
+    if (t.customListener) t.valueChangedEvent.removeListener(t.customListener);
+    t.customListener = updateDisplay;
+    t.valueChangedEvent.addListener(updateDisplay);
+    updateDisplay();
+
+    const newEl = el.cloneNode(true);
+    el.parentNode.replaceChild(newEl, el);
+    el = newEl;
+    el.addEventListener('click', () => {
+      t.setValue(!t.getValue());
+      updateDisplay();
+    });
+  }
+
+  function bindChoicePills(groupEl, id, choices, onChange = null) {
+    if (!groupEl) return;
+    groupEl.innerHTML = '';
+    choices.forEach((name, i) => {
+      const b = document.createElement('button');
+      b.className = 'pill sm';
+      b.dataset.index = String(i);
+      b.textContent = name;
+      groupEl.appendChild(b);
+    });
+    const buttons = groupEl.querySelectorAll('button');
+
+    const updateDisplay = () => {
+      const idx = comboIndex(id, choices.length);
+      buttons.forEach(btn => btn.classList.toggle('on', parseInt(btn.dataset.index, 10) === idx));
+      if (onChange) onChange(idx);
+    };
+
+    const s = cb(id);
+    if (s) {
+      if (s.customListener) s.valueChangedEvent.removeListener(s.customListener);
+      s.customListener = updateDisplay;
+      s.valueChangedEvent.addListener(updateDisplay);
+    }
+    updateDisplay();
+
+    buttons.forEach(btn => btn.addEventListener('click', () => {
+      setComboIndex(id, parseInt(btn.dataset.index, 10));
+      updateDisplay();
+    }));
+    return updateDisplay;
+  }
+
+  // ------------------------------------------------------ detector well
+  const canvas = $('spectrumCanvas');
+  const ctx = canvas.getContext('2d');
+  let W = 0, H = 0, dpr = 1;
+  const AXIS = 18;
+
+  const FMIN = 20, FMAX = 20000;
+  const DB_MIN = -80, DB_MAX = 6;
+  const BIN_FMIN = 10, BIN_FMAX = 30000;
+
+  const freqToX = f => (Math.log(clamp(f, FMIN, FMAX) / FMIN) / Math.log(FMAX / FMIN)) * W;
+  const xToFreq = x => FMIN * Math.pow(FMAX / FMIN, clamp(x / Math.max(1, W), 0, 1));
+  const freqToBin = f => (Math.log(f / BIN_FMIN) / Math.log(BIN_FMAX / BIN_FMIN)) * preSpectrumDb.length;
+
+  const HISTORY_CAPACITY = 600;
+  const HISTORY_HZ = 60;
+  const historyBuf = (window.WDKit && WDKit.createHistoryBuffer)
+    ? WDKit.createHistoryBuffer({
+        capacity: HISTORY_CAPACITY,
+        cloneFrame: (src, dst) => {
+          const f = dst || {
+            gr: 0,
+            env: -120,
+            pre: new Float32Array(240),
+            sc: new Float32Array(240),
+          };
+          f.gr = Number.isFinite(src.gr) ? src.gr : 0;
+          f.env = Number.isFinite(src.env) ? src.env : -120;
+          for (let i = 0; i < 240; ++i) {
+            f.pre[i] = src.pre && Number.isFinite(src.pre[i]) ? src.pre[i] : -120;
+            f.sc[i]  = src.sc  && Number.isFinite(src.sc[i])  ? src.sc[i]  : -120;
+          }
+          return f;
+        }
+      })
+    : null;
+  let dragMode = null; // 'center' or 'width'
+
+  function fitCanvas() {
+    dpr = window.devicePixelRatio || 1;
+    const r = canvas.getBoundingClientRect();
+    W = r.width; H = r.height;
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawSpectrum();
+  }
+  new ResizeObserver(fitCanvas).observe(canvas);
+
+  function bandEdges() {
+    if (currentMode === 0) {
+      return { lo: currentFreq * Math.pow(2, -currentWidth * 0.5),
+               hi: currentFreq * Math.pow(2, currentWidth * 0.5) };
+    }
+    return { lo: currentFreq, hi: FMAX };
+  }
+
+  const fmtHzShort = hz => hz >= 1000 ? (hz / 1000).toFixed(1) + ' kHz' : Math.round(hz) + ' Hz';
+
+  function drawSpectrum() {
+    ctx.clearRect(0, 0, W, H);
+    if (W < 40 || H < 40) return;
+    const plotH = H - AXIS;
+
+    const { lo, hi } = bandEdges();
+    const bandL = clamp(freqToX(lo), 0, W);
+    const bandR = clamp(freqToX(hi), 0, W);
+
+    // Band overlay
+    ctx.fillStyle = ink(0.08);
+    ctx.fillRect(bandL, 0, bandR - bandL, plotH);
+
+    // Spectrum bars
+    const PITCH = 12, BAR = 9;
+    const dbToH = db => ((clamp(db, DB_MIN, DB_MAX) - DB_MIN) / (DB_MAX - DB_MIN)) * plotH;
+    for (let x = 0; x + BAR <= W + 1; x += PITCH) {
+      const b0 = Math.floor(freqToBin(xToFreq(x)));
+      const b1 = Math.ceil(freqToBin(xToFreq(x + BAR)));
+      let peak = -120;
+      for (let b = Math.max(0, b0); b <= Math.min(preSpectrumDb.length - 1, b1); ++b)
+        peak = Math.max(peak, preSpectrumDb[b]);
+      const h = dbToH(peak);
+      if (h < 1) continue;
+      const inBand = x + BAR / 2 >= bandL && x + BAR / 2 <= bandR;
+      ctx.fillStyle = ink(inBand ? 0.55 : 0.22);
+      ctx.fillRect(x, plotH - h, BAR, h);
+    }
+
+    // External Key FFT overlay (cyan) when External sidechain is selected
+    if (currentScSource === 1 && Array.isArray(scSpectrumDb) && scSpectrumDb.length > 1) {
+      let hasKeyEnergy = false;
+      for (let b = 0; b < scSpectrumDb.length; ++b) {
+        if (scSpectrumDb[b] > -115) { hasKeyEnergy = true; break; }
+      }
+      if (hasKeyEnergy) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, 0, W, plotH);
+        ctx.clip();
+        ctx.beginPath();
+        const nBins = scSpectrumDb.length;
+        let firstX = 0;
+        let lastX = W;
+        for (let b = 0; b < nBins; ++b) {
+          const f = BIN_FMIN * Math.pow(BIN_FMAX / BIN_FMIN, (b + 0.5) / nBins);
+          const bx = (Math.log(f / FMIN) / Math.log(FMAX / FMIN)) * W;
+          const by = plotH - dbToH(scSpectrumDb[b]);
+          if (b === 0) { firstX = bx; ctx.moveTo(bx, by); }
+          else ctx.lineTo(bx, by);
+          lastX = bx;
+        }
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 2.0;
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+        ctx.lineTo(lastX, plotH);
+        ctx.lineTo(firstX, plotH);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.14)';
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    // Top accent bar across band
+    ctx.fillStyle = COL.accentLit;
+    ctx.fillRect(bandL, 0, bandR - bandL, 3.5);
+
+    // Decade marks in axis band
+    ctx.strokeStyle = ink(0.07);
+    ctx.lineWidth = 1;
+    ctx.font = '600 9px ' + cssVar('--font');
+    ctx.fillStyle = ink(0.34);
+    ctx.textAlign = 'center';
+    [50, 100, 200, 500, 1000, 2000, 5000, 10000].forEach(hz => {
+      const x = freqToX(hz);
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, plotH); ctx.stroke();
+      ctx.fillText(hz >= 1000 ? (hz / 1000) + 'k' : String(hz), x, H - 4);
+    });
+
+    // Band edges in Bandpass mode
+    if (currentMode === 0) {
+      ctx.strokeStyle = ink(dragMode === 'width' ? 0.85 : 0.4);
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(bandL, 0); ctx.lineTo(bandL, plotH);
+      ctx.moveTo(bandR, 0); ctx.lineTo(bandR, plotH);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Centre handle
+    const x = freqToX(currentFreq);
+    ctx.strokeStyle = ink(dragMode === 'center' ? 0.85 : 0.5);
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, plotH); ctx.stroke();
+    ctx.setLineDash([]);
+
+    const label = fmtHzShort(currentFreq);
+    ctx.font = '700 10px ' + cssVar('--font');
+    const tw = ctx.measureText(label).width + 16;
+    ctx.fillStyle = COL.cream;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(x - tw / 2, 8, tw, 20, 10);
+    else ctx.rect(x - tw / 2, 8, tw, 20);
+    ctx.fill();
+    ctx.fillStyle = COL.well;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, x, 18.5);
+    ctx.textBaseline = 'alphabetic';
+  }
+
+  // --------------------------------------------------------- band dragging
+  let dragStartFreq = 6500;
+  let dragInitialFreq = 6500;
+  let dragStartWidth = 1.5;
+  let dragInitialWidth = 1.5;
+  let dragStartX = 0;
+  let dragMoved = false;
+  let pendingOutOfBandJump = false;
+  let dragMutated = false;
+  let dragStartedWidth = false;
+
+  const setFreqNormFromHz = (sliderF, hz) => {
+    if (!sliderF) return;
+    const p = sliderF.properties || { start: 500, end: 16000, skew: 0.35 };
+    const norm = Math.pow((clamp(hz, 500, 16000) - p.start) / (p.end - p.start), p.skew || 1.0);
+    sliderF.setNormalisedValue(clamp(norm, 0, 1));
+  };
+
+  const setWidthNorm = (sliderW, w) => {
+    if (!sliderW) return;
+    const p = sliderW.properties || { start: 0.5, end: 4.0 };
+    const norm = (clamp(w, 0.5, 4.0) - p.start) / (p.end - p.start);
+    sliderW.setNormalisedValue(clamp(norm, 0, 1));
+  };
+
+  canvas.addEventListener('pointerdown', ev => {
+    if ((ev.button ?? 0) !== 0) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = ev.clientX - rect.left;
+    const y = ev.clientY - rect.top;
+    if (x < 0 || x > W || y < 0 || y > H - AXIS) return;
+
+    const clickedFreq = xToFreq(x);
+    const { lo, hi } = bandEdges();
+    const distLow = Math.abs(x - freqToX(lo));
+    const distHigh = Math.abs(x - freqToX(hi));
+
+    if (currentMode === 0 && (distLow < 12 || distHigh < 12)) {
+      dragMode = 'width';
+      pendingOutOfBandJump = false;
+    } else if (currentMode === 0 && clickedFreq >= lo && clickedFreq <= hi) {
+      dragMode = 'center';
+      pendingOutOfBandJump = false;
+    } else if (currentMode === 1 && clickedFreq >= currentFreq) {
+      dragMode = 'center';
+      pendingOutOfBandJump = false;
+    } else {
+      dragMode = 'center';
+      pendingOutOfBandJump = true;
+    }
+
+    dragInitialFreq = currentFreq;
+    dragStartFreq = currentFreq;
+    dragInitialWidth = currentWidth;
+    dragStartWidth = currentWidth;
+    dragStartX = ev.clientX;
+    dragMoved = false;
+    dragMutated = false;
+
+    const sF = sl('freq');
+    const sWd = sl('width');
+    if (sF) sF.sliderDragStarted();
+    dragStartedWidth = !!(sWd && currentMode === 0);
+    if (dragStartedWidth) sWd.sliderDragStarted();
+
+    try { canvas.setPointerCapture(ev.pointerId); } catch (e) {}
+    ev.preventDefault();
+    drawSpectrum();
+  });
+
+  canvas.addEventListener('pointermove', ev => {
+    if (!dragMode) {
+      const rect = canvas.getBoundingClientRect();
+      const x = ev.clientX - rect.left;
+      const { lo, hi } = bandEdges();
+      const nearEdge = currentMode === 0 && (Math.abs(x - freqToX(lo)) < 12 || Math.abs(x - freqToX(hi)) < 12);
+      canvas.style.cursor = nearEdge ? 'ew-resize' : 'default';
+      return;
+    }
+
+    const deltaX = ev.clientX - dragStartX;
+    if (!dragMoved) {
+      if (Math.abs(deltaX) < 3) return;
+      dragMoved = true;
+      if (dragMode === 'center' && pendingOutOfBandJump) {
+        const rect = canvas.getBoundingClientRect();
+        const x = ev.clientX - rect.left;
+        dragStartFreq = clamp(xToFreq(x), 500, 16000);
+        dragStartX = ev.clientX;
+        pendingOutOfBandJump = false;
+      }
+    }
+
+    if (dragMode === 'center') {
+      const moveDeltaX = ev.clientX - dragStartX;
+      const ratio = moveDeltaX / Math.max(1, W);
+      const spanLog = Math.log(FMAX / FMIN);
+      const newFreq = clamp(dragStartFreq * Math.exp(ratio * spanLog), 500, 16000);
+      const sliderF = sl('freq');
+      if (sliderF) {
+        setFreqNormFromHz(sliderF, newFreq);
+        currentFreq = newFreq;
+        dragMutated = true;
+      }
+    } else if (dragMode === 'width' && currentMode === 0) {
+      const ratio = deltaX / Math.max(1, W);
+      const newWidth = clamp(dragStartWidth + ratio * 8.0, 0.5, 4.0);
+      const sliderW = sl('width');
+      if (sliderW) {
+        setWidthNorm(sliderW, newWidth);
+        currentWidth = newWidth;
+        dragMutated = true;
+      }
+    }
+    drawSpectrum();
+  });
+
+  function endCanvasDrag(ev) {
+    if (dragMode) {
+      if (ev.type === 'pointercancel') {
+        if (dragMutated) {
+          const sliderF = sl('freq');
+          const sliderW = sl('width');
+          if (dragMode === 'center' && sliderF) {
+            currentFreq = dragInitialFreq;
+            setFreqNormFromHz(sliderF, dragInitialFreq);
+          } else if (dragMode === 'width' && dragStartedWidth && sliderW) {
+            currentWidth = dragInitialWidth;
+            setWidthNorm(sliderW, dragInitialWidth);
+          }
+        }
+      } else if (ev.type === 'pointerup' && dragMode === 'center' && !dragMoved && Math.abs(ev.clientX - dragStartX) < 3) {
+        const rect = canvas.getBoundingClientRect();
+        const x = ev.clientX - rect.left;
+        if (x >= 0 && x <= W) {
+          const sliderF = sl('freq');
+          if (sliderF) {
+            const clickedFreq = clamp(xToFreq(x), 500, 16000);
+            currentFreq = clickedFreq;
+            setFreqNormFromHz(sliderF, clickedFreq);
+          }
+        }
+      }
+      const sF = sl('freq');
+      const sWd = sl('width');
+      if (sF) sF.sliderDragEnded();
+      if (sWd && dragStartedWidth) sWd.sliderDragEnded();
+      dragMode = null;
+      dragMoved = false;
+      pendingOutOfBandJump = false;
+      dragMutated = false;
+      dragStartedWidth = false;
+      drawSpectrum();
+    }
+    try { canvas.releasePointerCapture(ev.pointerId); } catch (e) {}
+  }
+  canvas.addEventListener('pointerup', endCanvasDrag);
+  canvas.addEventListener('pointercancel', endCanvasDrag);
+
+  if (window.WDKit) {
+    window.WDKit.attachWheelGesture(canvas, () => currentMode === 0 ? sl('width') : null, (sliderW, stepNorm) => {
+      let newWidth = clamp(currentWidth + stepNorm * 15.0, 0.5, 4.0);
+      const p = sliderW.properties || { start: 0.5, end: 4.0 };
+      const norm = (newWidth - p.start) / (p.end - p.start);
+      sliderW.setNormalisedValue(clamp(norm, 0, 1));
+      drawSpectrum();
+    });
+  } else {
+    canvas.addEventListener('wheel', ev => {
+      ev.preventDefault();
+      if (currentMode !== 0) return;
+      const sliderW = sl('width');
+      if (!sliderW) return;
+      const direction = ev.deltaY < 0 ? 1 : -1;
+      let newWidth = currentWidth + direction * 0.15;
+      newWidth = clamp(newWidth, 0.5, 4.0);
+      const p = sliderW.properties || { start: 0.5, end: 4.0 };
+      const norm = (newWidth - p.start) / (p.end - p.start);
+      sliderW.sliderDragStarted();
+      sliderW.setNormalisedValue(clamp(norm, 0, 1));
+      sliderW.sliderDragEnded();
+      drawSpectrum();
+    }, { passive: false });
+  }
+
+  // ------------------------------------------------------ reduction well
+  const grCanvas = $('grCanvas');
+  const grCtx = grCanvas.getContext('2d');
+  let gW = 0, gH = 0, gDpr = 1;
+  const GR_SPAN = 24;
+
+  function fitGrCanvas() {
+    gDpr = window.devicePixelRatio || 1;
+    const r = grCanvas.getBoundingClientRect();
+    gW = r.width; gH = r.height;
+    grCanvas.width = Math.round(gW * gDpr);
+    grCanvas.height = Math.round(gH * gDpr);
+    grCtx.setTransform(gDpr, 0, 0, gDpr, 0, 0);
+    drawReduction();
+  }
+  new ResizeObserver(fitGrCanvas).observe(grCanvas);
+
+  function drawReduction() {
+    grCtx.clearRect(0, 0, gW, gH);
+    if (gW < 40 || gH < 40) return;
+
+    const pad = 18;
+    const drawW = gW - pad * 2, drawH = gH - pad * 2;
+    const yFor = db => pad + (clamp(Math.abs(db), 0, GR_SPAN) / GR_SPAN) * drawH;
+
+    // Range setting guide
+    grCtx.strokeStyle = COL.accentLit;
+    grCtx.lineWidth = 2.6;
+    grCtx.setLineDash([3, 4]);
+    grCtx.beginPath();
+    grCtx.moveTo(pad, yFor(currentRange));
+    grCtx.lineTo(pad + drawW, yFor(currentRange));
+    grCtx.stroke();
+    grCtx.setLineDash([]);
+
+    // Live reduction history
+    const n = historyBuf ? historyBuf.length() : 0;
+    if (n > 0) {
+      const xOffset = HISTORY_CAPACITY - n;
+      const xAt = i => pad + ((xOffset + i) / Math.max(1, HISTORY_CAPACITY - 1)) * drawW;
+      grCtx.strokeStyle = ink(0.92);
+      grCtx.lineWidth = 3.4;
+      grCtx.lineJoin = 'round';
+      grCtx.lineCap = 'round';
+      grCtx.beginPath();
+      for (let i = 0; i < n; ++i) {
+        const f = historyBuf.getFrameAt(i);
+        const x = xAt(i);
+        const y = yFor(f ? f.gr : 0);
+        i ? grCtx.lineTo(x, y) : grCtx.moveTo(x, y);
+      }
+      grCtx.stroke();
+
+      // Dot at tip
+      const lastF = historyBuf.getFrameAt(n - 1);
+      grCtx.fillStyle = COL.cream;
+      grCtx.beginPath();
+      grCtx.arc(xAt(n - 1), yFor(lastF ? lastF.gr : 0), 4, 0, Math.PI * 2);
+      grCtx.fill();
+
+      if (historyBuf.isFrozen()) {
+        const sx = xAt(historyBuf.getScrubIndex());
+        grCtx.strokeStyle = '#f59e0b';
+        grCtx.lineWidth = 1.5;
+        grCtx.beginPath();
+        grCtx.moveTo(sx, pad);
+        grCtx.lineTo(sx, pad + drawH);
+        grCtx.stroke();
+      }
+    }
+  }
+
+  drawSpectrumFn = drawSpectrum;
+  drawReductionFn = drawReduction;
+
+  // ------------------------------------------------------- setup and loops
+  const fmtFreq = v => v >= 1000 ? (v / 1000).toFixed(2) + ' kHz' : Math.round(v) + ' Hz';
+  const fmtWidth = v => v.toFixed(2) + ' oct';
+  const fmtDb = v => (v > 0 ? '+' : '') + v.toFixed(1) + ' dB';
+  const fmtMs = v => Math.round(v) + ' ms';
+  const fmtPct = v => Math.round(v) + '%';
+
+  function renderSelfTrackChip() {
+    const chip = $('selfTrackChip');
+    const lbl = $('selfTrackName');
+    if (!chip || !lbl || selfEditing) return;
+    lbl.textContent = selfMeta.name || 'DeEss 1';
+    const pub = selfMeta.publishing && selfMeta.publishedName
+      ? ' · broadcasting on WD Beacon as "' + selfMeta.publishedName + '"'
+      : '';
+    chip.title = 'Instance name' + pub + ' — click to rename';
+  }
+
+  function startSelfRename() {
+    const chip = $('selfTrackChip');
+    const lbl = $('selfTrackName');
+    if (!chip || !lbl || selfEditing) return;
+    selfEditing = true;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'track-name-input';
+    input.maxLength = 47;
+    input.value = selfMeta.customName || selfMeta.name || '';
+    lbl.style.display = 'none';
+    chip.insertBefore(input, lbl);
+    input.focus();
+    input.select();
+
+    let finished = false;
+    const finish = async (save) => {
+      if (finished) return;
+      finished = true;
+      const next = save ? input.value.trim() : null;
+      if (input.parentNode) input.parentNode.removeChild(input);
+      lbl.style.display = '';
+      selfEditing = false;
+      if (save) {
+        selfMeta.customName = next;
+        if (next) selfMeta.name = next;
+        if (host) {
+          try {
+            const res = await host.call('setInstanceName', next);
+            if (res && typeof res.name === 'string') selfMeta.name = res.name;
+            if (res && typeof res.customName === 'string') selfMeta.customName = res.customName;
+            if (res && typeof res.beaconPublishedName === 'string') selfMeta.publishedName = res.beaconPublishedName;
+            if (res && typeof res.beaconPublishing === 'boolean') selfMeta.publishing = res.beaconPublishing;
+          } catch (e) {}
+        }
+      }
+      renderSelfTrackChip();
+    };
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+      else if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+      e.stopPropagation();
+    });
+    input.addEventListener('blur', () => finish(true));
+  }
+
+  {
+    const chip = $('selfTrackChip');
+    if (chip) chip.addEventListener('click', startSelfRename);
+  }
+
+  function updateScUiState() {
+    const extOn = currentScSource === 1;
+    const hasKeySignal = beaconSelected ? beaconReceiving : scActive;
+    const badge = $('specKeyBadge');
+    const badgeLbl = $('specKeyLabel');
+    if (badge) {
+      badge.hidden = !extOn;
+      badge.classList.toggle('idle', extOn && !hasKeySignal);
+    }
+    if (badgeLbl) {
+      badgeLbl.textContent = beaconSelected ? ('Key · ' + beaconSelected) : 'Key';
+    }
+    const hint = $('scHint');
+    if (hint) {
+      hint.classList.remove('warn');
+      if (!extOn) {
+        hint.hidden = true;
+      } else if (beaconSelected && beaconSrMismatch) {
+        hint.textContent = 'Beacon SR mismatch';
+        hint.classList.add('warn');
+        hint.hidden = false;
+      } else if (beaconSelected && !beaconReceiving) {
+        hint.textContent = 'Waiting for Beacon';
+        hint.hidden = false;
+      } else if (!beaconSelected && !scActive) {
+        hint.textContent = 'No key connected';
+        hint.hidden = false;
+      } else {
+        hint.hidden = true;
+      }
+    }
+  }
+
+  function updateBeaconLed() {
+    const wrap = $('beaconPickerWrap');
+    if (wrap) {
+      const extOn = currentScSource === 1;
+      const baseTip = 'Select an active Werewolf Digital Beacon track for external sibilance detector keying. Wireless cross-track key — for sample-exact timing at large DAW buffer sizes (1024+), use Off (Host Bus) with a DAW sidechain send.';
+      wrap.classList.remove('receiving', 'waiting', 'mismatch');
+      if (beaconSelected) {
+        if (beaconSrMismatch) {
+          wrap.classList.add('mismatch');
+          wrap.title = 'Sample rate mismatch between this track and the selected WD Beacon track.';
+        } else {
+          wrap.classList.add(extOn && beaconReceiving ? 'receiving' : 'waiting');
+          wrap.title = extOn ? baseTip : (baseTip + ' (SC Source is currently Internal.)');
+        }
+      } else if (extOn) {
+        wrap.classList.add(scActive ? 'receiving' : 'waiting');
+        wrap.title = scActive
+          ? 'Receiving external sidechain key from Host Bus 1.'
+          : baseTip;
+      } else {
+        wrap.title = baseTip;
+      }
+    }
+    updateScUiState();
+  }
+
+  function renderBeaconSources(res) {
+    const sel = $('beaconSourceSelect');
+    if (!sel || !res || typeof res !== 'object') return;
+    const sources = Array.isArray(res.sources) ? res.sources : [];
+    if (typeof res.selected === 'string') beaconSelected = res.selected;
+    if (!beaconMetersSeen && typeof res.receiving === 'boolean') beaconReceiving = res.receiving;
+    if (!beaconMetersSeen && typeof res.scActive === 'boolean') scActive = res.scActive;
+    if (typeof res.srMismatch === 'boolean') beaconSrMismatch = res.srMismatch;
+
+    const sig = sources.map(s => `${s.name}:${s.sr}:${s.ch}`).join('|') + '#' + beaconSelected;
+    updateBeaconLed();
+    if (document.activeElement === sel || sig === lastBeaconSig) return;
+    lastBeaconSig = sig;
+
+    sel.textContent = '';
+    const off = document.createElement('option');
+    off.value = '';
+    off.textContent = 'Off (Host Bus)';
+    sel.appendChild(off);
+
+    let found = (beaconSelected === '');
+    for (const s of sources) {
+      const opt = document.createElement('option');
+      opt.value = s.name;
+      const sr = s.sr ? (s.sr / 1000).toFixed(s.sr % 1000 === 0 ? 0 : 1) + 'k' : '?';
+      const ch = s.ch === 1 ? 'Mono' : s.ch === 2 ? 'St' : (s.ch + 'ch');
+      opt.textContent = `${s.name} (${sr} · ${ch})`;
+      if (s.name === beaconSelected) found = true;
+      sel.appendChild(opt);
+    }
+    if (!found && beaconSelected) {
+      const offline = document.createElement('option');
+      offline.value = beaconSelected;
+      offline.textContent = `${beaconSelected} (waiting…)`;
+      sel.appendChild(offline);
+    }
+    sel.value = beaconSelected;
+  }
+
+  async function refreshBeaconSources() {
+    if (!host) return;
+    try {
+      const res = await host.call('getBeaconSources');
+      renderBeaconSources(res);
+    } catch (e) {}
+  }
+
+  {
+    const sel = $('beaconSourceSelect');
+    if (sel) {
+      sel.addEventListener('pointerdown', refreshBeaconSources);
+      sel.addEventListener('focus', refreshBeaconSources);
+      sel.addEventListener('change', async () => {
+        beaconSelected = sel.value || '';
+        beaconSrMismatch = false;
+        scSpectrumDb.fill(-120);
+        if (beaconSelected && currentScSource !== 1) {
+          currentScSource = 1;
+          setComboIndex('scsource', 1);
+          if (syncScSourcePills) syncScSourcePills(1);
+        }
+        updateBeaconLed();
+        drawSpectrum();
+        if (host) {
+          beaconRpcInFlight = true;
+          try {
+            const res = await host.call('setBeaconSource', beaconSelected);
+            if (res && typeof res.receiving === 'boolean') beaconReceiving = res.receiving;
+            if (res && typeof res.scActive === 'boolean') scActive = res.scActive;
+            if (res && typeof res.srMismatch === 'boolean') beaconSrMismatch = res.srMismatch;
+            updateBeaconLed();
+          } catch (e) {}
+          beaconRpcInFlight = false;
+        }
+      });
+    }
+  }
+
+  // Auto threshold law, mirrored from WdDeEss.h: the knob is an offset from
+  // the tracked base, zero at the parameter default of -20 dB. The numeral
+  // shows that offset, signed, so a knob at -14 reads "+6.0 dB".
+  const AUTO_THRESH_REF_DB = -20.0;
+  let autoThresh = false;
+  const fmtOffset = v => {
+    const o = Math.abs(v) < 0.05 ? 0 : v;
+    return (o > 0 ? '+' : '') + o.toFixed(1) + ' dB';
+  };
+  const fmtThreshold = v => autoThresh ? fmtOffset(v - AUTO_THRESH_REF_DB) : fmtDb(v);
+  function refreshThresholdKnob() {
+    const knob = $('param_threshold');
+    if (!knob) return;
+    knob.classList.toggle('auto-on', autoThresh);
+    const lab = knob.querySelector('.klabel');
+    if (lab) lab.textContent = autoThresh ? 'Threshold offset' : 'Threshold';
+    const span = knob.querySelector('.v');
+    const s = sl('threshold');
+    if (span && s) span.textContent = fmtThreshold(s.getScaledValue());
+  }
+
+  function initAll() {
+    document.querySelectorAll('.knob').forEach(mountKnob);
+
+    bindSlider($('param_freq'), 'freq', fmtFreq, v => { currentFreq = v; drawSpectrum(); });
+    bindSlider($('param_width'), 'width', fmtWidth, v => { currentWidth = v; drawSpectrum(); });
+    bindSlider($('param_threshold'), 'threshold', fmtThreshold);
+    bindSlider($('param_range'), 'range', v => v.toFixed(1) + ' dB', v => { currentRange = v; drawReduction(); });
+    bindSlider($('param_release'), 'release', fmtMs);
+    bindSlider($('param_mix'), 'mix', fmtPct);
+
+    bindChoicePills($('param_mode'), 'mode', MODE_CHOICES, idx => {
+      currentMode = idx;
+      const widthEl = $('param_width');
+      if (widthEl) widthEl.classList.toggle('inert', currentMode === 1);
+      const hint = $('detectorHint');
+      if (hint) hint.textContent = currentMode === 1 ? 'Drag the edge' : 'Drag the band · wheel for width';
+      drawSpectrum();
+    });
+    bindChoicePills($('param_listen'), 'listen', LISTEN_CHOICES);
+    bindChoicePills($('param_style'), 'style', STYLE_CHOICES);
+    bindChoicePills($('param_stereoTarget'), 'stereoTarget', TARGET_CHOICES);
+    {
+      const updateScPills = bindChoicePills($('scsource-group'), 'scsource', SCSOURCE_CHOICES, idx => {
+        currentScSource = idx;
+        updateBeaconLed();
+        drawSpectrum();
+      });
+      syncScSourcePills = idx => {
+        const grp = $('scsource-group');
+        if (grp) {
+          grp.querySelectorAll('button').forEach(b =>
+            b.classList.toggle('on', parseInt(b.dataset.index, 10) === idx));
+        }
+        currentScSource = idx;
+        updateBeaconLed();
+      };
+      if (typeof updateScPills === 'function' && host) updateScPills();
+    }
+
+    bindToggle($('param_autoThreshold'), 'autoThreshold', v => {
+      autoThresh = v;
+      refreshThresholdKnob();
+    });
+    bindToggle($('param_link'), 'link');
+    bindToggle($('param_vocalOnly'), 'vocalOnly');
+    bindToggle($('param_power'), 'power', v => {
+      const b = $('param_power');
+      if (b) b.lastChild.textContent = v ? 'Engaged' : 'Bypassed';
+    });
+  }
+
+  const beaconEpochWatch = window.WDKit
+    ? window.WDKit.createBeaconEpochWatcher(refreshBeaconSources)
+    : () => {};
+
+  setTimeout(async () => {
+    initAll();
+    if (window.WDKit) {
+      window.WDKit.enhanceAllKnobs(sl);
+      window.WDKit.mountHeaderKit({ host });
+      window.WDKit.syncGlobalTheme(host, applyTheme);
+    }
+    fitCanvas();
+    fitGrCanvas();
+
+    if (host) {
+      try {
+        const state = await host.call('getUiState');
+        if (state) {
+          if (state.build) $('buildTag').textContent = state.build;
+          if (state.sampleRate) {
+            sampleRate = state.sampleRate;
+            $('srTag').textContent = (state.sampleRate / 1000).toFixed(1) + ' kHz';
+          }
+          if (state.selfName) selfMeta.name = state.selfName;
+          if (typeof state.selfCustomName === 'string') selfMeta.customName = state.selfCustomName;
+          if (typeof state.beaconPublishedName === 'string') selfMeta.publishedName = state.beaconPublishedName;
+          if (typeof state.beaconPublishing === 'boolean') selfMeta.publishing = state.beaconPublishing;
+          if (typeof state.beaconSource === 'string') beaconSelected = state.beaconSource;
+          if (typeof state.beaconReceiving === 'boolean') beaconReceiving = state.beaconReceiving;
+          if (typeof state.scActive === 'boolean') scActive = state.scActive;
+          if (typeof state.beaconSrMismatch === 'boolean') beaconSrMismatch = state.beaconSrMismatch;
+          renderSelfTrackChip();
+          updateBeaconLed();
+        }
+      } catch (e) { console.warn('getUiState call failed', e); }
+      await refreshBeaconSources();
+    } else {
+      renderSelfTrackChip();
+      updateBeaconLed();
+    }
+  }, 120);
+
+  // Meter ballistics and display updates
+  let mGr = 0, mEnv = -120;
+
+  function applyFrozenFrame(frame) {
+    if (!frame) return;
+    const grAbs = Math.abs(Number.isFinite(frame.gr) ? frame.gr : 0);
+    const envDb = Number.isFinite(frame.env) ? frame.env : -120;
+    liveGrDb = Number.isFinite(frame.gr) ? frame.gr : 0;
+    liveEnvDb = envDb;
+
+    const grText = grAbs < 0.05 ? '—' : '-' + grAbs.toFixed(1) + ' dB';
+    $('grVal').textContent = grText;
+    $('grMeterVal').textContent = grText;
+    $('envVal').textContent = envDb <= -119.5 ? 'Env —' : 'Env ' + envDb.toFixed(1) + ' dB';
+
+    const grToPct = db => clamp(db / GR_SPAN, 0, 1);
+    const pct = (grToPct(grAbs) * 100).toFixed(1) + '%';
+    const bar = $('grBar');
+    if (bar) bar.style.setProperty('--fill', pct);
+
+    if (frame.pre) {
+      for (let i = 0; i < preSpectrumDb.length; ++i) {
+        preSpectrumDb[i] = Number.isFinite(frame.pre[i]) ? frame.pre[i] : -120;
+      }
+    }
+    if (frame.sc) {
+      for (let i = 0; i < scSpectrumDb.length; ++i) {
+        scSpectrumDb[i] = Number.isFinite(frame.sc[i]) ? frame.sc[i] : -120;
+      }
+    }
+    drawSpectrum();
+    drawReduction();
+  }
+
+  const scrubTimeline = (window.WDKit && WDKit.mountScrubTimeline && historyBuf)
+    ? WDKit.mountScrubTimeline({
+        container: $('historyScrubMount'),
+        historyBuffer: historyBuf,
+        hz: HISTORY_HZ,
+        label: 'WdDeEss 10-second reduction & spectrum scrub',
+        onToggleHold: (frozen, frame) => {
+          if (frozen && historyBuf.length() === 0) {
+            historyBuf.setFrozen(false);
+            if (scrubTimeline) scrubTimeline.update();
+            return;
+          }
+          if (frozen && frame) applyFrozenFrame(frame);
+          else {
+            drawSpectrum();
+            drawReduction();
+          }
+        },
+        onScrub: (frame, _age, frozen) => {
+          if (frozen && historyBuf.length() === 0) {
+            historyBuf.setFrozen(false);
+            if (scrubTimeline) scrubTimeline.update();
+            return;
+          }
+          if (frozen && frame) applyFrozenFrame(frame);
+          else {
+            drawSpectrum();
+            drawReduction();
+          }
+        }
+      })
+    : null;
+
+  function updateMeters(meters) {
+    if (historyBuf && historyBuf.isFrozen()) return;
+    beaconMetersSeen = true;
+    beaconEpochWatch(meters);
+    const prevKeyDraw = currentScSource === 1 && (scActive || beaconReceiving);
+    if (typeof meters.beaconReceiving === 'boolean') beaconReceiving = meters.beaconReceiving;
+    if (typeof meters.scActive === 'boolean') scActive = meters.scActive;
+    if (typeof meters.beaconSrMismatch === 'boolean') beaconSrMismatch = meters.beaconSrMismatch;
+    if (typeof meters.beaconSource === 'string' && !beaconRpcInFlight) {
+      if (beaconSelected !== meters.beaconSource) {
+        beaconSelected = meters.beaconSource;
+        lastBeaconSig = '';
+        refreshBeaconSources();
+      }
+    }
+    if (typeof meters.selfName === 'string' && !selfEditing) {
+      const changed = (selfMeta.name !== meters.selfName
+        || selfMeta.publishedName !== (meters.beaconPublishedName || '')
+        || selfMeta.publishing !== !!meters.beaconPublishing);
+      selfMeta.name = meters.selfName;
+      if (typeof meters.selfCustomName === 'string') selfMeta.customName = meters.selfCustomName;
+      if (typeof meters.beaconPublishedName === 'string') selfMeta.publishedName = meters.beaconPublishedName;
+      if (typeof meters.beaconPublishing === 'boolean') selfMeta.publishing = meters.beaconPublishing;
+      if (changed) renderSelfTrackChip();
+    }
+    updateBeaconLed();
+    const nextKeyDraw = currentScSource === 1 && (scActive || beaconReceiving);
+    if (prevKeyDraw && !nextKeyDraw) {
+      scSpectrumDb.fill(-120);
+      drawSpectrum();
+    }
+
+    const targetGr = Math.abs(meters.gr || 0);
+    const targetEnv = Number.isFinite(meters.envelope) ? meters.envelope : -120;
+
+    mGr += (targetGr - mGr) * 0.8;
+    mEnv += (targetEnv - mEnv) * (targetEnv > mEnv ? 0.8 : 0.15);
+
+    const grText = mGr < 0.05 ? '—' : '-' + mGr.toFixed(1) + ' dB';
+    $('grVal').textContent = grText;
+    $('grMeterVal').textContent = grText;
+    $('envVal').textContent = mEnv <= -119.5 ? 'Env —' : 'Env ' + mEnv.toFixed(1) + ' dB';
+
+    const grToPct = db => clamp(db / GR_SPAN, 0, 1);
+    const pct = (grToPct(mGr) * 100).toFixed(1) + '%';
+    const bar = $('grBar');
+    if (bar) bar.style.setProperty('--fill', pct);
+
+    if (mGr > peakHoldGr) {
+      peakHoldGr = mGr;
+      peakHoldTimer = 120;
+    } else if (peakHoldTimer > 0) {
+      peakHoldTimer--;
+    } else {
+      peakHoldGr = Math.max(mGr, peakHoldGr - 0.1);
+    }
+    const peakLine = $('grPeakLine');
+    if (peakHoldGr > 0.1) {
+      peakLine.style.display = 'block';
+      const peakPct = (grToPct(peakHoldGr) * 100).toFixed(1) + '%';
+      peakLine.style.setProperty('--peak', peakPct);
+    } else {
+      peakLine.style.display = 'none';
+    }
+
+    liveGrDb = meters.gr || 0;
+    liveEnvDb = targetEnv;
+
+    if (historyBuf) {
+      historyBuf.push({
+        gr: liveGrDb,
+        env: liveEnvDb,
+        pre: preSpectrumDb,
+        sc: scSpectrumDb,
+      });
+      if (scrubTimeline) scrubTimeline.update();
+    }
+
+    drawReduction();
+  }
+
+  // ------------------------------------------------------------ live events
+  if (host) {
+    host.on('meters', data => { if (data) updateMeters(data); });
+
+    host.on('spectrum', data => {
+      if (!data || (historyBuf && historyBuf.isFrozen())) return;
+      let updated = false;
+      if (data.pre) { preSpectrumDb = data.pre; updated = true; }
+      if (data.sc) { scSpectrumDb = data.sc; updated = true; }
+      if (updated) drawSpectrum();
+    });
+  } else {
+    setInterval(() => {
+      const t = Date.now() * 0.001;
+      updateMeters({
+        gr: Math.min(0, -2.0 - 4.0 * Math.sin(t * 3) - 2.0 * Math.sin(t * 12)),
+        envelope: -35.0 + 15.0 * Math.sin(t * 2),
+        scActive: true
+      });
+    }, 16.6);
+
+    setInterval(() => {
+      if (historyBuf && historyBuf.isFrozen()) return;
+      const t = Date.now() * 0.001;
+      for (let i = 0; i < preSpectrumDb.length; ++i) {
+        const f = BIN_FMIN * Math.pow(BIN_FMAX / BIN_FMIN, i / (preSpectrumDb.length - 1));
+        let val = -55.0 - 15.0 * Math.log10(f / 100) + 12.0 * Math.sin(t * 1.5 + f / 1000);
+        if (f > 4000 && f < 9000)
+          val += 25.0 * Math.exp(-Math.pow(f - 6500, 2) / (2 * Math.pow(1500, 2)));
+        preSpectrumDb[i] = clamp(val, -100, 0);
+
+        let keyVal = -62.0 - 14.0 * Math.log10(f / 120) + 8.0 * Math.cos(t * 2.1 + f / 900);
+        if (f > 3000 && f < 12000)
+          keyVal += 28.0 * Math.exp(-Math.pow(f - 7200, 2) / (2 * Math.pow(1700, 2)));
+        scSpectrumDb[i] = clamp(keyVal, -100, 0);
+      }
+      drawSpectrum();
+    }, 33);
+  }
+
+})();
+</script>
+</body>
+</html>

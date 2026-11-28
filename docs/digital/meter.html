@@ -1,0 +1,2138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Werewolf Digital Meter</title>
+<link rel="stylesheet" href="./wd/tokens.css">
+<style>
+  /* ══════════════════════════════════════════════════════════════════════
+     Precision Instrument — Werewolf Digital Meter (Track & Bus Visualizer)
+     Accent: Slate Blue (#6684b8 / #9db5e0 / #374f7d) · Key Cyan (#22d3ee)
+     ════════════════════════════════════════════════════════════════════ */
+  :root {
+    --bg:      #0b0d12;
+    --panel:   #151922;
+    --panel-hi:#1d2330;
+    --track:   #0d0f15;
+    --line:    rgba(255, 255, 255, 0.08);
+    --line-hi: rgba(255, 255, 255, 0.15);
+    --hover-bg:rgba(255, 255, 255, 0.06);
+    --text:    #f2f5fa;
+    --label:   #8b96a8;
+    --muted:   #586274;
+    --well:    #06070a;
+    --cream:   #f2f5fa;
+
+    --accent:     #6684b8;
+    --accent-lit: #9db5e0;
+    --accent-deep:#374f7d;
+
+    --sage:      #34d399;
+    --sage-tint: rgba(52, 211, 153, 0.14);
+    --sage-deep: #6ee7b7;
+    --cyan:      #22d3ee;
+    --warn:      #f59e0b;
+    --danger:    #f43f5e;
+    --violet:    #a78bfa;
+
+    --r-panel: 8px;
+    --r-pill: 5px;
+    --font: "Figtree", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    --font-display: "Caprasimo", "Segoe UI Variable Display", "Segoe UI Semibold", system-ui, sans-serif;
+  }
+  :root[data-theme="japandi-dark"] {
+    --bg:      #121316;
+    --panel:   #1b1d21;
+    --panel-hi:#24272d;
+    --track:   #0d0e10;
+    --line:    rgba(242, 237, 228, 0.08);
+    --line-hi: rgba(242, 237, 228, 0.15);
+    --hover-bg:rgba(242, 237, 228, 0.06);
+    --text:    #f2ede4;
+    --label:   #9e978c;
+    --muted:   #666057;
+    --well:    #090a0c;
+    --cream:   #f2ede4;
+    --accent-deep:#9db5e0;
+    --sage:      #7a9171;
+    --sage-tint: rgba(122, 145, 113, 0.18);
+    --sage-deep: #b8cfb0;
+  }
+  :root[data-theme="japandi-light"] {
+    --bg:      #e6e1d8;
+    --panel:   #dbd5c9;
+    --panel-hi:#e4dfd5;
+    --track:   #ccc5b8;
+    --line:    rgba(24, 25, 28, 0.11);
+    --line-hi: rgba(24, 25, 28, 0.20);
+    --hover-bg:rgba(24, 25, 28, 0.06);
+    --text:    #18191c;
+    --label:   #635f58;
+    --muted:   #8c867c;
+    --well:    #17181b;
+    --cream:   #f2ede4;
+    --accent-deep:#374f7d;
+    --sage:      #4d6b47;
+    --sage-tint: rgba(77, 107, 71, 0.16);
+    --sage-deep: #2d4229;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 400 12px/1.35 var(--font);
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  :focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ── Top Instrument Bar (46px) ── */
+  header {
+    flex: 0 0 46px;
+    height: 46px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent), var(--panel);
+    border-bottom: 1px solid var(--line-hi);
+    overflow: hidden;
+  }
+  .brand { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+  .brand svg { display: block; filter: drop-shadow(0 0 5px var(--accent)); }
+  .brand .stack { display: flex; flex-direction: column; gap: 1px; }
+  .brand .line { font: 700 8px/1 var(--font); letter-spacing: 0.2em; text-transform: uppercase; color: var(--label); white-space: nowrap; }
+  .brand .name { font-family: var(--font-display); font-size: 15.5px; line-height: 1; font-weight: 700; letter-spacing: -0.01em; }
+  .headsep { width: 1px; height: 20px; background: var(--line); flex: 0 0 auto; }
+  .spacer { flex: 1 1 auto; min-width: 0; }
+
+  .self-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 24px;
+    padding: 0 8px;
+    border-radius: var(--r-pill);
+    background: var(--track);
+    border: 1px solid var(--line);
+    color: var(--text);
+    font: 600 10.5px/1 var(--font);
+    cursor: pointer;
+    flex: 0 1 124px;
+    min-width: 0;
+  }
+  .self-chip:hover { border-color: var(--line-hi); background: var(--hover-bg); }
+  .self-chip .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-lit); box-shadow: 0 0 6px var(--accent); flex: 0 0 auto; }
+  .self-chip .lbl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .self-chip input {
+    width: 92px; background: var(--well); color: var(--text); border: 1px solid var(--accent);
+    border-radius: 3px; font: 600 10.5px/1 var(--font); padding: 2px 4px;
+  }
+
+  .beacon-picker {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 24px;
+    padding: 0 7px;
+    border-radius: var(--r-pill);
+    background: var(--track);
+    border: 1px solid var(--line);
+    flex: 0 0 auto;
+  }
+  .beacon-picker .led { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); flex: 0 0 auto; }
+  .beacon-picker.receiving .led { background: var(--cyan); box-shadow: 0 0 7px var(--cyan); }
+  .beacon-picker.waiting .led { background: var(--warn); }
+  .beacon-picker.mismatch .led { background: var(--danger); }
+  .beacon-picker select {
+    border: 0; background: transparent; color: var(--text); font: 600 10.5px/1 var(--font);
+    max-width: 126px; cursor: pointer;
+  }
+  .beacon-picker select option { background: var(--panel); color: var(--text); }
+
+  .stat { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex: 0 0 auto; }
+  .stat .k { font: 600 8px/1 var(--font); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+  .stat .v { font: 700 11px/1 var(--font); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .stat .v.delta-bad { color: var(--danger); }
+  .stat .v.delta-good { color: var(--accent-deep); }
+  #buildTag { font: 500 9px/1.15 var(--font); color: var(--muted); max-width: 112px; text-align: right; opacity: 0.72; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .theme-strip {
+    display: inline-flex;
+    background: var(--track);
+    border: 1px solid var(--line);
+    border-radius: var(--r-pill);
+    padding: 2px;
+    gap: 2px;
+    flex: 0 0 auto;
+  }
+  .theme-btn {
+    height: 20px; padding: 0 7px; border: 0; border-radius: calc(var(--r-pill) - 1px);
+    background: transparent; color: var(--label); font: 600 9.5px/1 var(--font); cursor: pointer;
+  }
+  .theme-btn:hover:not(.on) { color: var(--text); background: var(--hover-bg); }
+  .theme-btn.on { background: var(--panel-hi); color: var(--text); }
+
+  /* ── Controls & Pills ── */
+  .pill {
+    height: 24px; padding: 0 9px; border-radius: var(--r-pill); border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.025); font: 600 10.5px/1 var(--font); color: var(--label);
+    cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 5px; white-space: nowrap;
+  }
+  .pill:hover { background: var(--hover-bg); color: var(--text); }
+  .pill.on { border-color: transparent; background: var(--accent); color: #ffffff; font-weight: 700; }
+  .pill.xs { height: 20px; padding: 0 7px; font-size: 9.5px; }
+  .pill.clip.on { background: var(--danger); color: #ffffff; border-color: transparent; }
+
+  .pillbed {
+    display: inline-flex; gap: 2px; padding: 2px; border-radius: var(--r-pill);
+    background: var(--track); border: 1px solid var(--line); flex: 0 0 auto;
+  }
+  .pillbed button {
+    height: 20px; padding: 0 8px; border-radius: calc(var(--r-pill) - 1px); border: 0;
+    background: transparent; color: var(--label); font: 600 10px/1 var(--font); cursor: pointer; white-space: nowrap;
+  }
+  .pillbed button:hover:not(.on) { background: var(--hover-bg); color: var(--text); }
+  .pillbed.accent > button.on { background: var(--accent); color: #ffffff; font-weight: 700; }
+  .pillbed.sm button { height: 18px; padding: 0 6px; font-size: 9.5px; }
+
+  /* ── Main Layout ── */
+  .workspace {
+    flex: 1 1 auto;
+    display: flex;
+    gap: 8px;
+    padding: 8px;
+    min-height: 0;
+    min-width: 0;
+  }
+  .stage-grid {
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    grid-template-rows: 1.25fr 0.95fr;
+    gap: 8px;
+    min-height: 0;
+    min-width: 0;
+  }
+
+  /* View Presets */
+  body[data-preset="Track"] .stage-grid {
+    grid-template-columns: 1fr 1.1fr;
+    grid-template-rows: 1.45fr 0.72fr;
+  }
+  body[data-preset="Mastering"] .stage-grid {
+    grid-template-columns: 1.25fr 0.95fr;
+    grid-template-rows: 1.3fr 0.9fr;
+  }
+  body[data-preset="Strip"] .stage-grid {
+    grid-template-columns: 1fr 1.2fr 0.95fr 0.95fr;
+    grid-template-rows: 1fr;
+  }
+
+  /* Maximized pane */
+  .stage-grid.has-max .pane-card { display: none; }
+  .stage-grid.has-max .pane-card.maximized {
+    display: flex;
+    grid-column: 1 / -1;
+    grid-row: 1 / -1;
+  }
+
+  /* ── Modular Pane Cards ── */
+  .pane-card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--r-panel);
+    padding: 7px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    min-height: 0;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+  .pane-card.hidden-pane { display: none; }
+
+  .well-head {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 22px;
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+  .well-title {
+    font: 700 10px/1 var(--font);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--label);
+    white-space: nowrap;
+  }
+  .well-hint {
+    font: 600 10px/1 var(--font);
+    color: var(--muted);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .well-hint.accent { color: var(--accent-deep); }
+  .well-hint.cyan { color: var(--cyan); }
+  .max-btn {
+    width: 20px; height: 20px; padding: 0; border-radius: 4px; border: 1px solid var(--line);
+    background: transparent; color: var(--label); font: 700 11px/1 var(--font); cursor: pointer;
+    flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+  }
+  .max-btn:hover { background: var(--hover-bg); color: var(--text); }
+  .max-btn.on { background: var(--accent); color: #ffffff; border-color: transparent; }
+
+  .well {
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    border-radius: 6px;
+    background: var(--well);
+    border: 1px solid var(--line-hi);
+    box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.72);
+    position: relative;
+    overflow: hidden;
+  }
+  .well canvas { width: 100%; height: 100%; display: block; }
+
+  /* Split wells (Spectrum+Waterfall, Dual Scope, Vectorscope+8Band) */
+  .dual-wells {
+    flex: 1 1 auto;
+    display: flex;
+    gap: 6px;
+    min-height: 0;
+    min-width: 0;
+  }
+  .dual-wells.vertical { flex-direction: column; }
+  .dual-wells .well { flex: 1 1 0; }
+  .dual-wells .well.gonio-box { flex: 0 0 42%; min-width: 110px; }
+
+  /* HUD Overlays */
+  .well-hud {
+    position: absolute;
+    left: 8px;
+    top: 7px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    border-radius: 5px;
+    background: rgba(9, 11, 16, 0.84);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    pointer-events: none;
+    font-variant-numeric: tabular-nums;
+  }
+  .tuner-note { font: 800 14px/1 var(--font); color: var(--cream); min-width: 28px; }
+  .tuner-meta { font: 600 10px/1.1 var(--font); color: var(--label); }
+  .tuner-bar { width: 54px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.12); position: relative; overflow: hidden; }
+  .tuner-bar .center-tick { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: rgba(255, 255, 255, 0.45); }
+  .tuner-bar .needle { position: absolute; top: 0; bottom: 0; width: 4px; margin-left: -2px; border-radius: 2px; background: var(--sage); left: 50%; }
+  .tuner-hud.unvoiced .tuner-note { color: var(--muted); }
+  .tuner-hud.unvoiced .needle { background: var(--muted); }
+
+  .spec-hover-hud {
+    position: absolute;
+    right: 8px;
+    top: 7px;
+    padding: 3px 7px;
+    border-radius: 4px;
+    background: rgba(9, 11, 16, 0.84);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    color: var(--cream);
+    font: 600 10px/1 var(--font);
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+    display: none;
+  }
+
+  /* ── Stereo & Phase Strip ── */
+  .stereo-metrics {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  .mini-meter {
+    background: var(--track);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 4px 7px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .mini-meter .top { display: flex; justify-content: space-between; align-items: baseline; }
+  .mini-meter .k { font: 600 8.5px/1 var(--font); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .mini-meter .v { font: 700 11px/1 var(--font); font-variant-numeric: tabular-nums; }
+  .hbar { height: 5px; border-radius: 3px; background: var(--well); position: relative; overflow: hidden; }
+  .hbar i { position: absolute; left: 0; top: 0; bottom: 0; width: var(--fill, 0%); background: var(--accent-lit); border-radius: 3px; }
+  .hbar.neg i { background: var(--danger); }
+
+  /* ── Loudness & Dynamics Pane ── */
+  .cells { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; flex: 0 0 auto; }
+  .cells.four { grid-template-columns: repeat(4, 1fr); }
+  .cell {
+    min-width: 0; display: flex; flex-direction: column; justify-content: center;
+    padding: 5px 7px; background: var(--track); border: 1px solid var(--line); border-radius: 6px;
+    cursor: pointer;
+  }
+  .cell:hover { border-color: var(--line-hi); }
+  .cell.accent { background: rgba(102, 132, 184, 0.14); border-color: var(--accent); }
+  .cell .klabel { font: 600 8.5px/1 var(--font); letter-spacing: 0.11em; text-transform: uppercase; color: var(--label); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cell .v { font: 700 15px/1.05 var(--font); font-variant-numeric: tabular-nums; color: var(--text); white-space: nowrap; }
+  .cell .v.sm { font-size: 12px; }
+  .cell .v .u { font: 600 9px/1 var(--font); color: var(--muted); margin-left: 2px; }
+  .cell.accent .v { color: var(--accent-deep); }
+
+  .loud-row { display: flex; gap: 6px; align-items: stretch; flex: 1 1 auto; min-height: 54px; }
+  .loud-row .well { flex: 1 1 auto; min-height: 46px; }
+  .res-col { flex: 0 0 142px; display: flex; flex-direction: column; gap: 4px; }
+  .res-pill {
+    flex: 1 1 0; display: flex; align-items: center; justify-content: space-between;
+    padding: 0 7px; border-radius: 5px; background: var(--track); border: 1px solid var(--line);
+    font-variant-numeric: tabular-nums;
+  }
+  .res-pill .rk { font: 600 8.5px/1 var(--font); text-transform: uppercase; color: var(--muted); }
+  .res-pill .rv { font: 700 10.5px/1 var(--font); color: var(--text); }
+
+  .k-bar-row {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 7px;
+    background: var(--track);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+  }
+  .k-bar-row .k { font: 700 9px/1 var(--font); letter-spacing: 0.1em; text-transform: uppercase; color: var(--label); min-width: 38px; }
+  .k-bar-row .hbar { flex: 1 1 auto; height: 6px; }
+  .k-bar-row .v { font: 700 10.5px/1 var(--font); font-variant-numeric: tabular-nums; min-width: 68px; text-align: right; }
+
+  /* ── Right True-Peak Meter Bridge ── */
+  .master {
+    flex: 0 0 92px;
+    width: 92px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--r-panel);
+    padding: 8px 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+  .master .tpwrap { flex: 1 1 auto; min-height: 40px; width: 100%; display: flex; gap: 6px; }
+  .master .vmeter-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .master .vmeter {
+    flex: 1; min-height: 30px; width: 13px; border-radius: 3px;
+    background: var(--well); border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.75); overflow: hidden; position: relative;
+  }
+  .master .vmeter i {
+    position: absolute; left: 0; right: 0; bottom: 0; height: var(--fill, 0%);
+    background: linear-gradient(0deg, var(--accent), var(--accent-lit)); border-radius: 2px;
+  }
+  .master .vmeter i.clip { background: var(--danger); }
+  .master .vmeter-wrap .k { font: 600 8.5px/1 var(--font); letter-spacing: 0.08em; color: var(--label); }
+  .master .vmeter-wrap .v { font: 700 10px/1 var(--font); font-variant-numeric: tabular-nums; }
+  .master .vmeter-wrap .v.clip { color: var(--danger); font-weight: 800; }
+  .master .stack { width: 100%; display: flex; flex-direction: column; gap: 5px; }
+  .master .pill.wide { width: 100%; padding: 0 4px; font-size: 9.5px; }
+
+  /* ── Compact Strip Mode / Low-Height Layout ── */
+  body[data-preset="Strip"] .stereo-metrics,
+  body[data-preset="Strip"] .res-col,
+  body[data-preset="Strip"] .k-bar-row,
+  body[data-preset="Strip"] #historyWellBox,
+  body[data-preset="Strip"] #dynCellsRow,
+  body[data-preset="Strip"] #targetSelect,
+  body[data-preset="Strip"] #tonalSelect,
+  body[data-preset="Strip"] #refBtn,
+  body[data-preset="Strip"] #refClearBtn,
+  body[data-preset="Strip"] #buildTag { display: none !important; }
+  body[data-preset="Strip"] .cell .v { font-size: 13px; }
+  body[data-preset="Strip"] .dual-wells .well.gonio-box { flex: 0 0 46%; min-width: 72px; }
+
+  @media (max-height: 340px) {
+    header { height: 38px; flex-basis: 38px; padding: 0 10px; }
+    .workspace { padding: 5px; gap: 6px; }
+    .stage-grid { grid-template-columns: 1fr 1.2fr 0.95fr 0.95fr !important; grid-template-rows: 1fr !important; }
+    .stereo-metrics, .res-col, .k-bar-row, #historyWellBox, #dynCellsRow, #buildTag, .build-sep { display: none !important; }
+  }
+  @media (max-width: 980px) {
+    #buildTag, .build-sep, #paneToggles { display: none; }
+  }
+</style>
+</head>
+<body data-preset="Bus">
+  <header>
+    <div class="brand">
+      <svg width="18" height="16" viewBox="0 0 20 18">
+        <path d="M2 16.5 L10 1.5 L18 16.5 Z" fill="none" stroke="#6684b8" stroke-width="2.2" stroke-linejoin="round"/>
+      </svg>
+      <div class="stack">
+        <div class="line">Werewolf Digital</div>
+        <div class="name">Meter</div>
+      </div>
+    </div>
+
+    <div class="headsep"></div>
+    <button class="self-chip" id="selfTrackChip" title="Click to rename this Meter track · Broadcasts on WD Beacon">
+      <span class="dot"></span>
+      <span class="lbl" id="selfTrackName">Meter 1</span>
+    </button>
+
+    <div class="beacon-picker" id="beaconPickerWrap" title="Select a WD Beacon track or use Host Bus 1 to overlay its waveform and spectrum in cyan">
+      <span class="led"></span>
+      <select id="beaconSelect" aria-label="Beacon reference track">
+        <option value="">Off (Host Bus)</option>
+      </select>
+    </div>
+
+    <div class="headsep"></div>
+    <div class="pillbed accent" id="presetSelect" title="Switch layout profile for tracking, bus mixing, mastering, or compact strip monitoring">
+      <button data-value="Track">Track</button>
+      <button data-value="Bus" class="on">Bus</button>
+      <button data-value="Mastering">Mastering</button>
+      <button data-value="Strip">Strip</button>
+    </div>
+
+    <div class="pillbed" id="paneToggles" title="Show or hide visualizer modules">
+      <button data-pane="scope" class="on">Scope</button>
+      <button data-pane="spectrum" class="on">Spec</button>
+      <button data-pane="stereo" class="on">Phase</button>
+      <button data-pane="loudness" class="on">Loud</button>
+    </div>
+
+    <div class="spacer"></div>
+    <div class="stat" title="Integrated loudness against selected delivery target">
+      <div class="k" id="targetDeltaKey">vs Spotify</div>
+      <div class="v delta-neutral" id="targetDeltaChip">&mdash;</div>
+    </div>
+    <div class="stat"><div class="k">SR</div><div class="v" id="srTag">48.0k</div></div>
+
+    <button class="pill xs" id="freezeBtn" title="Freeze all visualizer scopes and traces">Hold</button>
+    <button class="pill xs" id="headerResetBtn" title="Reset integrated loudness, peak holds, and clip count">Reset</button>
+
+    <div class="theme-strip" id="themeSwitcher" title="Switch instrument chassis finish">
+      <button class="theme-btn on" data-theme="studio">Studio</button>
+      <button class="theme-btn" data-theme="japandi-dark">Sumi</button>
+      <button class="theme-btn" data-theme="japandi-light">Washi</button>
+    </div>
+    <div class="headsep build-sep"></div>
+    <div id="buildTag">&mdash;</div>
+  </header>
+
+  <div class="workspace">
+    <div class="stage-grid" id="stageGrid">
+
+      <!-- ── Well 1: Spectrum & 2D Spectrogram Waterfall ── -->
+      <section class="pane-card" id="specPane" data-pane="spectrum">
+        <div class="well-head">
+          <div class="well-title">Spectrum</div>
+          <div class="pillbed accent sm" id="specViewGroup" title="Display Spectrum curve, 2D Spectrogram Waterfall, or Split">
+            <button data-value="spectrum" class="on">Spec</button>
+            <button data-value="waterfall">Fall</button>
+            <button data-value="split">Split</button>
+          </div>
+          <div class="pillbed accent sm" id="specChanGroup" title="Stereo total or Mid/Side spectral split">
+            <button data-value="stereo" class="on">St</button>
+            <button data-value="ms">M/S</button>
+          </div>
+          <div class="pillbed accent sm" id="tiltGroup" title="Display tilt (dB/octave)">
+            <button data-tilt="0">0</button>
+            <button data-tilt="3">3</button>
+            <button data-tilt="4.5" class="on">4.5</button>
+            <button data-tilt="6">6</button>
+          </div>
+          <div class="pillbed accent sm" id="tonalSelect" title="Reference tonal balance curve overlay">
+            <button data-value="Neutral">Off</button>
+            <button data-value="Pop" class="on">Pop</button>
+            <button data-value="Rock">Rock</button>
+            <button data-value="Hip-Hop">Hip</button>
+          </div>
+          <div class="spacer"></div>
+          <span class="well-hint cyan" id="specKeyBadge" style="display:none"></span>
+          <button class="pill xs" id="refBtn" title="Capture current tonal balance and loudness as Reference A/B ghost overlay">Ref</button>
+          <button class="pill xs" id="refClearBtn" style="display:none" title="Clear captured reference snapshot">Clear</button>
+          <button class="max-btn" data-max="specPane" title="Maximize or restore Spectrum">⤢</button>
+        </div>
+        <div class="dual-wells vertical" id="specWells">
+          <div class="well" id="spectrumBox">
+            <canvas id="spectrumCanvas"></canvas>
+            <div class="spec-hover-hud" id="specHoverHud">1.00 kHz · C6 · -24.0 dB</div>
+          </div>
+          <div class="well" id="waterfallBox" style="display:none">
+            <canvas id="waterfallCanvas"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Well 2: Dual-Mode Oscilloscope + Pitch Tuner ── -->
+      <section class="pane-card" id="scopePane" data-pane="scope">
+        <div class="well-head">
+          <div class="well-title">Oscilloscope</div>
+          <div class="pillbed accent sm" id="scopeModeGroup" title="Rolling transient envelope, Pitch-locked cycle view, or Dual">
+            <button data-value="rolling" class="on">Wave</button>
+            <button data-value="cycle">Cycle</button>
+            <button data-value="dual">Dual</button>
+          </div>
+          <button class="pill xs" id="scopeMsBtn" title="Overlay Side component trace on Cycle scope">M/S</button>
+          <div class="spacer"></div>
+          <span class="well-hint cyan" id="scopeKeyBadge" style="display:none"></span>
+          <button class="max-btn" data-max="scopePane" title="Maximize or restore Oscilloscope">⤢</button>
+        </div>
+        <div class="dual-wells" id="scopeWells">
+          <div class="well" id="waveBox">
+            <canvas id="waveCanvas"></canvas>
+          </div>
+          <div class="well" id="cycleBox" style="display:none">
+            <canvas id="cycleCanvas"></canvas>
+            <div class="well-hud tuner-hud unvoiced" id="tunerHud">
+              <span class="tuner-note" id="tunerNote">--</span>
+              <span class="tuner-meta" id="tunerMeta">Free · Unvoiced</span>
+              <div class="tuner-bar"><span class="center-tick"></span><span class="needle" id="tunerNeedle"></span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Well 3: Vectorscope & 8-Band Octave Phase Correlation ── -->
+      <section class="pane-card" id="stereoPane" data-pane="stereo">
+        <div class="well-head">
+          <div class="well-title">Stereo &amp; Phase</div>
+          <span class="well-hint" id="phaseStatusHint">In Phase</span>
+          <div class="spacer"></div>
+          <button class="max-btn" data-max="stereoPane" title="Maximize or restore Stereo & Phase">⤢</button>
+        </div>
+        <div class="dual-wells">
+          <div class="well gonio-box" title="Polar Lissajous Vectorscope: vertical = Mid, horizontal = Side">
+            <canvas id="gonioCanvas"></canvas>
+          </div>
+          <div class="well" title="8-Band Octave Phase Correlation (63 Hz to 8 kHz): red below 0 indicates mono cancellation">
+            <canvas id="bandCorrCanvas"></canvas>
+          </div>
+        </div>
+        <div class="stereo-metrics">
+          <div class="mini-meter" title="Broadband phase correlation (+1 mono, 0 uncorrelated, -1 out of phase)">
+            <div class="top"><span class="k">Corr</span><span class="v" id="corrText">+1.00</span></div>
+            <div class="hbar" id="corrBar"><i id="correlationFill"></i></div>
+          </div>
+          <div class="mini-meter" title="Side-to-total stereo width ratio">
+            <div class="top"><span class="k">Width</span><span class="v" id="valWidth">0%</span></div>
+            <div class="hbar"><i id="widthFill"></i></div>
+          </div>
+          <div class="mini-meter" title="Left/Right RMS balance">
+            <div class="top"><span class="k">Balance</span><span class="v" id="valBalance">C</span></div>
+            <div class="hbar"><i id="balanceFill"></i></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Well 4: Loudness, Punch (PSR/Crest), K-System & History ── -->
+      <section class="pane-card" id="loudnessPane" data-pane="loudness">
+        <div class="well-head">
+          <div class="well-title">Loudness &amp; Punch</div>
+          <div class="pillbed accent sm" id="targetSelect" title="Delivery target for integrated loudness and true-peak ceiling">
+            <button data-value="Spotify" class="on">Spotify</button>
+            <button data-value="Apple Music">Apple</button>
+            <button data-value="YouTube">YT</button>
+            <button data-value="Amazon">Amz</button>
+            <button data-value="EBU R128">R128</button>
+          </div>
+          <div class="spacer"></div>
+          <span class="well-hint accent" id="targetLufsLabel">&minus;14.0 LUFS</span>
+          <button class="max-btn" data-max="loudnessPane" title="Maximize or restore Loudness & Punch">⤢</button>
+        </div>
+
+        <div class="cells">
+          <div class="cell" id="momentaryBlock" title="Momentary loudness (400 ms). Click to reset.">
+            <div class="klabel">Momentary</div>
+            <div class="v" id="valMomentary">-inf</div>
+          </div>
+          <div class="cell" id="shortTermBlock" title="Short-term loudness (3 s). Click to reset.">
+            <div class="klabel">Short-Term</div>
+            <div class="v" id="valShortTerm">-inf</div>
+          </div>
+          <div class="cell accent" id="integratedBlock" title="Integrated loudness since reset. Click to reset.">
+            <div class="klabel">Integrated</div>
+            <div class="v" id="valIntegrated">-inf</div>
+          </div>
+        </div>
+
+        <div class="cells four" id="dynCellsRow">
+          <div class="cell" title="Stereo Crest Factor (Peak minus RMS in dB)">
+            <div class="klabel">Crest</div>
+            <div class="v sm" id="metricCrest">0.0 dB</div>
+          </div>
+          <div class="cell" title="Peak-to-Short-Term Ratio (transient punch vs loudness)">
+            <div class="klabel">PSR Punch</div>
+            <div class="v sm" id="metricPSR">0.0 dB</div>
+          </div>
+          <div class="cell" title="Peak-to-Integrated Loudness Ratio">
+            <div class="klabel">PLR</div>
+            <div class="v sm" id="metricPLR">0.0 dB</div>
+          </div>
+          <div class="cell" title="EBU R128 Loudness Range">
+            <div class="klabel">LRA</div>
+            <div class="v sm" id="metricLRA">0.0 LU</div>
+          </div>
+        </div>
+
+        <div class="k-bar-row" id="kMeterRow">
+          <div class="pillbed accent sm" id="kModeGroup" title="Select ballistic VU or K-System reference scale">
+            <button data-value="off" class="on">VU</button>
+            <button data-value="k12">K-12</button>
+            <button data-value="k14">K-14</button>
+            <button data-value="k20">K-20</button>
+          </div>
+          <div class="hbar"><i id="kMeterFill"></i></div>
+          <div class="v" id="kMeterVal">-100.0 dB</div>
+          <span class="well-hint" id="refDeltaBadge" style="display:none"></span>
+        </div>
+
+        <div class="loud-row" id="historyWellBox">
+          <div class="well" title="Momentary (dim) and Short-Term (bright) LUFS history against Target guide">
+            <canvas id="historyCanvas"></canvas>
+            <div class="well-hud" style="padding:2px 6px;"><span class="tuner-meta" id="historyCurrentVal">&minus;inf LUFS</span></div>
+          </div>
+          <div class="res-col" title="Persistent narrow spectral resonances (AN.3)">
+            <div class="res-pill"><span class="rk">Res 1</span><span class="rv" id="res0">&mdash;</span></div>
+            <div class="res-pill"><span class="rk">Res 2</span><span class="rv" id="res1">&mdash;</span></div>
+            <div class="res-pill"><span class="rk">Res 3</span><span class="rv" id="res2">&mdash;</span></div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ── Right True-Peak Meter Bridge ── -->
+    <aside class="master" id="masterRail">
+      <div class="tpwrap">
+        <div class="vmeter-wrap" title="Left True Peak (4x oversampled dBTP)">
+          <div class="vmeter"><i id="tpBarL"></i></div>
+          <div class="k">TP L</div>
+          <div class="v" id="tpValL">-inf</div>
+        </div>
+        <div class="vmeter-wrap" title="Right True Peak (4x oversampled dBTP)">
+          <div class="vmeter"><i id="tpBarR"></i></div>
+          <div class="k">TP R</div>
+          <div class="v" id="tpValR">-inf</div>
+        </div>
+      </div>
+      <div class="stack">
+        <button class="pill wide clip" id="clipCounterChip" title="True-peak overs above target ceiling. Click to clear."><span id="clipCountVal">0 clips</span></button>
+        <button class="pill wide" id="resetBtn" title="Reset integrated loudness, range, and clip counter">Reset</button>
+      </div>
+    </aside>
+  </div>
+
+  <div id="historyScrubMount" style="flex:0 0 auto; padding:0 8px 6px;"></div>
+
+<script>
+  window.addEventListener('error', e => {
+    if (e.message && (e.message.includes('ResizeObserver') || e.message.includes('loop completed with undelivered notifications'))) return;
+    let el = document.getElementById('errBanner');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'errBanner';
+      el.style.cssText = 'position:fixed;left:0;right:0;bottom:0;background:#374f7d;color:#f2f5fa;font:11px monospace;padding:4px 10px;z-index:99;';
+      document.body.appendChild(el);
+    }
+    el.textContent = 'UI error: ' + e.message + ' @' + (e.lineno || '?');
+  });
+</script>
+
+<script src="./demo-bar.js"></script>
+<script src="./modules/meter.js"></script>
+<script src="./wd-plugin-host.js"></script>
+<script src="./wd/kit.js"></script>
+<script src="./wd/gl-viz.js"></script>
+<script type="module">
+(async () => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+  const isList = x => !!x && typeof x.length === 'number';
+  const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const ink = a => 'rgba(242, 245, 250, ' + a + ')';
+
+  const COL = {
+    accent: '#6684b8',
+    accentLit: '#9db5e0',
+    well: '#06070a',
+    cream: '#f2f5fa',
+    cyan: '#22d3ee',
+    sage: '#34d399',
+    violet: '#a78bfa',
+    warn: '#f59e0b',
+    danger: '#f43f5e',
+    font: 'sans-serif',
+  };
+
+  let gonioViz = null;
+  let cycleViz = null;
+  let fallViz = null;
+
+  function applyTheme(theme) {
+    const t = theme || 'studio';
+    if (t === 'studio') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', t);
+    COL.accent = cssVar('--accent') || '#6684b8';
+    COL.accentLit = cssVar('--accent-lit') || '#9db5e0';
+    COL.well = cssVar('--well') || '#06070a';
+    COL.cream = cssVar('--cream') || '#f2f5fa';
+    COL.sage = cssVar('--sage') || '#34d399';
+    COL.font = cssVar('--font') || 'sans-serif';
+    if (gonioViz) gonioViz.setColors({ bgColor: COL.well, primaryColor: COL.accentLit });
+    if (cycleViz) cycleViz.setColors({ bgColor: COL.well, primaryColor: COL.cream, secondaryColor: COL.violet, keyColor: COL.cyan });
+    if (fallViz) fallViz.setPalette(null, COL.well);
+    const sw = $('themeSwitcher');
+    if (sw) sw.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('on', b.dataset.theme === t));
+    try { localStorage.setItem('wd_theme', t); } catch (e) {}
+  }
+  {
+    let saved = 'studio';
+    try { saved = localStorage.getItem('wd_theme') || 'studio'; } catch (e) {}
+    applyTheme(saved);
+    const sw = $('themeSwitcher');
+    if (sw) sw.addEventListener('click', e => {
+      const btn = e.target.closest('.theme-btn');
+      if (btn && btn.dataset.theme) applyTheme(btn.dataset.theme);
+    });
+  }
+
+  let host = null;
+  if (window.__JUCE__ && window.__JUCE__.backend) {
+    try {
+      const lib = await import('./juce/index.js');
+      const be = window.__JUCE__.backend;
+      host = {
+        call: (name, ...args) => lib.getNativeFunction(name)(...args),
+        on:   (event, cb) => be.addEventListener(event, cb),
+      };
+    } catch (e) { console.warn('JUCE frontend unavailable:', e); }
+  }
+
+  const TARGETS = {
+    'Spotify':     { lufs: -14.0, tp: -1.0 },
+    'Apple Music': { lufs: -16.0, tp: -1.0 },
+    'YouTube':     { lufs: -14.0, tp: -1.0 },
+    'Amazon':      { lufs: -14.0, tp: -1.0 },
+    'EBU R128':    { lufs: -23.0, tp: -1.0 },
+  };
+  const TONAL_PROFILES = {
+    'Pop':     [-3.0, -1.0, 0.0, 1.0, 1.0, 0.0, -1.0, -2.0, -4.0, -6.0],
+    'Rock':    [-2.0,  0.0, 1.0, 1.0, 0.0, -1.0, -1.0, -1.0, -3.0, -5.0],
+    'Hip-Hop': [ 4.0,  5.0, 3.0, 1.0, 0.0, -1.0, -2.0, -3.0, -4.0, -5.0],
+  };
+  const TONAL_FREQS = [31.25, 62.5, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
+  const BAND_LABELS = ['63', '125', '250', '500', '1k', '2k', '4k', '8k'];
+  const NOTES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
+
+  let currentPreset = 'Bus';
+  let currentTarget = 'Spotify';
+  let currentTonal = 'Pop';
+  let currentTilt = 4.5;
+  let currentSpecView = 'spectrum';
+  let currentSpecChan = 'stereo';
+  let currentScopeMode = 'rolling';
+  let currentKSystem = 'off';
+  let scopeMsOn = false;
+  let frozen = false;
+  let maximizedPane = '';
+  let sampleRate = 48000;
+  let paneVisibility = { scope: true, spectrum: true, stereo: true, loudness: true };
+
+  let selfName = 'Meter 1';
+  let beaconSelected = '';
+  let beaconReceiving = false;
+  let beaconSrMismatch = false;
+  let scActive = false;
+  let lastBeaconSig = '';
+
+  let latchedClipCount = 0;
+  let peakClipsExceeded = false;
+  let liveSnap = null;
+  let lastSnap = null;
+  let specHover = { active: false, x: 0, y: 0 };
+  let lastVizMs = performance.now();
+
+  const targetInfo = () => TARGETS[currentTarget] || { lufs: -14.0, tp: -1.0 };
+
+  // ── Canvas Helpers ──
+  function setupCanvas(cv, state, onDraw) {
+    const fit = () => {
+      const d = window.devicePixelRatio || 1;
+      const r = cv.getBoundingClientRect();
+      state.w = r.width || 0;
+      state.h = r.height || 0;
+      if (state.w > 0 && state.h > 0) {
+        cv.width = Math.round(state.w * d);
+        cv.height = Math.round(state.h * d);
+        state.ctx.setTransform(d, 0, 0, d, 0, 0);
+      }
+      if (onDraw) onDraw();
+    };
+    new ResizeObserver(fit).observe(cv);
+    return fit;
+  }
+
+  function setupVizCanvas(cv, state, getViz, onResized) {
+    const fit = () => {
+      const d = window.devicePixelRatio || 1;
+      const r = cv.getBoundingClientRect();
+      state.w = r.width || 0;
+      state.h = r.height || 0;
+      const viz = getViz();
+      if (viz && state.w > 0 && state.h > 0) {
+        viz.resize(state.w, state.h, d);
+      }
+      if (onResized) onResized();
+    };
+    new ResizeObserver(fit).observe(cv);
+    return fit;
+  }
+
+  // ── 1. Spectrum & 2D Spectrogram Waterfall ──
+  const specCv = $('spectrumCanvas'), specSt = { ctx: specCv.getContext('2d'), w: 0, h: 0 };
+  const fallCv = $('waterfallCanvas'), fallSt = { w: 0, h: 0 };
+  const FMIN = 10, FMAX = 24000, DB_MIN = -85, DB_MAX = 6, AXIS_H = 18;
+  const SPEC_BINS = 240;
+  const avgTrace = new Array(SPEC_BINS).fill(-120);
+  const peakTrace = new Array(SPEC_BINS).fill(-120);
+  const midTrace = new Array(SPEC_BINS).fill(-120);
+  const sideTrace = new Array(SPEC_BINS).fill(-120);
+  const scSpecTrace = new Array(SPEC_BINS).fill(-120);
+  const tiltedWaterfallRow = new Float32Array(SPEC_BINS);
+
+  const xOfHz = (f, w) => (Math.log10(clamp(f, FMIN, FMAX) / FMIN) / Math.log10(FMAX / FMIN)) * w;
+  const hzOfX = (x, w) => FMIN * Math.pow(FMAX / FMIN, clamp(x / Math.max(1, w), 0, 1));
+  const yOfDb = (db, plotH) => plotH - ((clamp(db, DB_MIN, DB_MAX) - DB_MIN) / (DB_MAX - DB_MIN)) * plotH;
+
+  function drawWaterfallOverlay(ctx, W, H) {
+    if (W < 40 || H < 30) return;
+    ctx.save();
+    ctx.font = '600 9px ' + COL.font;
+    ctx.fillStyle = COL.cream;
+    ctx.globalAlpha = 0.5;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    const ticks = [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000];
+    for (let i = 0; i < ticks.length; ++i) {
+      const hz = ticks[i];
+      ctx.fillText(hz >= 1000 ? (hz / 1000) + 'k' : String(hz), xOfHz(hz, W), H - 5);
+    }
+    ctx.restore();
+  }
+
+  fallViz = window.WDGLViz ? window.WDGLViz.createSpectrogram(fallCv, {
+    bins: SPEC_BINS,
+    historyRows: 180,
+    dbMin: -78,
+    dbMax: -6,
+    axisBottomPx: AXIS_H,
+    bgColor: COL.well,
+    onOverlayDraw: drawWaterfallOverlay,
+  }) : null;
+
+  function renderSpectrum() {
+    const { ctx, w: W, h: H } = specSt;
+    if (W < 40 || H < 40) return;
+    ctx.clearRect(0, 0, W, H);
+    const plotH = H - AXIS_H;
+
+    // Grid
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(242, 245, 250, 0.05)';
+    for (const db of [-72, -60, -48, -36, -24, -12, 0]) {
+      const y = Math.round(yOfDb(db, plotH)) + 0.5;
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+    ctx.font = '600 9px ' + COL.font;
+    ctx.fillStyle = ink(0.45);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000].forEach(hz => {
+      const x = xOfHz(hz, W);
+      ctx.strokeStyle = 'rgba(242, 245, 250, 0.06)';
+      ctx.beginPath(); ctx.moveTo(Math.round(x) + 0.5, 0); ctx.lineTo(Math.round(x) + 0.5, plotH); ctx.stroke();
+      ctx.fillText(hz >= 1000 ? (hz / 1000) + 'k' : String(hz), x, H - 5);
+    });
+
+    const drawCurve = (arr, fillStyle, strokeStyle, lw, filled) => {
+      ctx.save();
+      ctx.beginPath();
+      for (let b = 0; b < SPEC_BINS; ++b) {
+        const fHz = FMIN * Math.pow(FMAX / FMIN, (b + 0.5) / SPEC_BINS);
+        const x = xOfHz(fHz, W);
+        const y = yOfDb(arr[b], plotH);
+        b === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      if (filled && fillStyle) {
+        ctx.save();
+        ctx.lineTo(W, plotH);
+        ctx.lineTo(0, plotH);
+        ctx.closePath();
+        ctx.fillStyle = fillStyle;
+        ctx.fill();
+        ctx.restore();
+      }
+      ctx.strokeStyle = strokeStyle;
+      ctx.lineWidth = lw;
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+      ctx.restore();
+    };
+
+    // Tonal balance target
+    const profile = TONAL_PROFILES[currentTonal];
+    if (profile) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(157, 181, 224, 0.45)';
+      ctx.lineWidth = 1.6;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      for (let i = 0; i < TONAL_FREQS.length; ++i) {
+        const f = TONAL_FREQS[i];
+        const dbVal = -36.0 + profile[i] + currentTilt * Math.log2(f / 1000);
+        const x = xOfHz(f, W), y = yOfDb(dbVal, plotH);
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Reference ghost overlay
+    if (lastSnap && lastSnap.hasRef && isList(lastSnap.refTonalBands) && lastSnap.refTonalBands.length === 10) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(245, 158, 11, 0.7)';
+      ctx.lineWidth = 1.6;
+      ctx.setLineDash([2, 3]);
+      ctx.beginPath();
+      for (let i = 0; i < 10; ++i) {
+        const f = TONAL_FREQS[i];
+        const dbVal = lastSnap.refTonalBands[i] + currentTilt * Math.log2(f / 1000);
+        const x = xOfHz(f, W), y = yOfDb(dbVal, plotH);
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Beacon Reference spectrum in cyan
+    if (scActive) {
+      drawCurve(scSpecTrace, 'rgba(34, 211, 238, 0.12)', COL.cyan, 1.5, true);
+    }
+
+    if (currentSpecChan === 'ms') {
+      drawCurve(midTrace, 'rgba(52, 211, 153, 0.18)', COL.sage, 1.8, true);
+      drawCurve(sideTrace, 'rgba(167, 139, 250, 0.16)', COL.violet, 1.5, true);
+    } else {
+      drawCurve(peakTrace, null, 'rgba(157, 181, 224, 0.45)', 1.1, false);
+      drawCurve(avgTrace, 'rgba(102, 132, 184, 0.28)', COL.cream, 2.0, true);
+    }
+
+    // Resonance markers on plot
+    if (lastSnap && isList(lastSnap.resonances)) {
+      ctx.save();
+      ctx.font = '700 9px ' + COL.font;
+      ctx.textAlign = 'center';
+      for (let i = 0; i < 3; ++i) {
+        const f = lastSnap.resonances[i * 3];
+        if (!f || f <= 0) continue;
+        const x = xOfHz(f, W);
+        ctx.strokeStyle = 'rgba(244, 63, 94, 0.45)';
+        ctx.setLineDash([2, 3]);
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, plotH); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = 'rgba(244, 63, 94, 0.88)';
+        ctx.fillRect(x - 16, 4 + i * 13, 32, 11);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(f >= 1000 ? (f / 1000).toFixed(1) + 'k' : Math.round(f) + '', x, 12.5 + i * 13);
+      }
+      ctx.restore();
+    }
+
+    // Crosshair
+    if (specHover.active) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(242, 245, 250, 0.22)';
+      ctx.setLineDash([2, 3]);
+      ctx.beginPath();
+      ctx.moveTo(specHover.x, 0); ctx.lineTo(specHover.x, plotH);
+      ctx.moveTo(0, specHover.y); ctx.lineTo(W, specHover.y);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  const fitSpec = setupCanvas(specCv, specSt, renderSpectrum);
+  const fitFall = setupVizCanvas(fallCv, fallSt, () => fallViz);
+
+  specCv.addEventListener('pointermove', ev => {
+    const r = specCv.getBoundingClientRect();
+    const x = ev.clientX - r.left, y = ev.clientY - r.top;
+    specHover = { active: true, x, y };
+    const hz = hzOfX(x, specSt.w);
+    const plotH = Math.max(1, specSt.h - AXIS_H);
+    const db = DB_MAX - clamp(y / plotH, 0, 1) * (DB_MAX - DB_MIN);
+    const midi = 69 + 12 * Math.log2(Math.max(10, hz) / 440);
+    const mRnd = Math.round(midi);
+    const cents = Math.round((midi - mRnd) * 100);
+    const noteStr = NOTES[((mRnd % 12) + 12) % 12] + (Math.floor(mRnd / 12) - 1);
+    const hzStr = hz >= 1000 ? (hz / 1000).toFixed(2) + ' kHz' : Math.round(hz) + ' Hz';
+    const hud = $('specHoverHud');
+    if (hud) {
+      hud.style.display = 'block';
+      hud.textContent = `${hzStr} · ${noteStr} (${cents >= 0 ? '+' : ''}${cents} ct) · ${db.toFixed(1)} dB`;
+    }
+    renderSpectrum();
+  });
+  specCv.addEventListener('pointerleave', () => {
+    specHover.active = false;
+    const hud = $('specHoverHud');
+    if (hud) hud.style.display = 'none';
+    renderSpectrum();
+  });
+
+  // ── 2. Dual-Mode Oscilloscope (Wave + Pitch-Locked Cycle) ──
+  const waveCv = $('waveCanvas'), waveSt = { ctx: waveCv.getContext('2d'), w: 0, h: 0 };
+  const cycleCv = $('cycleCanvas'), cycleSt = { w: 0, h: 0 };
+
+  function drawCycleOverlay(ctx, W, H) {
+    if (W < 30 || H < 30) return;
+    const midY = H / 2;
+    ctx.save();
+    ctx.strokeStyle = COL.cream;
+    ctx.globalAlpha = 0.14;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, Math.round(midY) + 0.5); ctx.lineTo(W, Math.round(midY) + 0.5);
+    ctx.moveTo(Math.round(W * 0.5) + 0.5, 0); ctx.lineTo(Math.round(W * 0.5) + 0.5, H);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  cycleViz = window.WDGLViz ? window.WDGLViz.createPhosphorScope(cycleCv, {
+    mode: 'line',
+    decayTauMs: 160,
+    lineWidth: 2.0,
+    squareAspect: false,
+    bgColor: COL.well,
+    primaryColor: COL.cream,
+    secondaryColor: COL.violet,
+    keyColor: COL.cyan,
+    onOverlayDraw: drawCycleOverlay,
+  }) : null;
+
+  function renderWave() {
+    const { ctx, w: W, h: H } = waveSt;
+    if (W < 30 || H < 30) return;
+    ctx.clearRect(0, 0, W, H);
+    const midY = H / 2;
+
+    // Guides
+    ctx.strokeStyle = 'rgba(242, 245, 250, 0.14)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, Math.round(midY) + 0.5); ctx.lineTo(W, Math.round(midY) + 0.5); ctx.stroke();
+    ctx.strokeStyle = 'rgba(242, 245, 250, 0.05)';
+    for (const amp of [0.5, -0.5]) {
+      const y = Math.round(midY - amp * (H * 0.44)) + 0.5;
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+
+    if (!lastSnap || !isList(lastSnap.waveMax) || lastSnap.waveMax.length < 2) return;
+    const wMax = lastSnap.waveMax, wMin = lastSnap.waveMin, wRms = lastSnap.waveRms || [];
+    const n = wMax.length;
+    const colW = W / n;
+    const scaleY = H * 0.44;
+
+    // Beacon peer envelope in cyan behind/over
+    if (scActive && isList(lastSnap.waveSc) && lastSnap.waveSc.length === n) {
+      ctx.fillStyle = 'rgba(34, 211, 238, 0.25)';
+      for (let i = 0; i < n; ++i) {
+        const pk = clamp(lastSnap.waveSc[i], 0, 1.1) * scaleY;
+        if (pk > 0.5) ctx.fillRect(i * colW, midY - pk, Math.max(1, colW - 0.5), pk * 2);
+      }
+    }
+
+    // Main peak envelope
+    ctx.fillStyle = 'rgba(102, 132, 184, 0.45)';
+    for (let i = 0; i < n; ++i) {
+      const yTop = midY - clamp(wMax[i], -1.1, 1.1) * scaleY;
+      const yBot = midY - clamp(wMin[i], -1.1, 1.1) * scaleY;
+      const h = Math.max(1.2, yBot - yTop);
+      ctx.fillRect(i * colW, yTop, Math.max(1, colW - 0.5), h);
+    }
+
+    // Main RMS inner core
+    ctx.fillStyle = COL.cream;
+    for (let i = 0; i < n; ++i) {
+      const r = clamp(wRms[i] || 0, 0, 1.1) * scaleY;
+      if (r > 0.4) ctx.fillRect(i * colW, midY - r, Math.max(1, colW - 0.5), r * 2);
+    }
+  }
+
+  function renderCycle(dtMs = 16.67) {
+    if (!cycleViz) return;
+    const W = cycleSt.w, H = cycleSt.h;
+    if (W < 30 || H < 30) return;
+    if (!lastSnap || !isList(lastSnap.cycleMid) || lastSnap.cycleMid.length < 2) {
+      cycleViz.pushFrame(null, dtMs);
+      return;
+    }
+    const mid = lastSnap.cycleMid;
+    const n = mid.length;
+    let peak = 0.08;
+    for (let i = 0; i < n; ++i) peak = Math.max(peak, Math.abs(mid[i]));
+    if (scActive && isList(lastSnap.cycleSc)) {
+      for (let i = 0; i < n; ++i) peak = Math.max(peak, Math.abs(lastSnap.cycleSc[i]));
+    }
+    const scaleY = (H * 0.40) / Math.min(1.25, peak * 1.12);
+
+    cycleViz.pushFrame({
+      mid,
+      side: (scopeMsOn && isList(lastSnap.cycleSide) && lastSnap.cycleSide.length === n) ? lastSnap.cycleSide : null,
+      sc: (scActive && isList(lastSnap.cycleSc) && lastSnap.cycleSc.length === n) ? lastSnap.cycleSc : null,
+      scaleY,
+    }, dtMs);
+  }
+
+  const fitWave = setupCanvas(waveCv, waveSt, renderWave);
+  const fitCycle = setupVizCanvas(cycleCv, cycleSt, () => cycleViz, () => {
+    if (lastSnap && isList(lastSnap.cycleMid)) renderCycle(16.67);
+  });
+
+  // ── 3. Vectorscope & 8-Band Octave Phase Correlation ──
+  const gonioCv = $('gonioCanvas'), gonioSt = { w: 0, h: 0 };
+  const bandCorrCv = $('bandCorrCanvas'), bandCorrSt = { ctx: bandCorrCv.getContext('2d'), w: 0, h: 0 };
+
+  function drawGonioOverlay(ctx, W, H) {
+    if (W < 20 || H < 20) return;
+    const cx = W / 2, cy = H / 2, r = Math.min(cx, cy) * 0.88;
+    ctx.save();
+    ctx.strokeStyle = COL.cream;
+    ctx.globalAlpha = 0.09;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - r); ctx.lineTo(cx, cy + r);
+    ctx.moveTo(cx - r, cy); ctx.lineTo(cx + r, cy);
+    ctx.moveTo(cx - r * 0.7, cy - r * 0.7); ctx.lineTo(cx + r * 0.7, cy + r * 0.7);
+    ctx.moveTo(cx + r * 0.7, cy - r * 0.7); ctx.lineTo(cx - r * 0.7, cy + r * 0.7);
+    ctx.stroke();
+    ctx.font = '600 8.5px ' + COL.font;
+    ctx.fillStyle = COL.cream;
+    ctx.globalAlpha = 0.4;
+    ctx.textAlign = 'center';
+    ctx.fillText('M', cx, cy - r + 7);
+    ctx.fillText('L', cx - r * 0.72, cy - r * 0.72 + 4);
+    ctx.fillText('R', cx + r * 0.72, cy - r * 0.72 + 4);
+    ctx.restore();
+  }
+
+  gonioViz = window.WDGLViz ? window.WDGLViz.createPhosphorScope(gonioCv, {
+    mode: 'points',
+    decayTauMs: 220,
+    pointSize: 3.2,
+    squareAspect: true,
+    bgColor: COL.well,
+    primaryColor: COL.accentLit,
+    onOverlayDraw: drawGonioOverlay,
+  }) : null;
+
+  function renderGoniometer(points, dtMs = 16.67) {
+    if (!gonioViz) return;
+    if (gonioSt.w < 20 || gonioSt.h < 20) return;
+    gonioViz.pushFrame((points && points.length >= 2) ? points : null, dtMs);
+  }
+
+  function renderBandCorrelation(arr) {
+    const { ctx, w: W, h: H } = bandCorrSt;
+    if (W < 40 || H < 30) return;
+    ctx.clearRect(0, 0, W, H);
+    const padB = 16, padT = 8, plotH = H - padB - padT;
+    const midY = padT + plotH * 0.5;
+
+    ctx.strokeStyle = 'rgba(242, 245, 250, 0.22)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(6, Math.round(midY) + 0.5); ctx.lineTo(W - 6, Math.round(midY) + 0.5); ctx.stroke();
+
+    ctx.font = '600 8.5px ' + COL.font;
+    ctx.textAlign = 'center';
+    const colW = (W - 12) / 8;
+    const bw = Math.max(6, colW - 8);
+    for (let i = 0; i < 8; ++i) {
+      const val = clamp((arr && arr[i] !== undefined) ? arr[i] : 0, -1, 1);
+      const cx = 6 + (i + 0.5) * colW;
+      const barH = Math.abs(val) * (plotH * 0.46);
+      const y = val >= 0 ? (midY - barH) : midY;
+      ctx.fillStyle = val < -0.05 ? COL.danger : (val < 0.2 ? COL.warn : COL.sage);
+      ctx.fillRect(cx - bw / 2, y, bw, Math.max(1.5, barH));
+
+      ctx.fillStyle = ink(0.5);
+      ctx.fillText(BAND_LABELS[i], cx, H - 4);
+    }
+  }
+
+  const fitGonio = setupVizCanvas(gonioCv, gonioSt, () => gonioViz, () => {
+    if (lastSnap && lastSnap.goniometer) renderGoniometer(lastSnap.goniometer, 16.67);
+  });
+  const fitBandCorr = setupCanvas(bandCorrCv, bandCorrSt, () => renderBandCorrelation(lastSnap && lastSnap.bandCorrelation));
+
+  // ── 4. Loudness History ──
+  const histCv = $('historyCanvas'), histSt = { ctx: histCv.getContext('2d'), w: 0, h: 0 };
+  function renderHistory(momentary, shortTerm) {
+    const { ctx, w: W, h: H } = histSt;
+    if (W < 30 || H < 25) return;
+    ctx.clearRect(0, 0, W, H);
+    const dbMin = -60, dbMax = 4;
+    const yOf = db => H - 6 - ((clamp(db, dbMin, dbMax) - dbMin) / (dbMax - dbMin)) * (H - 12);
+
+    const t = targetInfo();
+    ctx.fillStyle = COL.accentLit;
+    ctx.fillRect(0, yOf(t.lufs) - 1, W, 2);
+
+    if (!momentary || momentary.length < 2 || !shortTerm) return;
+    const n = momentary.length;
+    const drawLine = (src, stroke, lw) => {
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = lw;
+      ctx.beginPath();
+      for (let i = 0; i < n; ++i) {
+        const x = (i / (n - 1)) * W, y = yOf(src[i]);
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    };
+    drawLine(momentary, ink(0.30), 2.0);
+    drawLine(shortTerm, ink(0.92), 2.4);
+  }
+  const fitHistory = setupCanvas(histCv, histSt, () => lastSnap && renderHistory(lastSnap.historyMomentary, lastSnap.historyShortTerm));
+
+  function refitAll() {
+    fitSpec(); fitFall(); fitWave(); fitCycle(); fitGonio(); fitBandCorr(); fitHistory();
+  }
+
+  // ── Layout & View Controls ──
+  function syncViewModeLayout() {
+    document.body.setAttribute('data-preset', currentPreset);
+
+    const showWave = currentScopeMode === 'rolling' || currentScopeMode === 'dual';
+    const showCycle = currentScopeMode === 'cycle' || currentScopeMode === 'dual';
+    $('waveBox').style.display = showWave ? '' : 'none';
+    $('cycleBox').style.display = showCycle ? '' : 'none';
+
+    const showSpec = currentSpecView === 'spectrum' || currentSpecView === 'split';
+    const showFall = currentSpecView === 'waterfall' || currentSpecView === 'split';
+    $('spectrumBox').style.display = showSpec ? '' : 'none';
+    $('waterfallBox').style.display = showFall ? '' : 'none';
+
+    ['scope', 'spectrum', 'stereo', 'loudness'].forEach(p => {
+      const card = document.querySelector(`.pane-card[data-pane="${p}"]`);
+      if (card) card.classList.toggle('hidden-pane', !paneVisibility[p]);
+      const btn = document.querySelector(`#paneToggles button[data-pane="${p}"]`);
+      if (btn) btn.classList.toggle('on', !!paneVisibility[p]);
+    });
+
+    const grid = $('stageGrid');
+    grid.classList.toggle('has-max', !!maximizedPane);
+    document.querySelectorAll('.pane-card').forEach(c => c.classList.toggle('maximized', c.id === maximizedPane));
+    document.querySelectorAll('.max-btn').forEach(b => b.classList.toggle('on', b.dataset.max === maximizedPane));
+
+    refitAll();
+    requestAnimationFrame(refitAll);
+  }
+
+  function applyPresetDefaults(preset) {
+    currentPreset = preset;
+    if (preset === 'Track') {
+      paneVisibility = { scope: true, spectrum: true, stereo: true, loudness: false };
+      currentScopeMode = 'dual';
+      currentSpecView = 'spectrum';
+    } else if (preset === 'Bus') {
+      paneVisibility = { scope: true, spectrum: true, stereo: true, loudness: true };
+      currentScopeMode = 'rolling';
+      currentSpecView = 'spectrum';
+    } else if (preset === 'Mastering') {
+      paneVisibility = { scope: false, spectrum: true, stereo: true, loudness: true };
+      currentSpecView = 'split';
+    } else if (preset === 'Strip') {
+      paneVisibility = { scope: true, spectrum: true, stereo: true, loudness: true };
+      currentScopeMode = 'rolling';
+      currentSpecView = 'spectrum';
+    }
+    paintBed($('scopeModeGroup'), currentScopeMode);
+    paintBed($('specViewGroup'), currentSpecView);
+    maximizedPane = '';
+    syncViewModeLayout();
+  }
+
+  function paintBed(groupEl, val) {
+    if (!groupEl) return;
+    groupEl.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.value === val));
+  }
+
+  function bindBed(groupEl, onPick) {
+    if (!groupEl) return;
+    groupEl.querySelectorAll('button').forEach(b => {
+      b.addEventListener('click', () => {
+        const val = b.dataset.value;
+        paintBed(groupEl, val);
+        onPick(val);
+      });
+    });
+  }
+
+  bindBed($('presetSelect'), v => {
+    applyPresetDefaults(v);
+    if (host) {
+      host.call('setUiState', 'preset', v);
+      host.call('setUiState', 'scopeMode', currentScopeMode);
+      host.call('setUiState', 'specView', currentSpecView);
+      Object.entries(paneVisibility).forEach(([k, on]) => host.call('setUiState', k + 'On', on));
+    }
+  });
+  bindBed($('specViewGroup'), v => { currentSpecView = v; syncViewModeLayout(); if (host) host.call('setUiState', 'specView', v); });
+  bindBed($('specChanGroup'), v => { currentSpecChan = v; renderSpectrum(); if (host) host.call('setUiState', 'specChan', v); });
+  bindBed($('scopeModeGroup'), v => { currentScopeMode = v; syncViewModeLayout(); if (host) host.call('setUiState', 'scopeMode', v); });
+  bindBed($('kModeGroup'), v => { currentKSystem = v; if (lastSnap) updateKMeter(lastSnap); if (host) host.call('setUiState', 'kSystem', v); });
+  bindBed($('tonalSelect'), v => { currentTonal = v; renderSpectrum(); if (host) host.call('setUiState', 'tonalTarget', v); });
+  bindBed($('targetSelect'), v => {
+    currentTarget = v;
+    const t = targetInfo();
+    $('targetDeltaKey').textContent = 'vs ' + currentTarget;
+    $('targetLufsLabel').textContent = t.lufs.toFixed(1) + ' LUFS';
+    if (lastSnap) renderHistory(lastSnap.historyMomentary, lastSnap.historyShortTerm);
+    if (host) host.call('setUiState', 'target', v);
+  });
+
+  document.querySelectorAll('#tiltGroup button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentTilt = parseFloat(btn.dataset.tilt);
+      document.querySelectorAll('#tiltGroup button').forEach(b => b.classList.toggle('on', parseFloat(b.dataset.tilt) === currentTilt));
+      peakTrace.fill(-120);
+      renderSpectrum();
+      if (host) host.call('setUiState', 'slope', currentTilt);
+    });
+  });
+
+  $('paneToggles').querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const p = btn.dataset.pane;
+      const next = !paneVisibility[p];
+      if (!next && Object.values(paneVisibility).filter(Boolean).length <= 1) return;
+      paneVisibility[p] = next;
+      maximizedPane = '';
+      syncViewModeLayout();
+      if (host) host.call('setUiState', p + 'On', next);
+    });
+  });
+
+  document.querySelectorAll('.max-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      maximizedPane = (maximizedPane === btn.dataset.max) ? '' : btn.dataset.max;
+      syncViewModeLayout();
+    });
+  });
+
+  $('scopeMsBtn').addEventListener('click', () => {
+    scopeMsOn = !scopeMsOn;
+    $('scopeMsBtn').classList.toggle('on', scopeMsOn);
+    renderCycle();
+  });
+
+  const HISTORY_CAPACITY = 600;
+  const HISTORY_HZ = 60;
+  const copyF32 = (srcArr, dstArr) => {
+    if (!srcArr || !srcArr.length) return null;
+    if (dstArr && dstArr.length === srcArr.length) {
+      dstArr.set(srcArr);
+      return dstArr;
+    }
+    return new Float32Array(srcArr);
+  };
+
+  const historyBuf = (window.WDKit && window.WDKit.createHistoryBuffer)
+    ? window.WDKit.createHistoryBuffer({
+        capacity: HISTORY_CAPACITY,
+        cloneFrame: (src, dst) => {
+          const f = dst || {};
+          f.momentary = src.momentary;
+          f.shortTerm = src.shortTerm;
+          f.integrated = src.integrated;
+          f.lra = src.lra;
+          f.truePeakLeft = src.truePeakLeft;
+          f.truePeakRight = src.truePeakRight;
+          f.correlation = src.correlation;
+          f.width = src.width;
+          f.balance = src.balance;
+          f.hasRef = !!src.hasRef;
+          f.plr = src.plr;
+          f.psr = src.psr;
+          f.crestFactorStereo = src.crestFactorStereo;
+          f.vuLeft = src.vuLeft;
+          f.vuRight = src.vuRight;
+          f.k12Left = src.k12Left;
+          f.k12Right = src.k12Right;
+          f.k14Left = src.k14Left;
+          f.k14Right = src.k14Right;
+          f.k20Left = src.k20Left;
+          f.k20Right = src.k20Right;
+          f.pitchVoiced = !!src.pitchVoiced;
+          f.pitchHz = src.pitchHz;
+          f.pitchCents = src.pitchCents;
+          f.pitchConfidence = src.pitchConfidence;
+          f.pitchNote = src.pitchNote;
+          f.refDeltaLufs = src.refDeltaLufs;
+          f.selfName = src.selfName;
+          f.beaconSource = src.beaconSource;
+          f.beaconReceiving = !!src.beaconReceiving;
+          f.beaconSrMismatch = !!src.beaconSrMismatch;
+          f.scActive = !!src.scActive;
+
+          f.bandCorrelation = copyF32(src.bandCorrelation, f.bandCorrelation);
+          f.resonances = copyF32(src.resonances, f.resonances);
+          f.refTonalBands = copyF32(src.refTonalBands, f.refTonalBands);
+          f.fft = copyF32(src.fft, f.fft);
+          f.fftMid = copyF32(src.fftMid, f.fftMid);
+          f.fftSide = copyF32(src.fftSide, f.fftSide);
+          f.fftSc = copyF32(src.fftSc, f.fftSc);
+          f.waveMin = copyF32(src.waveMin, f.waveMin);
+          f.waveMax = copyF32(src.waveMax, f.waveMax);
+          f.waveRms = copyF32(src.waveRms, f.waveRms);
+          f.waveSc = copyF32(src.waveSc, f.waveSc);
+          f.cycleMid = copyF32(src.cycleMid, f.cycleMid);
+          f.cycleSide = copyF32(src.cycleSide, f.cycleSide);
+          f.cycleSc = copyF32(src.cycleSc, f.cycleSc);
+          f.goniometer = copyF32(src.goniometer, f.goniometer);
+          f.historyMomentary = copyF32(src.historyMomentary, f.historyMomentary);
+          f.historyShortTerm = copyF32(src.historyShortTerm, f.historyShortTerm);
+          return f;
+        },
+      })
+    : null;
+
+  let scrubTimeline = null;
+  let telemPoller = null;
+
+  function applyScrubbedFrame(frame) {
+    if (!frame) return;
+    lastSnap = frame;
+    if (typeof frame.scActive === 'boolean') scActive = frame.scActive;
+    updateBeaconUi();
+    renderScalarReadouts(frame);
+    if (isList(frame.refTonalBands) && paneVisibility.spectrum && (currentSpecView === 'spectrum' || currentSpecView === 'split')) {
+      renderSpectrum();
+    }
+    if (frame.fft && frame.fft.length >= SPEC_BINS) {
+      applySpectrumArrays(frame.fft, frame.fftMid, frame.fftSide, scActive ? frame.fftSc : null, true);
+    }
+    if (paneVisibility.scope && currentScopeMode !== 'cycle') renderWave();
+    if (paneVisibility.scope && currentScopeMode !== 'rolling') renderCycle(16.67);
+    if (paneVisibility.stereo) {
+      renderGoniometer(frame.goniometer, 16.67);
+      renderBandCorrelation(frame.bandCorrelation);
+    }
+    if (paneVisibility.loudness) {
+      renderHistory(frame.historyMomentary, frame.historyShortTerm);
+    }
+  }
+
+  function setHoldState(next) {
+    if (historyBuf) {
+      if (next && historyBuf.length() === 0) historyBuf.setFrozen(false);
+      else historyBuf.setFrozen(!!next);
+      frozen = historyBuf.isFrozen();
+    } else {
+      frozen = !!next;
+    }
+    $('freezeBtn').classList.toggle('on', frozen);
+    if (scrubTimeline) scrubTimeline.update();
+    if (frozen && historyBuf) {
+      const f = historyBuf.getActiveFrame();
+      if (f) applyScrubbedFrame(f);
+    } else if (!frozen && liveSnap) {
+      applyScrubbedFrame(liveSnap);
+    }
+  }
+
+  if (window.WDKit && window.WDKit.mountScrubTimeline && historyBuf) {
+    scrubTimeline = window.WDKit.mountScrubTimeline({
+      container: $('historyScrubMount'),
+      historyBuffer: historyBuf,
+      hz: HISTORY_HZ,
+      label: 'WdMeter 10-second history scrub',
+      onToggleHold: (isFrozen, frame) => {
+        if (isFrozen && historyBuf.length() === 0) {
+          historyBuf.setFrozen(false);
+          if (scrubTimeline) scrubTimeline.update();
+        }
+        frozen = historyBuf.isFrozen();
+        $('freezeBtn').classList.toggle('on', frozen);
+        if (frozen && frame) applyScrubbedFrame(frame);
+        else if (!frozen && liveSnap) applyScrubbedFrame(liveSnap);
+      },
+      onScrub: (frame, _age, isFrozen) => {
+        if (isFrozen && historyBuf.length() === 0) {
+          historyBuf.setFrozen(false);
+          if (scrubTimeline) scrubTimeline.update();
+        }
+        frozen = historyBuf.isFrozen();
+        $('freezeBtn').classList.toggle('on', frozen);
+        if (frame) applyScrubbedFrame(frame);
+      },
+    });
+  }
+
+  $('freezeBtn').addEventListener('click', () => {
+    setHoldState(!frozen);
+  });
+
+  const doReset = () => {
+    latchedClipCount = 0;
+    peakClipsExceeded = false;
+    $('clipCountVal').textContent = '0 clips';
+    $('clipCounterChip').classList.remove('on');
+    if (historyBuf) {
+      historyBuf.clear();
+      historyBuf.setFrozen(false);
+    }
+    frozen = false;
+    $('freezeBtn').classList.remove('on');
+    if (scrubTimeline) scrubTimeline.update();
+    if (gonioViz) gonioViz.clear();
+    if (cycleViz) cycleViz.clear();
+    if (fallViz) fallViz.clear();
+    if (host) host.call('reset');
+  };
+  $('resetBtn').addEventListener('click', doReset);
+  $('headerResetBtn').addEventListener('click', doReset);
+  $('clipCounterChip').addEventListener('click', () => {
+    latchedClipCount = 0;
+    peakClipsExceeded = false;
+    $('clipCountVal').textContent = '0 clips';
+    $('clipCounterChip').classList.remove('on');
+  });
+  ['momentaryBlock', 'shortTermBlock', 'integratedBlock'].forEach(id => $(id).addEventListener('click', doReset));
+
+  $('refBtn').addEventListener('click', () => { if (host) host.call('captureRef'); });
+  $('refClearBtn').addEventListener('click', () => { if (host) host.call('clearRef'); });
+
+  // Self Track Rename & Beacon Picker
+  function updateBeaconUi() {
+    const chip = $('selfTrackChip');
+    const lbl = $('selfTrackName');
+    if (lbl && !chip.querySelector('input')) lbl.textContent = selfName;
+    const wrap = $('beaconPickerWrap');
+    if (wrap) {
+      wrap.classList.remove('receiving', 'waiting', 'mismatch');
+      if (beaconSelected) {
+        wrap.classList.add(beaconSrMismatch ? 'mismatch' : (beaconReceiving ? 'receiving' : 'waiting'));
+      }
+    }
+    const keyLabel = beaconSelected || (scActive ? 'Host Bus' : '');
+    ['specKeyBadge', 'scopeKeyBadge'].forEach(id => {
+      const el = $(id);
+      if (!el) return;
+      el.style.display = scActive && keyLabel ? '' : 'none';
+      if (scActive && keyLabel) el.textContent = 'Key · ' + keyLabel;
+    });
+  }
+
+  $('selfTrackChip').addEventListener('click', () => {
+    const chip = $('selfTrackChip');
+    const lbl = $('selfTrackName');
+    if (!lbl || chip.querySelector('input')) return;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.maxLength = 40;
+    input.value = selfName;
+    let done = false;
+    const commit = async keep => {
+      if (done) return;
+      done = true;
+      const next = keep ? input.value.trim() : selfName;
+      input.replaceWith(lbl);
+      if (keep && host) {
+        try {
+          const res = await host.call('setInstanceName', next);
+          if (res && res.name) selfName = res.name;
+        } catch (e) {}
+      } else if (keep && next) {
+        selfName = next;
+      }
+      updateBeaconUi();
+    };
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); commit(true); }
+      else if (e.key === 'Escape') { e.preventDefault(); commit(false); }
+      e.stopPropagation();
+    });
+    input.addEventListener('blur', () => commit(true));
+    lbl.replaceWith(input);
+    input.focus({ preventScroll: true });
+    input.select();
+  });
+
+  async function refreshBeaconSources() {
+    if (!host) return;
+    try {
+      const res = await host.call('getBeaconSources');
+      if (!res || typeof res !== 'object') return;
+      const sel = $('beaconSelect');
+      if (typeof res.selected === 'string') beaconSelected = res.selected;
+      if (typeof res.receiving === 'boolean') beaconReceiving = res.receiving;
+      if (typeof res.scActive === 'boolean') scActive = res.scActive;
+      if (typeof res.srMismatch === 'boolean') beaconSrMismatch = res.srMismatch;
+      updateBeaconUi();
+      const sources = Array.isArray(res.sources) ? res.sources : [];
+      const sig = sources.map(s => s.name + ':' + s.sr).join('|') + '#' + beaconSelected;
+      if (document.activeElement === sel || sig === lastBeaconSig) return;
+      lastBeaconSig = sig;
+      sel.textContent = '';
+      const off = document.createElement('option');
+      off.value = ''; off.textContent = 'Off (Host Bus)';
+      sel.appendChild(off);
+      let found = beaconSelected === '';
+      for (const s of sources) {
+        const o = document.createElement('option');
+        o.value = s.name;
+        o.textContent = s.name;
+        if (s.name === beaconSelected) found = true;
+        sel.appendChild(o);
+      }
+      if (!found && beaconSelected) {
+        const w = document.createElement('option');
+        w.value = beaconSelected; w.textContent = beaconSelected + ' (waiting…)';
+        sel.appendChild(w);
+      }
+      sel.value = beaconSelected;
+    } catch (e) {}
+  }
+
+  $('beaconSelect').addEventListener('pointerdown', refreshBeaconSources);
+  $('beaconSelect').addEventListener('focus', refreshBeaconSources);
+  $('beaconSelect').addEventListener('change', async () => {
+    beaconSelected = $('beaconSelect').value || '';
+    beaconSrMismatch = false;
+    updateBeaconUi();
+    if (host) {
+      try {
+        const res = await host.call('setBeaconSource', beaconSelected);
+        if (res) {
+          if (typeof res.receiving === 'boolean') beaconReceiving = res.receiving;
+          if (typeof res.scActive === 'boolean') scActive = res.scActive;
+          if (typeof res.srMismatch === 'boolean') beaconSrMismatch = res.srMismatch;
+        }
+      } catch (e) {}
+    }
+    updateBeaconUi();
+  });
+
+  // ── Snapshot Handling ──
+  const showLufs = v => v <= -69.9 ? '-inf' : v.toFixed(1);
+  const showTp = v => v <= -99.9 ? '-inf' : v.toFixed(1);
+  const signed2 = v => (v >= 0 ? '+' : '') + v.toFixed(2);
+
+  function updateKMeter(snap) {
+    let val = snap.vuLeft !== undefined ? Math.max(snap.vuLeft, snap.vuRight || -100) : -100;
+    let pct = clamp((val + 48) / 51, 0, 1) * 100;
+    let lbl = (val <= -99.5 ? '-inf' : (val >= 0 ? '+' : '') + val.toFixed(1)) + ' VU';
+    if (currentKSystem === 'k12') {
+      val = Math.max(snap.k12Left ?? -100, snap.k12Right ?? -100);
+      pct = clamp((val + 36) / 48, 0, 1) * 100;
+      lbl = (val <= -79 ? '-inf' : (val >= 0 ? '+' : '') + val.toFixed(1)) + ' dB (K12)';
+    } else if (currentKSystem === 'k14') {
+      val = Math.max(snap.k14Left ?? -100, snap.k14Right ?? -100);
+      pct = clamp((val + 36) / 50, 0, 1) * 100;
+      lbl = (val <= -79 ? '-inf' : (val >= 0 ? '+' : '') + val.toFixed(1)) + ' dB (K14)';
+    } else if (currentKSystem === 'k20') {
+      val = Math.max(snap.k20Left ?? -100, snap.k20Right ?? -100);
+      pct = clamp((val + 36) / 56, 0, 1) * 100;
+      lbl = (val <= -79 ? '-inf' : (val >= 0 ? '+' : '') + val.toFixed(1)) + ' dB (K20)';
+    }
+    $('kMeterFill').style.setProperty('--fill', pct.toFixed(1) + '%');
+    $('kMeterVal').textContent = lbl;
+  }
+
+  function applySpectrumArrays(fft, fftMid, fftSide, fftSc, fromScrub = false) {
+    if (!fft || fft.length < SPEC_BINS) return;
+    const needFall = !fromScrub && paneVisibility.spectrum && (currentSpecView === 'waterfall' || currentSpecView === 'split');
+    const needSpec = paneVisibility.spectrum && (currentSpecView === 'spectrum' || currentSpecView === 'split');
+    for (let b = 0; b < SPEC_BINS; ++b) {
+      const fHz = FMIN * Math.pow(FMAX / FMIN, (b + 0.5) / SPEC_BINS);
+      const tilt = currentTilt * Math.log2(fHz / 1000);
+      const adj = fft[b] + tilt;
+      if (needFall) tiltedWaterfallRow[b] = adj;
+      avgTrace[b] = adj;
+      peakTrace[b] = fromScrub ? adj : (adj > peakTrace[b] ? adj : Math.max(DB_MIN, peakTrace[b] - 0.22));
+      if (fftMid && fftMid.length >= SPEC_BINS) midTrace[b] = fftMid[b] + tilt;
+      if (fftSide && fftSide.length >= SPEC_BINS) sideTrace[b] = fftSide[b] + tilt;
+      if (fftSc && fftSc.length >= SPEC_BINS) scSpecTrace[b] = fftSc[b] + tilt;
+    }
+    if (needFall && fallViz) {
+      fallViz.pushRow(tiltedWaterfallRow);
+      fallViz.render();
+    }
+    if (needSpec) {
+      renderSpectrum();
+    }
+  }
+
+  function renderScalarReadouts(snap) {
+    const mVal = snap.momentary ?? -70.0;
+    const sVal = snap.shortTerm ?? -70.0;
+    const iVal = snap.integrated ?? -70.0;
+    $('valMomentary').textContent = showLufs(mVal);
+    $('valShortTerm').textContent = showLufs(sVal);
+    $('valIntegrated').textContent = showLufs(iVal);
+    $('historyCurrentVal').textContent = (sVal <= -69.9 ? '-inf' : sVal.toFixed(1)) + ' LUFS';
+
+    const t = targetInfo();
+    const tpL = snap.truePeakLeft ?? -100.0;
+    const tpR = snap.truePeakRight ?? -100.0;
+    const tpPct = db => clamp((db + 60) / 60, 0, 1) * 100;
+    const paintTp = (bar, val, db) => {
+      bar.style.setProperty('--fill', tpPct(db).toFixed(1) + '%');
+      val.textContent = showTp(db);
+      bar.classList.toggle('clip', db > t.tp);
+      val.classList.toggle('clip', db > t.tp);
+    };
+    paintTp($('tpBarL'), $('tpValL'), tpL);
+    paintTp($('tpBarR'), $('tpValR'), tpR);
+
+    if (Math.max(tpL, tpR) > t.tp) {
+      if (!peakClipsExceeded) {
+        peakClipsExceeded = true;
+        latchedClipCount++;
+        $('clipCounterChip').classList.add('on');
+        $('clipCountVal').textContent = latchedClipCount + (latchedClipCount > 1 ? ' clips' : ' clip');
+      }
+    } else {
+      peakClipsExceeded = false;
+    }
+
+    const deltaLU = iVal - t.lufs;
+    const chip = $('targetDeltaChip');
+    chip.classList.remove('delta-good', 'delta-bad', 'delta-neutral');
+    if (iVal <= -69.9) {
+      chip.textContent = '—';
+      chip.classList.add('delta-neutral');
+    } else {
+      chip.textContent = (deltaLU >= 0 ? '+' : '') + deltaLU.toFixed(1) + ' LU';
+      chip.classList.add(Math.abs(deltaLU) <= 1.0 ? 'delta-good' : (deltaLU > 1.0 ? 'delta-bad' : 'delta-neutral'));
+    }
+
+    $('metricCrest').textContent = (snap.crestFactorStereo ?? 0).toFixed(1) + ' dB';
+    $('metricPSR').textContent = (snap.psr ?? 0).toFixed(1) + ' dB';
+    $('metricPLR').textContent = (snap.plr ?? 0).toFixed(1) + ' dB';
+    $('metricLRA').textContent = (snap.lra ?? 0).toFixed(1) + ' LU';
+    updateKMeter(snap);
+
+    const hasRef = !!snap.hasRef;
+    $('refBtn').classList.toggle('on', hasRef);
+    $('refClearBtn').style.display = hasRef ? '' : 'none';
+    const rDelta = $('refDeltaBadge');
+    if (hasRef) {
+      rDelta.style.display = '';
+      const dl = snap.refDeltaLufs || 0;
+      rDelta.textContent = `ΔRef ${dl >= 0 ? '+' : ''}${dl.toFixed(1)} LU`;
+    } else {
+      rDelta.style.display = 'none';
+    }
+
+    const res = snap.resonances || [];
+    for (let i = 0; i < 3; ++i) {
+      const el = $('res' + i);
+      if (!el) continue;
+      const f = res[i * 3], p = res[i * 3 + 1];
+      el.textContent = (!f || f <= 0) ? '—' : ((f >= 1000 ? (f / 1000).toFixed(2) + 'k' : Math.round(f) + 'Hz') + ' +' + p.toFixed(1));
+    }
+
+    const corrVal = snap.correlation !== undefined ? snap.correlation : 0;
+    $('corrText').textContent = signed2(corrVal);
+    const cf = $('correlationFill');
+    const half = clamp(Math.abs(corrVal), 0, 1) * 50;
+    cf.style.left = (corrVal >= 0 ? 50 : 50 - half).toFixed(1) + '%';
+    cf.style.setProperty('--fill', half.toFixed(1) + '%');
+    $('corrBar').classList.toggle('neg', corrVal < -0.05);
+    $('phaseStatusHint').textContent = corrVal < -0.15 ? 'Phase Warning' : (corrVal < 0.25 ? 'Wide Stereo' : 'Phase Coherent');
+    $('phaseStatusHint').style.color = corrVal < -0.15 ? COL.danger : (corrVal < 0.25 ? COL.warn : '');
+
+    const widthVal = clamp(snap.width !== undefined ? snap.width : 0, 0, 1);
+    $('valWidth').textContent = Math.round(widthVal * 100) + '%';
+    $('widthFill').style.setProperty('--fill', (widthVal * 100).toFixed(1) + '%');
+
+    const balVal = clamp(snap.balance !== undefined ? snap.balance : 0, -1, 1);
+    $('valBalance').textContent = balVal > 0.05 ? Math.round(balVal * 100) + '% R' : (balVal < -0.05 ? Math.round(-balVal * 100) + '% L' : 'C');
+    const bf = $('balanceFill'), bHalf = Math.abs(balVal) * 50;
+    bf.style.left = (balVal >= 0 ? 50 : 50 - bHalf).toFixed(1) + '%';
+    bf.style.setProperty('--fill', bHalf.toFixed(1) + '%');
+
+    const hud = $('tunerHud');
+    const voiced = !!snap.pitchVoiced && snap.pitchHz > 0;
+    hud.classList.toggle('unvoiced', !voiced);
+    if (voiced) {
+      $('tunerNote').textContent = snap.pitchNote || '--';
+      const ct = clamp(snap.pitchCents || 0, -50, 50);
+      $('tunerMeta').textContent = `${snap.pitchHz.toFixed(1)} Hz · ${ct >= 0 ? '+' : ''}${Math.round(ct)} ct`;
+      $('tunerNeedle').style.left = (50 + ct).toFixed(1) + '%';
+    } else {
+      $('tunerNote').textContent = '--';
+      $('tunerMeta').textContent = 'Free · Unvoiced';
+      $('tunerNeedle').style.left = '50%';
+    }
+  }
+
+  function handleSnapshot(snap) {
+    if (frozen || (historyBuf && historyBuf.isFrozen())) return;
+    const now = performance.now();
+    const dtMs = clamp(now - lastVizMs, 1, 250);
+    lastVizMs = now;
+
+    liveSnap = liveSnap ? Object.assign(liveSnap, snap) : Object.assign({}, snap);
+    lastSnap = liveSnap;
+
+    if (typeof snap.selfName === 'string') selfName = snap.selfName;
+    if (typeof snap.beaconSource === 'string') beaconSelected = snap.beaconSource;
+    if (typeof snap.beaconReceiving === 'boolean') beaconReceiving = snap.beaconReceiving;
+    if (typeof snap.beaconSrMismatch === 'boolean') beaconSrMismatch = snap.beaconSrMismatch;
+    if (typeof snap.scActive === 'boolean') scActive = snap.scActive;
+    liveSnap.scActive = scActive;
+
+    if (historyBuf) {
+      historyBuf.push(liveSnap);
+      if (scrubTimeline) scrubTimeline.update();
+    }
+
+    updateBeaconUi();
+    renderScalarReadouts(lastSnap);
+
+    if (isList(snap.refTonalBands) && paneVisibility.spectrum && (currentSpecView === 'spectrum' || currentSpecView === 'split')) {
+      renderSpectrum();
+    }
+
+    // Spectrum + Waterfall (present on JSON fallback or offline demo; binary poller drives when active)
+    if (snap.fft && snap.fft.length >= SPEC_BINS) {
+      applySpectrumArrays(snap.fft, snap.fftMid, snap.fftSide, snap.fftSc);
+    }
+
+    if (snap.waveMax && paneVisibility.scope && currentScopeMode !== 'cycle') renderWave();
+    if (snap.cycleMid && paneVisibility.scope && currentScopeMode !== 'rolling') renderCycle(dtMs);
+    if (snap.goniometer && paneVisibility.stereo) renderGoniometer(snap.goniometer, dtMs);
+    if (snap.bandCorrelation && paneVisibility.stereo) renderBandCorrelation(snap.bandCorrelation);
+    if (snap.historyMomentary && paneVisibility.loudness) renderHistory(snap.historyMomentary, snap.historyShortTerm);
+  }
+
+  // ── Init & Host Hydration ──
+  if (host) {
+    host.on('snapshot', data => { if (data) handleSnapshot(data); });
+    try {
+      const state = await host.call('getUiState');
+      if (state) {
+        if (state.build) $('buildTag').textContent = state.build;
+        if (state.sampleRate) {
+          sampleRate = state.sampleRate;
+          $('srTag').textContent = (sampleRate / 1000).toFixed(1) + 'k';
+        }
+        if (state.selfName) selfName = state.selfName;
+        if (typeof state.beaconSource === 'string') beaconSelected = state.beaconSource;
+        if (typeof state.beaconReceiving === 'boolean') beaconReceiving = state.beaconReceiving;
+        if (typeof state.scActive === 'boolean') scActive = state.scActive;
+        if (state.preset) { currentPreset = state.preset; paintBed($('presetSelect'), currentPreset); }
+        if (state.target && TARGETS[state.target]) {
+          currentTarget = state.target;
+          paintBed($('targetSelect'), currentTarget);
+          $('targetDeltaKey').textContent = 'vs ' + currentTarget;
+          $('targetLufsLabel').textContent = targetInfo().lufs.toFixed(1) + ' LUFS';
+        }
+        if (state.tonalTarget) { currentTonal = state.tonalTarget; paintBed($('tonalSelect'), currentTonal); }
+        if (state.slope !== undefined) {
+          currentTilt = parseFloat(state.slope);
+          document.querySelectorAll('#tiltGroup button').forEach(b => b.classList.toggle('on', parseFloat(b.dataset.tilt) === currentTilt));
+        }
+        if (state.specView) { currentSpecView = state.specView; paintBed($('specViewGroup'), currentSpecView); }
+        if (state.specChan) { currentSpecChan = state.specChan; paintBed($('specChanGroup'), currentSpecChan); }
+        if (state.scopeMode) { currentScopeMode = state.scopeMode; paintBed($('scopeModeGroup'), currentScopeMode); }
+        if (state.kSystem) { currentKSystem = state.kSystem; paintBed($('kModeGroup'), currentKSystem); }
+        if (typeof state.scopeOn === 'boolean') paneVisibility.scope = state.scopeOn;
+        if (typeof state.spectrumOn === 'boolean') paneVisibility.spectrum = state.spectrumOn;
+        if (typeof state.stereoOn === 'boolean') paneVisibility.stereo = state.stereoOn;
+        if (typeof state.loudnessOn === 'boolean') paneVisibility.loudness = state.loudnessOn;
+      }
+    } catch (e) { console.warn('Error reading native UI state:', e); }
+    refreshBeaconSources();
+    syncViewModeLayout();
+    updateBeaconUi();
+    if (window.WDKit) {
+      window.WDKit.mountHeaderKit({ host, enablePresets: false });
+      window.WDKit.syncGlobalTheme(host, applyTheme);
+      telemPoller = window.WDKit.createTelemetryPoller(({ kind, flags, floats }) => {
+        const kWave = 200, kCycle = 256;
+        const fixedEnd = 19 + 4 * SPEC_BINS + 4 * kWave + 3 * kCycle;
+        if (frozen || (historyBuf && historyBuf.isFrozen()) || kind !== 3 || !floats || floats.length < fixedEnd) return;
+        const now = performance.now();
+        const dtMs = clamp(now - lastVizMs, 1, 250);
+        lastVizMs = now;
+
+        const scOn = (flags & 1) !== 0;
+        scActive = scOn;
+        if (!liveSnap) liveSnap = {};
+
+        liveSnap.scActive = scOn;
+        liveSnap.momentary = floats[0];
+        liveSnap.shortTerm = floats[1];
+        liveSnap.integrated = floats[2];
+        liveSnap.lra = floats[3];
+        liveSnap.truePeakLeft = floats[4];
+        liveSnap.truePeakRight = floats[5];
+        liveSnap.correlation = floats[6];
+        liveSnap.width = floats[7];
+        liveSnap.balance = floats[8];
+
+        const gonioCount = Math.max(0, Math.round(floats[17]));
+        const histCount  = Math.max(0, Math.round(floats[18]));
+        liveSnap.bandCorrelation = Array.from(floats.subarray(9, 17));
+
+        let off = 19;
+        const fft     = floats.subarray(off, off + SPEC_BINS); off += SPEC_BINS;
+        const fftMid  = floats.subarray(off, off + SPEC_BINS); off += SPEC_BINS;
+        const fftSide = floats.subarray(off, off + SPEC_BINS); off += SPEC_BINS;
+        const fftSc   = floats.subarray(off, off + SPEC_BINS); off += SPEC_BINS;
+        liveSnap.fft     = fft;
+        liveSnap.fftMid  = fftMid;
+        liveSnap.fftSide = fftSide;
+        liveSnap.fftSc   = scOn ? fftSc : null;
+
+        liveSnap.waveMin = Array.from(floats.subarray(off, off + kWave)); off += kWave;
+        liveSnap.waveMax = Array.from(floats.subarray(off, off + kWave)); off += kWave;
+        liveSnap.waveRms = Array.from(floats.subarray(off, off + kWave)); off += kWave;
+        liveSnap.waveSc  = scOn ? Array.from(floats.subarray(off, off + kWave)) : []; off += kWave;
+
+        liveSnap.cycleMid  = Array.from(floats.subarray(off, off + kCycle)); off += kCycle;
+        liveSnap.cycleSide = Array.from(floats.subarray(off, off + kCycle)); off += kCycle;
+        liveSnap.cycleSc   = scOn ? Array.from(floats.subarray(off, off + kCycle)) : []; off += kCycle;
+
+        if (off + 2 * gonioCount <= floats.length) {
+          liveSnap.goniometer = floats.subarray(off, off + 2 * gonioCount);
+          off += 2 * gonioCount;
+        }
+        if (off + 2 * histCount <= floats.length) {
+          liveSnap.historyMomentary = floats.subarray(off, off + histCount); off += histCount;
+          liveSnap.historyShortTerm = floats.subarray(off, off + histCount); off += histCount;
+        }
+        if (off + 25 <= floats.length) {
+          liveSnap.hasRef = (flags & 2) !== 0;
+          liveSnap.plr = floats[off++];
+          liveSnap.psr = floats[off++];
+          liveSnap.crestFactorStereo = floats[off++];
+          liveSnap.vuLeft = floats[off++];
+          liveSnap.vuRight = floats[off++];
+          liveSnap.k12Left = floats[off++];
+          liveSnap.k12Right = floats[off++];
+          liveSnap.k14Left = floats[off++];
+          liveSnap.k14Right = floats[off++];
+          liveSnap.k20Left = floats[off++];
+          liveSnap.k20Right = floats[off++];
+          const pVoiced = floats[off++] > 0.5;
+          const pHz = floats[off++];
+          const pCents = floats[off++];
+          const pConf = floats[off++];
+          liveSnap.pitchVoiced = pVoiced;
+          liveSnap.pitchHz = pHz;
+          liveSnap.pitchCents = pCents;
+          liveSnap.pitchConfidence = pConf;
+          if (pVoiced && pHz > 0) {
+            const mRnd = Math.round(69 + 12 * Math.log2(pHz / 440));
+            liveSnap.pitchNote = NOTES[((mRnd % 12) + 12) % 12] + (Math.floor(mRnd / 12) - 1);
+          } else {
+            liveSnap.pitchNote = '--';
+          }
+          liveSnap.resonances = Array.from(floats.subarray(off, off + 9)); off += 9;
+          liveSnap.refDeltaLufs = floats[off++];
+        }
+
+        lastSnap = liveSnap;
+        if (historyBuf) {
+          historyBuf.push(liveSnap);
+          if (scrubTimeline) scrubTimeline.update();
+        }
+
+        renderScalarReadouts(lastSnap);
+        applySpectrumArrays(fft, fftMid, fftSide, scOn ? fftSc : null);
+        if (paneVisibility.scope && currentScopeMode !== 'cycle') renderWave();
+        if (paneVisibility.scope && currentScopeMode !== 'rolling') renderCycle(dtMs);
+        if (paneVisibility.stereo) {
+          renderGoniometer(lastSnap.goniometer, dtMs);
+          renderBandCorrelation(lastSnap.bandCorrelation);
+        }
+        if (paneVisibility.loudness) {
+          renderHistory(lastSnap.historyMomentary, lastSnap.historyShortTerm);
+        }
+      });
+      telemPoller.start();
+    }
+  } else {
+    syncViewModeLayout();
+    const mockMom = new Array(120).fill(-22);
+    const mockST = new Array(120).fill(-18);
+    setInterval(() => {
+      const t = Date.now() * 0.001;
+      const mVal = -18 + 5 * Math.sin(t * 2.1);
+      const sVal = -17 + 2 * Math.sin(t * 0.6);
+      mockMom.push(mVal); mockMom.shift();
+      mockST.push(sVal); mockST.shift();
+      const waveMax = [], waveMin = [], waveRms = [], cycleMid = [], cycleSide = [], fft = [];
+      for (let i = 0; i < 200; ++i) {
+        const beat = Math.exp(-((i % 25) * 0.25));
+        waveMax.push(0.2 + 0.6 * beat);
+        waveMin.push(-(0.2 + 0.6 * beat));
+        waveRms.push(0.12 + 0.35 * beat);
+      }
+      for (let i = 0; i < 256; ++i) {
+        const ph = (i / 256) * Math.PI * 4;
+        cycleMid.push(0.75 * Math.sin(ph) + 0.15 * Math.sin(ph * 2));
+        cycleSide.push(0.22 * Math.cos(ph));
+      }
+      for (let b = 0; b < SPEC_BINS; ++b) {
+        const f = FMIN * Math.pow(FMAX / FMIN, (b + 0.5) / SPEC_BINS);
+        fft.push(-16 - 9 * Math.log10(f / 20) + 4 * Math.sin(Math.log2(f) * 2 - t * 3));
+      }
+      handleSnapshot({
+        momentary: mVal, shortTerm: sVal, integrated: -16.5, lra: 4.8,
+        plr: 11.4, psr: 9.2, crestFactorStereo: 10.6,
+        truePeakLeft: -1.8, truePeakRight: -2.1,
+        vuLeft: -6.2, vuRight: -6.5,
+        correlation: 0.72, width: 0.32, balance: 0.02,
+        bandCorrelation: [0.95, 0.92, 0.85, 0.74, 0.68, 0.55, 0.42, 0.31],
+        goniometer: [0.4, 0.1, -0.3, -0.08, 0.6, 0.15, -0.5, 0.12],
+        historyMomentary: mockMom, historyShortTerm: mockST,
+        fft, fftMid: fft, fftSide: fft.map(v => v - 10),
+        waveMax, waveMin, waveRms, cycleMid, cycleSide,
+        pitchVoiced: true, pitchHz: 82.41, pitchNote: 'E2', pitchCents: -2,
+        resonances: [0, 0, 0],
+      });
+    }, 50);
+  }
+
+  window.addEventListener('beforeunload', () => {
+    if (telemPoller) telemPoller.stop();
+    if (scrubTimeline) scrubTimeline.destroy();
+    if (gonioViz) gonioViz.destroy();
+    if (cycleViz) cycleViz.destroy();
+    if (fallViz) fallViz.destroy();
+  });
+})();
+</script>
+</body>
+</html>
