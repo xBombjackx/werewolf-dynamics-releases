@@ -271,7 +271,7 @@
 
     const tag = document.createElement('span');
     tag.className = 'wd-db-tag';
-    tag.textContent = 'LIVE DSP DEMO';
+    tag.textContent = 'LIVE IN BROWSER';
     row1.appendChild(tag);
 
     const playBtn = document.createElement('button');
@@ -319,7 +319,7 @@
     row1.appendChild(fileInput);
 
     const loadBtn = document.createElement('button');
-    loadBtn.textContent = 'Load WAV';
+    loadBtn.textContent = 'Load Audio';
     loadBtn.addEventListener('click', () => fileInput.click());
     row1.appendChild(loadBtn);
 
@@ -341,7 +341,7 @@
 
     const status = document.createElement('span');
     status.className = 'wd-db-status';
-    status.textContent = 'Select a stem or drop a WAV file';
+    status.textContent = 'Press Play (Space) or drop an audio file anywhere';
     row1.appendChild(status);
 
     const row2 = document.createElement('div');
@@ -360,7 +360,7 @@
     dlLink.href = 'https://xbombjackx.itch.io/werewolf-digital';
     dlLink.target = '_blank';
     dlLink.rel = 'noopener';
-    dlLink.textContent = 'Download VST3 / CLAP \u2192';
+    dlLink.textContent = 'Free VST3 / CLAP \u2192';
     row2.append(navWrap, dlLink);
 
     bar.append(row1, row2);
@@ -448,7 +448,7 @@
       if (seq !== loadSeq) return;
       currentBuffer = buf;
       startOffset = 0;
-      status.textContent = `${stem.label} (${stem.file}) \u00b7 ${buf.duration.toFixed(1)}s`;
+      status.textContent = `${stem.label} \u00b7 ${buf.duration.toFixed(1)}s \u00b7 live @ ${(ctx.sampleRate / 1000).toFixed(1)} kHz`;
       updateProgress();
       if (autoPlay) {
         await opts.onStartBuffer(buf, { offset: 0, loop: loopEnabled, volumeGain: Math.pow(volValue / 100, 2) });
@@ -510,7 +510,7 @@
       currentKey = '__noise__';
       markActiveButton('__noise__');
       currentBuffer = pinkNoiseBuffer(ctx);
-      status.textContent = 'Pink Noise (4.0s stereo loop)';
+      status.textContent = `Pink Noise \u00b7 live @ ${(ctx.sampleRate / 1000).toFixed(1)} kHz`;
       await opts.onStartBuffer(currentBuffer, { offset: 0, loop: loopEnabled, volumeGain: Math.pow(volValue / 100, 2) });
       setPlayingState(true, 0);
     });
